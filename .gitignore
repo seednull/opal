@@ -1,0 +1,5 @@
+# CMake specific
+[Bb]uild/
+
+# VS Code specific
+.vscode

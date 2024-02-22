@@ -1,44 +1,49 @@
 cmake_minimum_required(VERSION 3.10)
-project(opal VERSION 1.0.0)
+set(TARGET 01_enumerate_devices)
+
+project(${TARGET} CXX)
 
 # ==================================================================================================
-# Global options
-# ==================================================================================================
-option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
-option(OPAL_USE_VALIDATION_LAYERS "Enable Opal validation layers" FALSE)
-
-# ==================================================================================================
-# Global Variables
-# ==================================================================================================
-set(OPAL_DIR_THIRDPARTY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
-set(OPAL_DIR_EXPORT ${CMAKE_CURRENT_SOURCE_DIR}/build)
-set(OPAL_DIR_API ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-if (WIN32)
-	set(OPAL_PLATFORM windows)
-	set(OPAL_ABI x64)
-endif()
-
-# ==================================================================================================
-# General compile flags
-# ==================================================================================================
-if (WIN32)
-	set(CMAKE_C_FLAGS "/wd4996")
-endif()
-
-# ==================================================================================================
-# General includes
+# Variables
 # ==================================================================================================
 
 # ==================================================================================================
-# General libraries
+# Sources
+# ==================================================================================================
+file(GLOB SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+)
+
+file(GLOB HEADERS
+	${CMAKE_CURRENT_SOURCE_DIR}/*.h
+)
+
+# ==================================================================================================
+# Target
+# ==================================================================================================
+add_executable(${TARGET} ${SOURCES} ${HEADERS})
+
+set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
+set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
+set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
+set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
+
+set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
+
+# ==================================================================================================
+# Includes
+# ==================================================================================================
+target_include_directories(${TARGET} PUBLIC ${OPAL_API_DIR})
+
+# ==================================================================================================
+# Preprocessor
 # ==================================================================================================
 
 # ==================================================================================================
-# Sub-projects
+# Libraries
 # ==================================================================================================
-add_subdirectory(src)
+target_link_libraries(${TARGET} PUBLIC opal)
 
-if (OPAL_BUILD_SAMPLES)
-	add_subdirectory(samples/01_enumerate_devices)
-endif()
+# ==================================================================================================
+# Custom commands
+# ==================================================================================================

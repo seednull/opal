@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h> // TODO: get rid of this dependency later
+
 // Version
 #define OPAL_VERSION_MAJOR 1
 #define OPAL_VERSION_MINOR 0
@@ -29,7 +31,7 @@
 	#define OPAL_NULL_HANDLE 0
 #endif
 
-#define OPAL_DEFINE_HANDLE(TYPE) typedef uint32_t TYPE;
+#define OPAL_DEFINE_HANDLE(TYPE) typedef uint64_t TYPE;
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,17 +54,74 @@ typedef enum Opal_Api_t
 	OPAL_API_DEFAULT = OPAL_API_VULKAN,
 } Opal_Api;
 
+typedef enum Opal_DefaultDeviceHint
+{
+	OPAL_DEFAULT_DEVICE_HINT_DEFAULT = 0,
+	OPAL_DEFAULT_DEVICE_HINT_PREFER_HIGH_PERFORMANCE,
+	OPAL_DEFAULT_DEVICE_HINT_PREFER_LOW_POWER,
+
+	OPAL_DEFAULT_DEVICE_MAX,
+} Opal_DefaultDeviceHint;
+
+typedef enum Opal_Result_t
+{
+	OPAL_SUCCESS = 0,
+	OPAL_UNSUPPORTED_API,
+	OPAL_INVALID_INSTANCE,
+	OPAL_INVALID_DEVICE,
+
+	OPAL_RESULT_MAX,
+} Opal_Result;
+
 // Structs
+typedef struct Opal_DeviceInfo_t
+{
+	char name[256];
+	uint32_t driver_version;
+	uint32_t vendor_id;
+	uint32_t device_id;
+	uint8_t tessellation_shader : 1;
+	uint8_t geometry_shader : 1;
+	uint8_t compute_shader : 1;
+	uint8_t mesh_task_pipeline : 1;
+	uint8_t raytrace_pipeline : 1;
+	uint8_t texture_compression_etc2 : 1;
+	uint8_t texture_compression_astc : 1;
+	uint8_t texture_compression_bc : 1;
+	uint64_t max_buffer_alignment;
+} Opal_DeviceInfo;
+
+typedef struct Opal_InstanceDesc_t
+{
+	const char *application_name;
+	uint32_t application_version;
+	const char *engine_name;
+	uint32_t engine_version;
+} Opal_InstanceDesc;
 
 // Function pointers
-typedef void (*PFN_opalCreateInstance)(Opal_Api api, OpalInstance *instance);
-typedef void (*PFN_opalDestroyInstance)(Opal_Instance instance);
+typedef Opal_Result (*PFN_opalCreateInstance)(Opal_Api api, const Opal_InstanceDesc *desc, Opal_Instance *instance);
+typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
+
+typedef Opal_Result (*PFN_opalEnumerateDevices)(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos);
+
+typedef Opal_Result (*PFN_opalCreateDevice)(Opal_Instance instance, int index, Opal_Device *device);
+typedef Opal_Result (*PFN_opalCreateDefaultDevice)(Opal_Instance instance, Opal_DefaultDeviceHint hint, Opal_Device *device);
+typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
+typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
 
 // API
-OPAL_APIENTRY PFN_opalCreateInstance opalCreateInstance;
-OPAL_APIENTRY PFN_opalDestroyInstance opalDestroyInstance;
+#if !defined(OPAL_NO_PROTOTYPES)
+OPAL_APIENTRY Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal_Instance *instance);
+OPAL_APIENTRY Opal_Result opalDestroyInstance(Opal_Instance instance);
 
-OPAL_APIENTRY int opalInit();
+OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos);
+
+OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, int index, Opal_Device *device);
+OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DefaultDeviceHint hint, Opal_Device *device);
+OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
+OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);
+#endif
 
 #ifdef __cplusplus
 }
