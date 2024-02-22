@@ -70,6 +70,9 @@ typedef enum Opal_Result_t
 	OPAL_INVALID_INSTANCE,
 	OPAL_INVALID_DEVICE,
 
+	// FIXME: add more error codes for dxgi / d3d12 stuff
+	OPAL_DIRECX12_ERROR,
+
 	OPAL_RESULT_MAX,
 } Opal_Result;
 

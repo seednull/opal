@@ -78,3 +78,6 @@ target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM
 # ==================================================================================================
 # Libraries
 # ==================================================================================================
+if (WIN32)
+	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi dxguid)
+endif()

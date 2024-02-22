@@ -13,7 +13,7 @@ int main()
 		0
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_NULL, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_DIRECTX12, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	int device_count = 0;
