@@ -7,19 +7,38 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, Opal_DeviceInfo *in
 	assert(adapter);
 	assert(info);
 
-	// TODO: detect feature level by creating d3ddevice with various feature levels
+	ID3D12Device *device = NULL;
+	HRESULT hr = D3D12CreateDevice((IUnknown *)adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &device);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECX12_ERROR;
 
-	// TODO: detect driver version by looking into windows registry using LUID from adapter desc
+	Opal_Result result = directx12_fillDeviceInfoWithDevice(adapter, device, info);
+	ID3D12Device_Release(device);
 
-	DXGI_ADAPTER_DESC1 desc;
-	HRESULT hr = IDXGIAdapter1_GetDesc1(adapter, &desc);
+	return result;
+}
+
+Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info)
+{
+	assert(adapter);
+	assert(info);
+	assert(device);
+
+	LARGE_INTEGER umd = {0};
+	HRESULT hr = IDXGIAdapter1_CheckInterfaceSupport(adapter, &IID_IDXGIDevice, &umd);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECX12_ERROR;
+
+	DXGI_ADAPTER_DESC1 desc = {0};
+	hr = IDXGIAdapter1_GetDesc1(adapter, &desc);
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECX12_ERROR;
 
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
 	wcstombs(info->name, &desc.Description[0], 256);
-	info->driver_version = 0;
+	info->gpu_type = OPAL_GPU_TYPE_DISCRETE;
+	info->driver_version = umd.QuadPart;
 	info->vendor_id = desc.VendorId;
 	info->device_id = desc.DeviceId;
 	info->tessellation_shader = 1;
@@ -27,6 +46,28 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, Opal_DeviceInfo *in
 	info->compute_shader = 1;
 	info->texture_compression_bc = 1;
 	info->max_buffer_alignment = 0xFFFF;
+
+	if (desc.Flags == DXGI_ADAPTER_FLAG_SOFTWARE)
+		info->gpu_type = OPAL_GPU_TYPE_CPU;
+
+	if (info->gpu_type == OPAL_GPU_TYPE_DISCRETE)
+	{
+		D3D12_FEATURE_DATA_ARCHITECTURE architecture = {0};
+		hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_ARCHITECTURE, &architecture, sizeof(D3D12_FEATURE_DATA_ARCHITECTURE));
+		if (SUCCEEDED(hr))
+			if (architecture.UMA == TRUE)
+				info->gpu_type = OPAL_GPU_TYPE_INTEGRATED;
+	}
+
+	D3D12_FEATURE_DATA_D3D12_OPTIONS5 raytracing_options = {0};
+	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS5, &raytracing_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5));
+	if (SUCCEEDED(hr))
+		info->raytrace_pipeline = (raytracing_options.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
+
+	D3D12_FEATURE_DATA_D3D12_OPTIONS9 mesh_options = {0};
+	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS9, &mesh_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9));
+	if (SUCCEEDED(hr))
+		info->mesh_pipeline = (mesh_options.MeshShaderPipelineStatsSupported == TRUE);
 
 	return OPAL_SUCCESS;
 }

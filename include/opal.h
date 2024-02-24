@@ -42,27 +42,6 @@ OPAL_DEFINE_HANDLE(Opal_Instance);
 OPAL_DEFINE_HANDLE(Opal_Device);
 
 // Enums
-typedef enum Opal_Api_t
-{
-	OPAL_API_VULKAN = 0,
-	OPAL_API_DIRECTX12,
-	OPAL_API_METAL,
-	OPAL_API_WEBGPU,
-	OPAL_API_NULL,
-
-	OPAL_API_MAX,
-	OPAL_API_DEFAULT = OPAL_API_VULKAN,
-} Opal_Api;
-
-typedef enum Opal_DefaultDeviceHint
-{
-	OPAL_DEFAULT_DEVICE_HINT_DEFAULT = 0,
-	OPAL_DEFAULT_DEVICE_HINT_PREFER_HIGH_PERFORMANCE,
-	OPAL_DEFAULT_DEVICE_HINT_PREFER_LOW_POWER,
-
-	OPAL_DEFAULT_DEVICE_MAX,
-} Opal_DefaultDeviceHint;
-
 typedef enum Opal_Result_t
 {
 	OPAL_SUCCESS = 0,
@@ -76,17 +55,50 @@ typedef enum Opal_Result_t
 	OPAL_RESULT_MAX,
 } Opal_Result;
 
+typedef enum Opal_Api_t
+{
+	OPAL_API_VULKAN = 0,
+	OPAL_API_DIRECTX12,
+	OPAL_API_METAL,
+	OPAL_API_WEBGPU,
+	OPAL_API_NULL,
+
+	OPAL_API_MAX,
+	OPAL_API_DEFAULT = OPAL_API_VULKAN,
+} Opal_Api;
+
+typedef enum Opal_DeviceHint_t
+{
+	OPAL_DEVICE_HINT_DEFAULT = 0,
+	OPAL_DEVICE_HINT_PREFER_HIGH_PERFORMANCE,
+	OPAL_DEVICE_HINT_PREFER_LOW_POWER,
+
+	OPAL_DEFAULT_DEVICE_MAX,
+} Opal_DeviceHint;
+
+typedef enum Opal_GpuType_t
+{
+	OPAL_GPU_TYPE_DISCRETE = 0,
+	OPAL_GPU_TYPE_INTEGRATED,
+	OPAL_GPU_TYPE_CPU,
+	OPAL_GPU_TYPE_EXTERNAL,
+	OPAL_GPU_TYPE_UNKNOWN,
+
+	OPAL_GPU_TYPE_MAX,
+} Opal_GpuType;
+
 // Structs
 typedef struct Opal_DeviceInfo_t
 {
 	char name[256];
-	uint32_t driver_version;
+	Opal_GpuType gpu_type;
+	uint64_t driver_version;
 	uint32_t vendor_id;
 	uint32_t device_id;
 	uint8_t tessellation_shader : 1;
 	uint8_t geometry_shader : 1;
 	uint8_t compute_shader : 1;
-	uint8_t mesh_task_pipeline : 1;
+	uint8_t mesh_pipeline : 1;
 	uint8_t raytrace_pipeline : 1;
 	uint8_t texture_compression_etc2 : 1;
 	uint8_t texture_compression_astc : 1;
@@ -109,7 +121,7 @@ typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
 typedef Opal_Result (*PFN_opalEnumerateDevices)(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos);
 
 typedef Opal_Result (*PFN_opalCreateDevice)(Opal_Instance instance, int index, Opal_Device *device);
-typedef Opal_Result (*PFN_opalCreateDefaultDevice)(Opal_Instance instance, Opal_DefaultDeviceHint hint, Opal_Device *device);
+typedef Opal_Result (*PFN_opalCreateDefaultDevice)(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
 typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
 
@@ -121,7 +133,7 @@ OPAL_APIENTRY Opal_Result opalDestroyInstance(Opal_Instance instance);
 OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos);
 
 OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, int index, Opal_Device *device);
-OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DefaultDeviceHint hint, Opal_Device *device);
+OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
 OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
 OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);
 #endif

@@ -9,7 +9,7 @@ typedef struct Instance_t Instance;
 typedef struct Device_t Device;
 
 typedef Opal_Result (*PFN_instanceEnumerateDevices)(Instance *this, int *device_count, Opal_DeviceInfo *infos);
-typedef Opal_Result (*PFN_instanceCreateDefaultDevice)(Instance *this, Opal_DefaultDeviceHint hint, Opal_Device *device);
+typedef Opal_Result (*PFN_instanceCreateDefaultDevice)(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
 typedef Opal_Result (*PFN_instanceCreateDevice)(Instance *this, int index, Opal_Device *device);
 typedef Opal_Result (*PFN_instanceDestroy)(Instance *this);
 
@@ -35,3 +35,5 @@ extern Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_
 extern Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 extern Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 extern Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+
+extern uint32_t opalEvaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint);

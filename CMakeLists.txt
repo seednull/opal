@@ -5,7 +5,8 @@ project(opal VERSION 1.0.0)
 # Global options
 # ==================================================================================================
 option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
-option(OPAL_USE_VALIDATION_LAYERS "Enable Opal validation layers" FALSE)
+option(OPAL_BUILD_WITH_DIRECTX12 "Build with Opal DirectX 12 backend" TRUE)
+option(OPAL_BUILD_WITH_VALIDATION_LAYERS "Build with Opal validation layers" FALSE)
 
 # ==================================================================================================
 # Global Variables

@@ -63,7 +63,7 @@ Opal_Result directx12_instanceEnumerateDevices(Instance *this, int *device_count
 	return OPAL_SUCCESS;
 }
 
-Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DefaultDeviceHint hint, Opal_Device *device)
+Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -71,13 +71,56 @@ Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DefaultDe
 	DirectX12_Instance *instance_ptr = (DirectX12_Instance *)this;
 	IDXGIFactory1 *factory = instance_ptr->factory;
 
-	// TODO: use hints
 	IDXGIAdapter1 *d3d_adapter = NULL;
-	HRESULT hr = IDXGIFactory1_EnumAdapters1(factory, 0, &d3d_adapter);
+	ID3D12Device *d3d_device = NULL;
+
+	UINT best_index = 0;
+
+	if (hint != OPAL_DEVICE_HINT_DEFAULT)
+	{
+		UINT count = 0;
+
+		uint32_t best_score = 0;
+		uint32_t current_score = 0;
+
+		Opal_DeviceInfo info = {0};
+
+		while (IDXGIFactory1_EnumAdapters1(factory, count, &d3d_adapter) != DXGI_ERROR_NOT_FOUND)
+		{
+			HRESULT hr = D3D12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
+			if (!SUCCEEDED(hr))
+			{
+				IDXGIAdapter1_Release(d3d_adapter);
+				return OPAL_DIRECX12_ERROR;
+			}
+
+			Opal_Result result = directx12_fillDeviceInfoWithDevice(d3d_adapter, d3d_device, &info);
+			if (result != OPAL_SUCCESS)
+			{
+				IDXGIAdapter1_Release(d3d_adapter);
+				ID3D12Device_Release(d3d_device);
+				return result;
+			}
+
+			current_score = opalEvaluateDevice(&info, hint);
+
+			if (best_score < current_score)
+			{
+				best_score = current_score;
+				best_index = count;
+			}
+
+			IDXGIAdapter1_Release(d3d_adapter);
+			ID3D12Device_Release(d3d_device);
+
+			count++;
+		}
+	}
+
+	HRESULT hr = IDXGIFactory1_EnumAdapters1(factory, best_index, &d3d_adapter);
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECX12_ERROR;
 
-	ID3D12Device *d3d_device = NULL;
 	hr = D3D12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
 	if (!SUCCEEDED(hr))
 	{
@@ -85,6 +128,8 @@ Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DefaultDe
 		return OPAL_DIRECX12_ERROR;
 	}
 
+	assert(d3d_adapter);
+	assert(d3d_device);
 	DirectX12_Device *ptr = (DirectX12_Device *)malloc(sizeof(DirectX12_Device));
 
 	// vtable

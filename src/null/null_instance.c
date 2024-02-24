@@ -3,6 +3,7 @@
 static Opal_DeviceInfo defaultInfo =
 {
 	"Null Device",
+	OPAL_GPU_TYPE_UNKNOWN,
 	0,
 	0,
 	0,
@@ -60,7 +61,7 @@ Opal_Result null_instanceEnumerateDevices(Instance *this, int *device_count, Opa
 	return OPAL_SUCCESS;
 }
 
-Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DefaultDeviceHint hint, Opal_Device *device)
+Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 	assert(device);

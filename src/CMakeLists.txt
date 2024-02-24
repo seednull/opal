@@ -10,6 +10,13 @@ project(${TARGET} C)
 # ==================================================================================================
 # Variables
 # ==================================================================================================
+set(OPAL_HAS_DIRECTX12 FALSE)
+set(OPAL_PLATFORM_DEFINES "")
+
+if (WIN32)
+	set(OPAL_HAS_DIRECTX12 ${OPAL_BUILD_WITH_DIRECTX12})
+	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WIN32 NOMINMAX)
+endif()
 
 # ==================================================================================================
 # Dependencies
@@ -21,7 +28,6 @@ project(${TARGET} C)
 file(GLOB SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.c
-	${CMAKE_CURRENT_SOURCE_DIR}/directx12/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/webgpu/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.c
@@ -30,17 +36,25 @@ file(GLOB SOURCES
 file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.h
-	${CMAKE_CURRENT_SOURCE_DIR}/directx12/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/webgpu/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.h
 )
 
-if (WIN32)
-	set(OPAL_PLATFORM_DEFINES
-		OPAL_PLATFORM_WIN32
-		NOMINMAX
+if (OPAL_HAS_DIRECTX12)
+	file(GLOB DIRECTX12_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/directx12/*.c
 	)
+
+	file(GLOB DIRECTX12_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/directx12/*.h
+	)
+
+	list(APPEND SOURCES ${DIRECTX12_SOURCES})
+	list(APPEND HEADERS ${DIRECTX12_HEADERS})
+	list(APPEND OPAL_PLATFORM_DEFINES OPAL_BACKEND_DIRECTX12)
+else()
+	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/directx12_stub.c)
 endif()
 
 # ==================================================================================================
@@ -70,6 +84,10 @@ set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
 # ==================================================================================================
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_API})
 
+if (OPAL_HAS_DIRECTX12)
+	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/directx12)
+endif()
+
 # ==================================================================================================
 # Preprocessor
 # ==================================================================================================
@@ -78,6 +96,6 @@ target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM
 # ==================================================================================================
 # Libraries
 # ==================================================================================================
-if (WIN32)
-	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi dxguid)
+if (OPAL_HAS_DIRECTX12)
+	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi)
 endif()

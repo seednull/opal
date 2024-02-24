@@ -54,7 +54,7 @@ Opal_Result opalCreateDevice(Opal_Instance instance, int index, Opal_Device *dev
 	return ptr->createDevice(ptr, index, device);
 }
 
-Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DefaultDeviceHint hint, Opal_Device *device)
+Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device)
 {
 	// FIXME: change to handle + generation and do proper check
 	if (instance == OPAL_NULL_HANDLE)

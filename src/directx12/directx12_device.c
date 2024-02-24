@@ -8,7 +8,7 @@ Opal_Result directx12_deviceGetInfo(Device *this, Opal_DeviceInfo *info)
 	assert(info);
 
 	DirectX12_Device *ptr = (DirectX12_Device *)this;
-	return directx12_fillDeviceInfo(ptr->adapter, info);
+	return directx12_fillDeviceInfoWithDevice(ptr->adapter, ptr->device, info);
 }
 
 /*

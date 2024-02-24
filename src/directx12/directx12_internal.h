@@ -4,7 +4,7 @@
 
 #define COBJMACROS
 #include <dxgi.h>
-#include <d3d12.h>
+#include <directx/d3d12.h>
 
 typedef struct DirectX12_Instance_t
 {
@@ -20,10 +20,11 @@ typedef struct DirectX12_Device_t
 } DirectX12_Device;
 
 extern Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, Opal_DeviceInfo *info);
+extern Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info);
 
 extern Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 extern Opal_Result directx12_instanceEnumerateDevices(Instance *this, int *device_count, Opal_DeviceInfo *infos);
-extern Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DefaultDeviceHint hint, Opal_Device *device);
+extern Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
 extern Opal_Result directx12_instanceCreateDevice(Instance *this, int index, Opal_Device *device);
 extern Opal_Result directx12_instanceDestroy(Instance *this);
 
