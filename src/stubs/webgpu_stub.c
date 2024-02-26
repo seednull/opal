@@ -2,7 +2,7 @@
 
 /*
  */
-Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);

@@ -5,7 +5,8 @@ project(opal VERSION 1.0.0)
 # Global options
 # ==================================================================================================
 option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
-option(OPAL_BUILD_WITH_DIRECTX12 "Build with Opal DirectX 12 backend" TRUE)
+option(OPAL_BUILD_WITH_DIRECTX12 "Build with DirectX 12 backend" TRUE)
+option(OPAL_BUILD_WITH_WEBGPU "Build with WebGPU backend" TRUE)
 option(OPAL_BUILD_WITH_VALIDATION_LAYERS "Build with Opal validation layers" FALSE)
 
 # ==================================================================================================
@@ -20,11 +21,25 @@ if (WIN32)
 	set(OPAL_ABI x64)
 endif()
 
+if (EMSCRIPTEN)
+	set(OPAL_PLATFORM emscripten)
+	set(OPAL_ABI wasm)
+endif()
+
+if (EMSCRIPTEN)
+	set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif()
+
 # ==================================================================================================
 # General compile flags
 # ==================================================================================================
 if (WIN32)
 	set(CMAKE_C_FLAGS "/wd4996")
+endif()
+
+if (EMSCRIPTEN)
+	add_link_options("-sUSE_WEBGPU=1")
+	add_link_options("-sASYNCIFY")
 endif()
 
 # ==================================================================================================

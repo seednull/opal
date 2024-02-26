@@ -11,9 +11,9 @@ Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal
 		case OPAL_API_METAL: return metal_createInstance(desc, instance);
 		case OPAL_API_WEBGPU: return webgpu_createInstance(desc, instance);
 		case OPAL_API_NULL: return null_createInstance(desc, instance);
-	}
 
-	return OPAL_UNSUPPORTED_API;
+		default: return OPAL_NOT_SUPPORTED;
+	}
 }
 
 Opal_Result opalDestroyInstance(Opal_Instance instance)

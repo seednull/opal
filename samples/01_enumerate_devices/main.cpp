@@ -41,9 +41,10 @@ void testEnumerateDevices(Opal_Instance instance)
 {
 	int device_count = 0;
 	Opal_Result result = opalEnumerateDevices(instance, &device_count, nullptr);
-	assert(result == OPAL_SUCCESS);
+	if (result != OPAL_SUCCESS)
+		return;
 
-	Opal_DeviceInfo infos[256];
+	Opal_DeviceInfo infos[16];
 	result = opalEnumerateDevices(instance, &device_count, &infos[0]);
 	assert(result == OPAL_SUCCESS);
 
@@ -81,7 +82,7 @@ int main()
 		0
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_DIRECTX12, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_WEBGPU, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	testEnumerateDevices(instance);

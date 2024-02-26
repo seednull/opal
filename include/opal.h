@@ -45,12 +45,15 @@ OPAL_DEFINE_HANDLE(Opal_Device);
 typedef enum Opal_Result_t
 {
 	OPAL_SUCCESS = 0,
-	OPAL_UNSUPPORTED_API,
+	OPAL_NOT_SUPPORTED,
 	OPAL_INVALID_INSTANCE,
 	OPAL_INVALID_DEVICE,
 
 	// FIXME: add more error codes for dxgi / d3d12 stuff
 	OPAL_DIRECX12_ERROR,
+
+	// FIXME: add more error codes for dxgi / d3d12 stuff
+	OPAL_WEBGPU_ERROR,
 
 	OPAL_RESULT_MAX,
 } Opal_Result;

@@ -4,5 +4,5 @@
  */
 Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
-	return OPAL_UNSUPPORTED_API;
+	return OPAL_NOT_SUPPORTED;
 }

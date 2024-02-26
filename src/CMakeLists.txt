@@ -11,11 +11,17 @@ project(${TARGET} C)
 # Variables
 # ==================================================================================================
 set(OPAL_HAS_DIRECTX12 FALSE)
+set(OPAL_HAS_WEBGPU FALSE)
 set(OPAL_PLATFORM_DEFINES "")
 
 if (WIN32)
 	set(OPAL_HAS_DIRECTX12 ${OPAL_BUILD_WITH_DIRECTX12})
 	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WIN32 NOMINMAX)
+endif()
+
+if (EMSCRIPTEN)
+	set(OPAL_HAS_WEBGPU ${OPAL_BUILD_WITH_WEBGPU})
+	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WEBGPU)
 endif()
 
 # ==================================================================================================
@@ -29,7 +35,6 @@ file(GLOB SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.c
-	${CMAKE_CURRENT_SOURCE_DIR}/webgpu/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.c
 )
 
@@ -37,7 +42,6 @@ file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.h
-	${CMAKE_CURRENT_SOURCE_DIR}/webgpu/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.h
 )
 
@@ -57,10 +61,30 @@ else()
 	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/directx12_stub.c)
 endif()
 
+if (OPAL_HAS_WEBGPU)
+	file(GLOB WEBGPU_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/webgpu/*.c
+	)
+
+	file(GLOB WEBGPU_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/webgpu/*.h
+	)
+
+	list(APPEND SOURCES ${WEBGPU_SOURCES})
+	list(APPEND HEADERS ${WEBGPU_HEADERS})
+	list(APPEND OPAL_PLATFORM_DEFINES OPAL_BACKEND_WEBGPU)
+else()
+	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/webgpu_stub.c)
+endif()
+
 # ==================================================================================================
 # Target
 # ==================================================================================================
-add_library(${TARGET} SHARED ${SOURCES} ${HEADERS})
+if (OPAL_HAS_WEBGPU)
+	add_library(${TARGET} STATIC ${SOURCES} ${HEADERS})
+else()
+	add_library(${TARGET} SHARED ${SOURCES} ${HEADERS})
+endif()
 
 set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
 set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
@@ -97,5 +121,5 @@ target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM
 # Libraries
 # ==================================================================================================
 if (OPAL_HAS_DIRECTX12)
-	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi)
+	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi) #TODO: get rid of these dependencies, load dll proc adresses manually
 endif()
