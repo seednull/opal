@@ -11,9 +11,9 @@ static const char *gpu_type[] = {
 };
 
 static const char *hint_type[] = {
-	"Default Device",
-	"Default Hight Performance Device",
-	"Default Low Power Device",
+	"Device",
+	"High Performance Device",
+	"Low Power Device",
 };
 
 void printDeviceInfo(const Opal_DeviceInfo *info)
@@ -39,7 +39,7 @@ void printDeviceInfo(const Opal_DeviceInfo *info)
 
 void testEnumerateDevices(Opal_Instance instance)
 {
-	int device_count = 0;
+	uint32_t device_count = 0;
 	Opal_Result result = opalEnumerateDevices(instance, &device_count, nullptr);
 	if (result != OPAL_SUCCESS)
 		return;
@@ -48,11 +48,27 @@ void testEnumerateDevices(Opal_Instance instance)
 	result = opalEnumerateDevices(instance, &device_count, &infos[0]);
 	assert(result == OPAL_SUCCESS);
 
-	for (int i = 0; i < device_count; ++i)
+	for (uint32_t i = 0; i < device_count; ++i)
 	{
-		std::cout << " ------ [" << i << "] ------\n";
+		std::cout << " ------ [Enumerate " << i << "] ------\n";
 		printDeviceInfo(&infos[i]);
 	}
+}
+
+void testCreateDevice(Opal_Instance instance, uint32_t index)
+{
+	Opal_Device device {OPAL_NULL_HANDLE};
+	Opal_Result result = opalCreateDevice(instance, index, &device);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_DeviceInfo info = {};
+	result = opalGetDeviceInfo(device, &info);
+	assert(result == OPAL_SUCCESS);
+	std::cout << " ------ [CreateByIndex " << index << "] ------\n";
+	printDeviceInfo(&info);
+
+	result = opalDestroyDevice(device);
+	assert(result == OPAL_SUCCESS);
 }
 
 void testCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint)
@@ -64,7 +80,7 @@ void testCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint)
 	Opal_DeviceInfo info = {};
 	result = opalGetDeviceInfo(device, &info);
 	assert(result == OPAL_SUCCESS);
-	std::cout << " ------ [" << hint_type[hint] << "] ------\n";
+	std::cout << " ------ [CreateDefault " << hint_type[hint] << "] ------\n";
 	printDeviceInfo(&info);
 
 	result = opalDestroyDevice(device);
@@ -82,10 +98,11 @@ int main()
 		0
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_WEBGPU, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	testEnumerateDevices(instance);
+	testCreateDevice(instance, 0);
 	testCreateDefaultDevice(instance, OPAL_DEVICE_HINT_DEFAULT);
 	testCreateDefaultDevice(instance, OPAL_DEVICE_HINT_PREFER_HIGH_PERFORMANCE);
 	testCreateDefaultDevice(instance, OPAL_DEVICE_HINT_PREFER_LOW_POWER);
