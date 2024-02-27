@@ -1,6 +1,6 @@
 #include "null_internal.h"
 
-static Opal_DeviceInfo defaultInfo =
+static Opal_DeviceInfo default_info =
 {
 	"Null Device",
 	OPAL_GPU_TYPE_UNKNOWN,
@@ -46,7 +46,7 @@ Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *in
 
 /*
  */
-Opal_Result null_instanceEnumerateDevices(Instance *this, int *device_count, Opal_DeviceInfo *infos)
+Opal_Result null_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 	assert(device_count);
@@ -55,7 +55,7 @@ Opal_Result null_instanceEnumerateDevices(Instance *this, int *device_count, Opa
 
 	if (infos)
 	{
-		memcpy(&infos[0], &defaultInfo, sizeof(Opal_DeviceInfo));
+		memcpy(&infos[0], &default_info, sizeof(Opal_DeviceInfo));
 	}
 
 	return OPAL_SUCCESS;
@@ -73,17 +73,19 @@ Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hin
 	ptr->vtbl.destroy = null_deviceDestroy;
 
 	// data
-	memcpy(&ptr->info, &defaultInfo, sizeof(Opal_DeviceInfo));
+	memcpy(&ptr->info, &default_info, sizeof(Opal_DeviceInfo));
 
 	*device = (Opal_Device)ptr;
 	return OPAL_SUCCESS;
 }
 
-Opal_Result null_instanceCreateDevice(Instance *this, int index, Opal_Device *device)
+Opal_Result null_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
-	assert(index == 0);
+
+	if (index != 0)
+		return OPAL_INVALID_DEVICE_INDEX;
 
 	Null_Device *ptr = (Null_Device *)malloc(sizeof(Null_Device));
 
@@ -92,7 +94,7 @@ Opal_Result null_instanceCreateDevice(Instance *this, int index, Opal_Device *de
 	ptr->vtbl.destroy = null_deviceDestroy;
 
 	// data
-	memcpy(&ptr->info, &defaultInfo, sizeof(Opal_DeviceInfo));
+	memcpy(&ptr->info, &default_info, sizeof(Opal_DeviceInfo));
 
 	*device = (Opal_Device)ptr;
 

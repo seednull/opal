@@ -48,12 +48,16 @@ typedef enum Opal_Result_t
 	OPAL_NOT_SUPPORTED,
 	OPAL_INVALID_INSTANCE,
 	OPAL_INVALID_DEVICE,
+	OPAL_INVALID_DEVICE_INDEX,
 
 	// FIXME: add more error codes for dxgi / d3d12 stuff
 	OPAL_DIRECX12_ERROR,
 
-	// FIXME: add more error codes for dxgi / d3d12 stuff
+	// FIXME: add more error codes for webgpu stuff
 	OPAL_WEBGPU_ERROR,
+
+	// FIXME: add more error codes for vulkan stuff
+	OPAL_VULKAN_ERROR,
 
 	OPAL_RESULT_MAX,
 } Opal_Result;
@@ -121,9 +125,9 @@ typedef struct Opal_InstanceDesc_t
 typedef Opal_Result (*PFN_opalCreateInstance)(Opal_Api api, const Opal_InstanceDesc *desc, Opal_Instance *instance);
 typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
 
-typedef Opal_Result (*PFN_opalEnumerateDevices)(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos);
+typedef Opal_Result (*PFN_opalEnumerateDevices)(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
 
-typedef Opal_Result (*PFN_opalCreateDevice)(Opal_Instance instance, int index, Opal_Device *device);
+typedef Opal_Result (*PFN_opalCreateDevice)(Opal_Instance instance, uint32_t index, Opal_Device *device);
 typedef Opal_Result (*PFN_opalCreateDefaultDevice)(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
 typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
@@ -133,9 +137,9 @@ typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo
 OPAL_APIENTRY Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal_Instance *instance);
 OPAL_APIENTRY Opal_Result opalDestroyInstance(Opal_Instance instance);
 
-OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos);
+OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
 
-OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, int index, Opal_Device *device);
+OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device);
 OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
 OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
 OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);

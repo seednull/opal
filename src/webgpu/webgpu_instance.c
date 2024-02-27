@@ -63,7 +63,7 @@ Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 
 }
 
-Opal_Result webgpu_instanceEnumerateDevices(Instance *this, int *device_count, Opal_DeviceInfo *infos)
+Opal_Result webgpu_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	// Note: in theory, it's possible to implement this by quering adapers using diffent wgpu power preference values
 	//       but for browser use case we usually want a single GPU with requested
@@ -114,7 +114,7 @@ Opal_Result webgpu_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 	return OPAL_SUCCESS;
 }
 
-Opal_Result webgpu_instanceCreateDevice(Instance *this, int index, Opal_Device *device)
+Opal_Result webgpu_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
 {
 	// Note: in theory, it's possible to implement this by quering adapers using diffent wgpu power preference values
 	//       but for browser use case we usually want a single GPU with requested

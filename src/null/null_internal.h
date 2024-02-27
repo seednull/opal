@@ -19,9 +19,9 @@ typedef struct Null_Device_t
 } Null_Device;
 
 extern Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-extern Opal_Result null_instanceEnumerateDevices(Instance *this, int *device_count, Opal_DeviceInfo *infos);
+extern Opal_Result null_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos);
 extern Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
-extern Opal_Result null_instanceCreateDevice(Instance *this, int index, Opal_Device *device);
+extern Opal_Result null_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device);
 extern Opal_Result null_instanceDestroy(Instance *this);
 
 extern Opal_Result null_deviceGetInfo(Device *this, Opal_DeviceInfo *info);

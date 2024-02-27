@@ -2,6 +2,7 @@
 
 #include "opal_internal.h"
 
+#define WIN32_LEAN_AND_MEAN
 #define COBJMACROS
 #include <dxgi.h>
 #include <directx/d3d12.h>
@@ -22,9 +23,9 @@ typedef struct DirectX12_Device_t
 extern Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, Opal_DeviceInfo *info);
 extern Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info);
 
-extern Opal_Result directx12_instanceEnumerateDevices(Instance *this, int *device_count, Opal_DeviceInfo *infos);
+extern Opal_Result directx12_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos);
 extern Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
-extern Opal_Result directx12_instanceCreateDevice(Instance *this, int index, Opal_Device *device);
+extern Opal_Result directx12_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device);
 extern Opal_Result directx12_instanceDestroy(Instance *this);
 
 extern Opal_Result directx12_deviceGetInfo(Device *this, Opal_DeviceInfo *info);

@@ -32,7 +32,7 @@ Opal_Result opalDestroyInstance(Opal_Instance instance)
 
 /*
  */
-Opal_Result opalEnumerateDevices(Opal_Instance instance, int *device_count, Opal_DeviceInfo *infos)
+Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	// FIXME: change to handle + generation and do proper check
 	if (instance == OPAL_NULL_HANDLE)
@@ -44,7 +44,7 @@ Opal_Result opalEnumerateDevices(Opal_Instance instance, int *device_count, Opal
 
 /*
  */
-Opal_Result opalCreateDevice(Opal_Instance instance, int index, Opal_Device *device)
+Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device)
 {
 	// FIXME: change to handle + generation and do proper check
 	if (instance == OPAL_NULL_HANDLE)

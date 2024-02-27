@@ -32,7 +32,7 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 
 /*
  */
-Opal_Result directx12_instanceEnumerateDevices(Instance *this, int *device_count, Opal_DeviceInfo *infos)
+Opal_Result directx12_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 	assert(device_count);
@@ -144,7 +144,7 @@ Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHin
 	return OPAL_SUCCESS;
 }
 
-Opal_Result directx12_instanceCreateDevice(Instance *this, int index, Opal_Device *device)
+Opal_Result directx12_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -156,7 +156,7 @@ Opal_Result directx12_instanceCreateDevice(Instance *this, int index, Opal_Devic
 	IDXGIAdapter1 *d3d_adapter = NULL;
 	HRESULT hr = IDXGIFactory1_EnumAdapters1(factory, index, &d3d_adapter);
 	if (!SUCCEEDED(hr))
-		return OPAL_DIRECX12_ERROR;
+		return OPAL_INVALID_DEVICE_INDEX;
 
 	ID3D12Device *d3d_device = NULL;
 	hr = D3D12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);

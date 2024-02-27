@@ -7,6 +7,7 @@ project(opal VERSION 1.0.0)
 option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
 option(OPAL_BUILD_WITH_DIRECTX12 "Build with DirectX 12 backend" TRUE)
 option(OPAL_BUILD_WITH_WEBGPU "Build with WebGPU backend" TRUE)
+option(OPAL_BUILD_WITH_VULKAN "Build with Vulkan backend" TRUE)
 option(OPAL_BUILD_WITH_VALIDATION_LAYERS "Build with Opal validation layers" FALSE)
 
 # ==================================================================================================

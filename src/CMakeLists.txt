@@ -12,16 +12,20 @@ project(${TARGET} C)
 # ==================================================================================================
 set(OPAL_HAS_DIRECTX12 FALSE)
 set(OPAL_HAS_WEBGPU FALSE)
+set(OPAL_HAS_VULKAN FALSE)
 set(OPAL_PLATFORM_DEFINES "")
+set(OPAL_TARGET_TYPE SHARED)
 
 if (WIN32)
 	set(OPAL_HAS_DIRECTX12 ${OPAL_BUILD_WITH_DIRECTX12})
+	set(OPAL_HAS_VULKAN ${OPAL_BUILD_WITH_VULKAN})
 	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WIN32 NOMINMAX)
 endif()
 
 if (EMSCRIPTEN)
 	set(OPAL_HAS_WEBGPU ${OPAL_BUILD_WITH_WEBGPU})
 	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WEBGPU)
+	set(OPAL_TARGET_TYPE STATIC)
 endif()
 
 # ==================================================================================================
@@ -33,14 +37,12 @@ endif()
 # ==================================================================================================
 file(GLOB SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.c
-	${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.c
 )
 
 file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
-	${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.h
 )
@@ -77,14 +79,27 @@ else()
 	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/webgpu_stub.c)
 endif()
 
+if (OPAL_HAS_VULKAN)
+	file(GLOB VULKAN_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.c
+		${OPAL_DIR_THIRDPARTY}/volk/include/volk.c
+	)
+
+	file(GLOB VULKAN_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.h
+	)
+
+	list(APPEND SOURCES ${VULKAN_SOURCES})
+	list(APPEND HEADERS ${VULKAN_HEADERS})
+	list(APPEND OPAL_PLATFORM_DEFINES OPAL_BACKEND_VULKAN)
+else()
+	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/vulkan_stub.c)
+endif()
+
 # ==================================================================================================
 # Target
 # ==================================================================================================
-if (OPAL_HAS_WEBGPU)
-	add_library(${TARGET} STATIC ${SOURCES} ${HEADERS})
-else()
-	add_library(${TARGET} SHARED ${SOURCES} ${HEADERS})
-endif()
+add_library(${TARGET} ${OPAL_TARGET_TYPE} ${SOURCES} ${HEADERS})
 
 set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
 set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
@@ -109,7 +124,12 @@ set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_API})
 
 if (OPAL_HAS_DIRECTX12)
-	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/directx12)
+	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/directx12/include)
+endif()
+
+if (OPAL_HAS_VULKAN)
+	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/volk/include)
+	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/vulkan/include)
 endif()
 
 # ==================================================================================================
