@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 set(TARGET opal)
 
-project(${TARGET} C)
+project(${TARGET} LANGUAGES C OBJC)
 
 # ==================================================================================================
 # Options
@@ -13,6 +13,7 @@ project(${TARGET} C)
 set(OPAL_HAS_DIRECTX12 FALSE)
 set(OPAL_HAS_WEBGPU FALSE)
 set(OPAL_HAS_VULKAN FALSE)
+set(OPAL_HAS_METAL FALSE)
 set(OPAL_PLATFORM_DEFINES "")
 set(OPAL_TARGET_TYPE SHARED)
 
@@ -20,6 +21,11 @@ if (WIN32)
 	set(OPAL_HAS_DIRECTX12 ${OPAL_BUILD_WITH_DIRECTX12})
 	set(OPAL_HAS_VULKAN ${OPAL_BUILD_WITH_VULKAN})
 	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WIN32 NOMINMAX)
+endif()
+
+if (APPLE)
+	set(OPAL_HAS_METAL ${OPAL_BUILD_WITH_METAL})
+	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_MACOS)
 endif()
 
 if (EMSCRIPTEN)
@@ -37,13 +43,11 @@ endif()
 # ==================================================================================================
 file(GLOB SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.c
-	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.c
 )
 
 file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
-	${CMAKE_CURRENT_SOURCE_DIR}/metal/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.h
 )
 
@@ -96,6 +100,22 @@ else()
 	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/vulkan_stub.c)
 endif()
 
+if (OPAL_HAS_METAL)
+	file(GLOB METAL_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/metal/*.m
+	)
+
+	file (GLOB METAL_HEADERS
+		${CMAKE_CURRENT_SOURCE_DIR}/metal/*.h
+	)
+
+	list(APPEND SOURCES ${METAL_SOURCES})
+	list(APPEND HEADERS ${METAL_HEADERS})
+	list(APPEND OPAL_PLATFORM_DEFINES OPAL_BACKEND_METAL)
+else()
+	list(APPEND SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/stubs/metal_stub.c)
+endif()
+
 # ==================================================================================================
 # Target
 # ==================================================================================================
@@ -142,4 +162,8 @@ target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM
 # ==================================================================================================
 if (OPAL_HAS_DIRECTX12)
 	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi) #TODO: get rid of these dependencies, load dll proc adresses manually
+endif()
+
+if (OPAL_HAS_METAL)
+	target_link_libraries(${TARGET} PRIVATE "-framework Metal -framework Quartz -framework IOKit -framework Foundation")
 endif()

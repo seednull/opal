@@ -98,7 +98,7 @@ int main()
 		0
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_METAL, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	testEnumerateDevices(instance);

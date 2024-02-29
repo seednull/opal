@@ -5,7 +5,6 @@
 typedef struct Null_Instance_t
 {
 	Instance vtbl;
-
 	char *application_name;
 	uint32_t application_version;
 	char *engine_name;

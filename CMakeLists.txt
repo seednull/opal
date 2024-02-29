@@ -8,6 +8,7 @@ option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
 option(OPAL_BUILD_WITH_DIRECTX12 "Build with DirectX 12 backend" TRUE)
 option(OPAL_BUILD_WITH_WEBGPU "Build with WebGPU backend" TRUE)
 option(OPAL_BUILD_WITH_VULKAN "Build with Vulkan backend" TRUE)
+option(OPAL_BUILD_WITH_METAL "Build with Metal backend" TRUE)
 option(OPAL_BUILD_WITH_VALIDATION_LAYERS "Build with Opal validation layers" FALSE)
 
 # ==================================================================================================
@@ -17,9 +18,17 @@ set(OPAL_DIR_THIRDPARTY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
 set(OPAL_DIR_EXPORT ${CMAKE_CURRENT_SOURCE_DIR}/build)
 set(OPAL_DIR_API ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if (WIN32)
 	set(OPAL_PLATFORM windows)
 	set(OPAL_ABI x64)
+endif()
+
+if (APPLE)
+	set(OPAL_PLATFORM macos)
+	set(OPAL_ABI x64) # FIXME: Is it always x64?
 endif()
 
 if (EMSCRIPTEN)
@@ -30,6 +39,9 @@ endif()
 if (EMSCRIPTEN)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
+
+message("Platform: ${OPAL_PLATFORM}")
+message("ABI: ${OPAL_ABI}")
 
 # ==================================================================================================
 # General compile flags

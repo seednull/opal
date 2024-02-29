@@ -59,6 +59,9 @@ typedef enum Opal_Result_t
 	// FIXME: add more error codes for vulkan stuff
 	OPAL_VULKAN_ERROR,
 
+	// FIXME: add more error codes for metal stuff
+	OPAL_METAL_ERROR,
+
 	OPAL_RESULT_MAX,
 } Opal_Result;
 

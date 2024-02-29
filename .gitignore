@@ -3,3 +3,6 @@
 
 # VS Code specific
 .vscode
+
+# Mac OS specific
+.DS_Store
