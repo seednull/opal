@@ -1,4 +1,4 @@
-#include "metal_internal.h"
+#include "opal_internal.h"
 
 /*
  */
