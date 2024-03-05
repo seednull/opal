@@ -2,6 +2,33 @@
 
 /*
  */
+static DirectX12_Device *opal_createDevice(IDXGIAdapter1 *adapter, ID3D12Device *device)
+{
+	assert(adapter);
+	assert(device);
+
+	DirectX12_Device *ptr = (DirectX12_Device *)malloc(sizeof(DirectX12_Device));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl.getInfo = directx12_deviceGetInfo;
+	ptr->vtbl.destroy = directx12_deviceDestroy;
+	ptr->vtbl.createBuffer = directx12_deviceCreateBuffer;
+	ptr->vtbl.createTexture = directx12_deviceCreateTexture;
+	ptr->vtbl.createTextureView = directx12_deviceCreateTextureView;
+	ptr->vtbl.destroyBuffer = directx12_deviceDestroyBuffer;
+	ptr->vtbl.destroyTexture = directx12_deviceDestroyTexture;
+	ptr->vtbl.destroyTextureView = directx12_deviceDestroyTextureView;
+
+	// data
+	ptr->adapter = adapter;
+	ptr->device = device;
+
+	return ptr;
+}
+
+/*
+ */
 Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
@@ -128,19 +155,7 @@ Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHin
 		return OPAL_DIRECX12_ERROR;
 	}
 
-	assert(d3d_adapter);
-	assert(d3d_device);
-	DirectX12_Device *ptr = (DirectX12_Device *)malloc(sizeof(DirectX12_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = directx12_deviceGetInfo;
-	ptr->vtbl.destroy = directx12_deviceDestroy;
-
-	// data
-	ptr->adapter = d3d_adapter;
-	ptr->device = d3d_device;
-
-	*device = (Opal_Device)ptr;
+	*device = (Opal_Device)opal_createDevice(d3d_adapter, d3d_device);
 	return OPAL_SUCCESS;
 }
 
@@ -166,18 +181,7 @@ Opal_Result directx12_instanceCreateDevice(Instance *this, uint32_t index, Opal_
 		return OPAL_DIRECX12_ERROR;
 	}
 
-	DirectX12_Device *ptr = (DirectX12_Device *)malloc(sizeof(DirectX12_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = directx12_deviceGetInfo;
-	ptr->vtbl.destroy = directx12_deviceDestroy;
-
-	// data
-	ptr->adapter = d3d_adapter;
-	ptr->device = d3d_device;
-
-	*device = (Opal_Device)ptr;
-
+	*device = (Opal_Device)opal_createDevice(d3d_adapter, d3d_device);
 	return OPAL_SUCCESS;
 }
 

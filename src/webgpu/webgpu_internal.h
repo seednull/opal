@@ -27,3 +27,11 @@ extern Opal_Result webgpu_instanceDestroy(Instance *this);
 
 extern Opal_Result webgpu_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
 extern Opal_Result webgpu_deviceDestroy(Device *this);
+
+extern Opal_Result webgpu_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
+extern Opal_Result webgpu_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
+extern Opal_Result webgpu_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
+
+extern Opal_Result webgpu_deviceDestroyBuffer(Device *this, Opal_Buffer buffer);
+extern Opal_Result webgpu_deviceDestroyTexture(Device *this, Opal_Texture texture);
+extern Opal_Result webgpu_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view);

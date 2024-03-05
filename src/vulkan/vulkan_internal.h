@@ -27,3 +27,11 @@ extern Opal_Result vulkan_instanceDestroy(Instance *this);
 
 extern Opal_Result vulkan_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
 extern Opal_Result vulkan_deviceDestroy(Device *this);
+
+extern Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
+extern Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
+extern Opal_Result vulkan_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
+
+extern Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer);
+extern Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture);
+extern Opal_Result vulkan_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view);

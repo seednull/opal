@@ -23,3 +23,37 @@ Opal_Result webgpu_deviceDestroy(Device *this)
 
 	return OPAL_SUCCESS;
 }
+
+/*
+ */
+Opal_Result webgpu_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result webgpu_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result webgpu_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
+Opal_Result webgpu_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result webgpu_deviceDestroyTexture(Device *this, Opal_Texture texture)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result webgpu_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view)
+{
+	return OPAL_NOT_SUPPORTED;
+}

@@ -89,3 +89,67 @@ Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info)
 	Device *ptr = (Device *)(device);
 	return ptr->getInfo(ptr, info);
 }
+
+/*
+ */
+Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Device *ptr = (Device *)(device);
+	return ptr->createBuffer(ptr, desc, buffer);
+}
+
+Opal_Result opalCreateTexture(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Device *ptr = (Device *)(device);
+	return ptr->createTexture(ptr, desc, texture);
+}
+
+Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Device *ptr = (Device *)(device);
+	return ptr->createTextureView(ptr, desc, texture_view);
+}
+
+/*
+ */
+Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Device *ptr = (Device *)(device);
+	return ptr->destroyBuffer(ptr, buffer);
+}
+
+Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Device *ptr = (Device *)(device);
+	return ptr->destroyTexture(ptr, texture);
+}
+
+Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_view)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Device *ptr = (Device *)(device);
+	return ptr->destroyTextureView(ptr, texture_view);
+}

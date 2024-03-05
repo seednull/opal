@@ -1,5 +1,7 @@
 #include "null_internal.h"
 
+/*
+ */
 static Opal_DeviceInfo default_info =
 {
 	"Null Device",
@@ -17,6 +19,31 @@ static Opal_DeviceInfo default_info =
 	0,
 	256,
 };
+
+/*
+ */
+static Null_Device *opal_createDevice(const Opal_DeviceInfo *info)
+{
+	assert(info);
+
+	Null_Device *ptr = (Null_Device *)malloc(sizeof(Null_Device));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl.getInfo = null_deviceGetInfo;
+	ptr->vtbl.destroy = null_deviceDestroy;
+	ptr->vtbl.createBuffer = null_deviceCreateBuffer;
+	ptr->vtbl.createTexture = null_deviceCreateTexture;
+	ptr->vtbl.createTextureView = null_deviceCreateTextureView;
+	ptr->vtbl.destroyBuffer = null_deviceDestroyBuffer;
+	ptr->vtbl.destroyTexture = null_deviceDestroyTexture;
+	ptr->vtbl.destroyTextureView = null_deviceDestroyTextureView;
+
+	// data
+	memcpy(&ptr->info, info, sizeof(Opal_DeviceInfo));
+
+	return ptr;
+}
 
 /*
  */
@@ -66,16 +93,7 @@ Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hin
 	assert(this);
 	assert(device);
 
-	Null_Device *ptr = (Null_Device *)malloc(sizeof(Null_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = null_deviceGetInfo;
-	ptr->vtbl.destroy = null_deviceDestroy;
-
-	// data
-	memcpy(&ptr->info, &default_info, sizeof(Opal_DeviceInfo));
-
-	*device = (Opal_Device)ptr;
+	*device = (Opal_Device)opal_createDevice(&default_info);
 	return OPAL_SUCCESS;
 }
 
@@ -87,17 +105,7 @@ Opal_Result null_instanceCreateDevice(Instance *this, uint32_t index, Opal_Devic
 	if (index != 0)
 		return OPAL_INVALID_DEVICE_INDEX;
 
-	Null_Device *ptr = (Null_Device *)malloc(sizeof(Null_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = null_deviceGetInfo;
-	ptr->vtbl.destroy = null_deviceDestroy;
-
-	// data
-	memcpy(&ptr->info, &default_info, sizeof(Opal_DeviceInfo));
-
-	*device = (Opal_Device)ptr;
-
+	*device = (Opal_Device)opal_createDevice(&default_info);
 	return OPAL_SUCCESS;
 }
 

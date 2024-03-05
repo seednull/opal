@@ -29,3 +29,11 @@ extern Opal_Result metal_instanceDestroy(Instance *this);
 
 extern Opal_Result metal_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
 extern Opal_Result metal_deviceDestroy(Device *this);
+
+extern Opal_Result metal_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
+extern Opal_Result metal_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
+extern Opal_Result metal_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
+
+extern Opal_Result metal_deviceDestroyBuffer(Device *this, Opal_Buffer buffer);
+extern Opal_Result metal_deviceDestroyTexture(Device *this, Opal_Texture texture);
+extern Opal_Result metal_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view);

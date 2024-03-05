@@ -37,6 +37,33 @@ EM_ASYNC_JS(WGPUDevice, webgpu_requestDeviceSync, (WGPUAdapter adapterId),
 
 /*
  */
+static WebGpu_Device *opal_createDevice(WGPUAdapter adapter, WGPUDevice device)
+{
+	assert(adapter);
+	assert(device);
+
+	WebGpu_Device *ptr = (WebGpu_Device *)malloc(sizeof(WebGpu_Device));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl.getInfo = webgpu_deviceGetInfo;
+	ptr->vtbl.destroy = webgpu_deviceDestroy;
+	ptr->vtbl.createBuffer = webgpu_deviceCreateBuffer;
+	ptr->vtbl.createTexture = webgpu_deviceCreateTexture;
+	ptr->vtbl.createTextureView = webgpu_deviceCreateTextureView;
+	ptr->vtbl.destroyBuffer = webgpu_deviceDestroyBuffer;
+	ptr->vtbl.destroyTexture = webgpu_deviceDestroyTexture;
+	ptr->vtbl.destroyTextureView = webgpu_deviceDestroyTextureView;
+
+	// data
+	ptr->adapter = adapter;
+	ptr->device = device;
+
+	return ptr;
+}
+
+/*
+ */
 Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
@@ -97,20 +124,7 @@ Opal_Result webgpu_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 		return OPAL_WEBGPU_ERROR;
 	}
 
-	assert(webgpu_adapter);
-	assert(webgpu_device);
-
-	WebGpu_Device *ptr = (WebGpu_Device *)malloc(sizeof(WebGpu_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = webgpu_deviceGetInfo;
-	ptr->vtbl.destroy = webgpu_deviceDestroy;
-
-	// data
-	ptr->adapter = webgpu_adapter;
-	ptr->device = webgpu_device;
-
-	*device = (Opal_Device)ptr;
+	*device = (Opal_Device)opal_createDevice(webgpu_adapter, webgpu_device);
 	return OPAL_SUCCESS;
 }
 

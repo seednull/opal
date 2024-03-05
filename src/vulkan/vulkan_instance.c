@@ -26,6 +26,31 @@ static void vulkan_volkLoadInstance(VkInstance instance)
 	}
 }
 
+static Vulkan_Device *opal_createDevice(VkPhysicalDevice physical_device, VkDevice device)
+{
+	assert(physical_device != VK_NULL_HANDLE);
+	assert(device != VK_NULL_HANDLE);
+
+	Vulkan_Device *ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl.getInfo = vulkan_deviceGetInfo;
+	ptr->vtbl.destroy = vulkan_deviceDestroy;
+	ptr->vtbl.createBuffer = vulkan_deviceCreateBuffer;
+	ptr->vtbl.createTexture = vulkan_deviceCreateTexture;
+	ptr->vtbl.createTextureView = vulkan_deviceCreateTextureView;
+	ptr->vtbl.destroyBuffer = vulkan_deviceDestroyBuffer;
+	ptr->vtbl.destroyTexture = vulkan_deviceDestroyTexture;
+	ptr->vtbl.destroyTextureView = vulkan_deviceDestroyTextureView;
+
+	// data
+	ptr->physical_device = physical_device;
+	ptr->device = device;
+
+	return ptr;
+}
+
 /*
  */
 Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
@@ -168,19 +193,7 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
 
-	assert(vulkan_physical_device != VK_NULL_HANDLE);
-	assert(vulkan_device != VK_NULL_HANDLE);
-	Vulkan_Device *ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = vulkan_deviceGetInfo;
-	ptr->vtbl.destroy = vulkan_deviceDestroy;
-
-	// data
-	ptr->physical_device = vulkan_physical_device;
-	ptr->device = vulkan_device;
-
-	*device = (Opal_Device)ptr;
+	*device = (Opal_Device)opal_createDevice(vulkan_physical_device, vulkan_device);
 	return OPAL_SUCCESS;
 }
 
@@ -227,19 +240,7 @@ Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
 
-	assert(vulkan_physical_device != VK_NULL_HANDLE);
-	assert(vulkan_device != VK_NULL_HANDLE);
-	Vulkan_Device *ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
-
-	// vtable
-	ptr->vtbl.getInfo = vulkan_deviceGetInfo;
-	ptr->vtbl.destroy = vulkan_deviceDestroy;
-
-	// data
-	ptr->physical_device = vulkan_physical_device;
-	ptr->device = vulkan_device;
-
-	*device = (Opal_Device)ptr;
+	*device = (Opal_Device)opal_createDevice(vulkan_physical_device, vulkan_device);
 	return OPAL_SUCCESS;
 }
 
