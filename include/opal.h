@@ -52,6 +52,7 @@ typedef enum Opal_Result_t
 	OPAL_INVALID_INSTANCE,
 	OPAL_INVALID_DEVICE,
 	OPAL_INVALID_DEVICE_INDEX,
+	OPAL_NO_MEMORY,
 
 	// FIXME: add more error codes for dxgi / d3d12 stuff
 	OPAL_DIRECX12_ERROR,
