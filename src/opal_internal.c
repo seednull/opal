@@ -47,3 +47,51 @@ uint32_t opalEvaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint)
 
 	return score;
 }
+
+#if !defined(OPAL_BACKEND_DIRECTX12)
+
+Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+#endif
+
+#if !defined(OPAL_BACKEND_WEBGPU)
+
+Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+#endif
+
+#if !defined(OPAL_BACKEND_VULKAN)
+
+Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+#endif
+
+#if !defined(OPAL_BACKEND_METAL)
+
+Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+#endif
