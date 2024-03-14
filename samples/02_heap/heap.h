@@ -2,18 +2,19 @@
 
 #include <opal.h>
 
-#define OPAL_MANTISSA_BITS		3
-#define OPAL_MANTISSA_MAX 		0x00000008
-#define OPAL_MANTISSA_MASK		0x00000007
+#define OPAL_MANTISSA_BITS			3
+#define OPAL_MANTISSA_MAX 			0x00000008
+#define OPAL_MANTISSA_MASK			0x00000007
 
-#define OPAL_EXPONENT_BITS		5
-#define OPAL_EXPONENT_MAX		0x00000020
+#define OPAL_EXPONENT_BITS			5
+#define OPAL_EXPONENT_MAX			0x00000020
 
-#define OPAL_NUM_SPARSE_BINS	OPAL_EXPONENT_MAX
-#define OPAL_NUM_LINEAR_BINS	OPAL_MANTISSA_MAX
-#define OPAL_NUM_BINS			OPAL_NUM_SPARSE_BINS * OPAL_NUM_LINEAR_BINS
+#define OPAL_NUM_SPARSE_BINS		OPAL_EXPONENT_MAX
+#define OPAL_NUM_LINEAR_BINS		OPAL_MANTISSA_MAX
+#define OPAL_NUM_BINS				OPAL_NUM_SPARSE_BINS * OPAL_NUM_LINEAR_BINS
 
-#define OPAL_NODE_INDEX_NULL	0xFFFFFFFF
+#define OPAL_NODE_INDEX_NULL		0xFFFFFFFF
+#define OPAL_LINEAR_BIN_INDEX_NULL	0xFF
 
 typedef uint8_t Opal_BinIndex;
 typedef uint32_t Opal_NodeIndex;
@@ -30,7 +31,8 @@ typedef struct Opal_HeapNode_t
 	uint32_t size;
 	Opal_NodeIndex next_bin;
 	Opal_NodeIndex prev_bin;
-	// TODO: neighbours
+	Opal_NodeIndex next_neighbour;
+	Opal_NodeIndex prev_neighbour;
 	uint8_t used;
 } Opal_HeapNode;
 

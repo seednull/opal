@@ -3,22 +3,32 @@
 #include <stdlib.h>
 #include <assert.h>
 
-// FIXME: implement for other compilers / OS
-
 /*
  */
 static uint32_t lzcnt(uint32_t value)
 {
+	assert(value != 0);
+
+#ifdef _MSC_VER
 	uint32_t result = 0;
 	_BitScanReverse(&result, value);
 	return 31 - result;
+#else
+	return __builtin_clz(value);
+#endif
 }
 
 static uint32_t tzcnt(uint32_t value)
 {
+	assert(value != 0);
+
+#ifdef _MSC_VER
 	uint32_t result = 0;
 	_BitScanForward(&result, value);
 	return result;
+#else
+	return __builtin_ctz(value);
+#endif
 }
 
 Opal_BinIndex opal_toBinIndexRoundUp(uint32_t value)
@@ -74,6 +84,8 @@ static void opal_heapInsertNode(Opal_Heap *heap, Opal_NodeIndex index, uint32_t 
 	node->size = size;
 	node->next_bin = OPAL_NODE_INDEX_NULL;
 	node->prev_bin = OPAL_NODE_INDEX_NULL;
+	node->next_neighbour = OPAL_NODE_INDEX_NULL;
+	node->prev_neighbour = OPAL_NODE_INDEX_NULL;
 	node->used = 0;
 
 	Opal_NodeIndex bin_head_index = heap->bins[bin_index];
@@ -99,19 +111,6 @@ static void opal_heapRemoveNode(Opal_Heap *heap, Opal_NodeIndex index)
 	Opal_BinIndex bin_index = opal_toBinIndexRoundUp(node->size);
 	Opal_NodeIndex bin_head_index = heap->bins[bin_index];
 
-	uint8_t sparse_bin_index = bin_index >> OPAL_MANTISSA_BITS;
-	uint8_t linear_bin_index = bin_index & OPAL_MANTISSA_MASK;
-
-	uint8_t linear_bin_mask = heap->used_linear_bins[sparse_bin_index];
-	uint32_t sparse_bin_mask = heap->used_sparse_bins;
-
-	linear_bin_mask &= ~(1 << linear_bin_index);
-	if (linear_bin_mask == 0)
-		sparse_bin_mask &= ~(1 << sparse_bin_index);
-
-	heap->used_linear_bins[sparse_bin_index] = linear_bin_mask;
-	heap->used_sparse_bins = sparse_bin_mask;
-
 	if (index == bin_head_index)
 		heap->bins[bin_index] = node->next_bin;
 
@@ -125,6 +124,22 @@ static void opal_heapRemoveNode(Opal_Heap *heap, Opal_NodeIndex index)
 	{
 		Opal_HeapNode *next_node = &heap->nodes[node->next_bin];
 		next_node->prev_bin = node->prev_bin;
+	}
+
+	uint8_t sparse_bin_index = bin_index >> OPAL_MANTISSA_BITS;
+	uint8_t linear_bin_index = bin_index & OPAL_MANTISSA_MASK;
+
+	uint8_t linear_bin_mask = heap->used_linear_bins[sparse_bin_index];
+	uint32_t sparse_bin_mask = heap->used_sparse_bins;
+
+	if (heap->bins[bin_index] == OPAL_NODE_INDEX_NULL)
+	{
+		linear_bin_mask &= ~(1 << linear_bin_index);
+		if (linear_bin_mask == 0)
+			sparse_bin_mask &= ~(1 << sparse_bin_index);
+
+		heap->used_linear_bins[sparse_bin_index] = linear_bin_mask;
+		heap->used_sparse_bins = sparse_bin_mask;
 	}
 }
 
@@ -146,6 +161,21 @@ static void opal_heapReleaseNodeIndex(Opal_Heap *heap, Opal_NodeIndex index)
 
 	heap->num_free_nodes++;
 	heap->free_indices[heap->num_free_nodes - 1] = index;
+}
+
+static Opal_Result opal_findBinFromIndex(uint32_t bins, uint8_t index, uint8_t *value)
+{
+	assert(value);
+
+	uint32_t mask = (1 << index) - 1;
+	mask = ~mask;
+
+	uint32_t masked_bins = bins & mask;
+	if (masked_bins == 0)
+		return OPAL_NO_MEMORY;
+
+	*value = tzcnt(masked_bins);
+	return OPAL_SUCCESS;
 }
 
 /*
@@ -192,28 +222,33 @@ Opal_Result opal_heapAlloc(Opal_Heap *heap, uint32_t size, Opal_HeapAllocation *
 	Opal_BinIndex index = opal_toBinIndexRoundUp(size);
 
 	uint8_t sparse_bin_index = index >> OPAL_MANTISSA_BITS;
-	uint8_t linear_bin_index = index & OPAL_MANTISSA_MASK;
-	uint8_t linear_bin_mask = (1 << linear_bin_index) - 1;
+	uint8_t linear_bin_index = OPAL_LINEAR_BIN_INDEX_NULL;
 
-	uint8_t used_linear_bin_mask = heap->used_linear_bins[sparse_bin_index];
-	if ((used_linear_bin_mask & linear_bin_mask) == 0)
+	uint8_t used_linear_bins = heap->used_linear_bins[sparse_bin_index];
+
+	if (used_linear_bins != 0)
 	{
-		uint32_t sparse_bin_mask = (1 << sparse_bin_index) - 1;
-		sparse_bin_mask |= (1 << sparse_bin_index);
-		sparse_bin_mask = ~sparse_bin_mask;
-
-		sparse_bin_index = tzcnt(heap->used_sparse_bins & sparse_bin_mask);
-		if (sparse_bin_index == 0)
-			return OPAL_NO_MEMORY;
-
-		used_linear_bin_mask = heap->used_linear_bins[sparse_bin_index];
-		assert(used_linear_bin_mask != 0);
-
-		linear_bin_index = (uint8_t)tzcnt(used_linear_bin_mask);
-
-		index = (sparse_bin_index << OPAL_MANTISSA_BITS);
-		index |= (linear_bin_index & OPAL_MANTISSA_MASK);
+		uint32_t min_linear_bin = index & OPAL_MANTISSA_BITS;
+		opal_findBinFromIndex(used_linear_bins, min_linear_bin, &linear_bin_index);
 	}
+
+	if (linear_bin_index == OPAL_LINEAR_BIN_INDEX_NULL)
+	{
+		Opal_Result result = opal_findBinFromIndex(heap->used_sparse_bins, sparse_bin_index + 1, &sparse_bin_index);
+		if (result != OPAL_SUCCESS)
+			return result;
+
+		assert(sparse_bin_index != 0);
+
+		used_linear_bins = heap->used_linear_bins[sparse_bin_index];
+		assert(used_linear_bins != 0);
+
+		linear_bin_index = (uint8_t)tzcnt(used_linear_bins);
+	}
+
+	assert(linear_bin_index != OPAL_LINEAR_BIN_INDEX_NULL);
+
+	index = (sparse_bin_index << OPAL_MANTISSA_BITS) | (linear_bin_index & OPAL_MANTISSA_MASK);
 
 	Opal_NodeIndex node_index = heap->bins[index];
 	assert(node_index != OPAL_NODE_INDEX_NULL);
@@ -228,10 +263,13 @@ Opal_Result opal_heapAlloc(Opal_Heap *heap, uint32_t size, Opal_HeapAllocation *
 
 	if (remainder > 0)
 	{
-		// TODO: neighbours
-
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
 		opal_heapInsertNode(heap, new_index, remainder, node->offset + size);
+
+		Opal_HeapNode *new_node = &heap->nodes[new_index];
+
+		node->next_neighbour = new_index;
+		new_node->prev_neighbour = node_index;
 	}
 
 	allocation->offset = node->offset;
@@ -248,13 +286,56 @@ Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 	assert(node);
 	assert(node->used);
 
-	node->used = 0;
-	opal_heapReleaseNodeIndex(heap, allocation.metadata);
+	Opal_NodeIndex prev_index = node->prev_neighbour;
+	Opal_NodeIndex next_index = node->next_neighbour;
 
-	// TODO: merge neighbours
+	Opal_HeapNode *next_node = (next_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[next_index] : NULL;
+	Opal_HeapNode *prev_node = (prev_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[prev_index] : NULL;
+
+	Opal_NodeIndex new_prev_index = prev_index;
+	Opal_NodeIndex new_next_index = next_index;
+
+	if (prev_node != NULL && prev_node->used == 0)
+	{
+		node->offset = prev_node->offset;
+		node->size += prev_node->size;
+
+		new_prev_index = prev_node->prev_neighbour;
+
+		opal_heapRemoveNode(heap, prev_index);
+		opal_heapReleaseNodeIndex(heap, prev_index);
+	}
+
+	if (next_node != NULL && next_node->used == 0)
+	{
+		node->size += next_node->size;
+
+		new_next_index = next_node->next_neighbour;
+
+		opal_heapRemoveNode(heap, next_index);
+		opal_heapReleaseNodeIndex(heap, next_index);
+	}
+
+	opal_heapReleaseNodeIndex(heap, allocation.metadata);
 
 	Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
 	opal_heapInsertNode(heap, new_index, node->size, node->offset);
+
+	node = &heap->nodes[new_index];
+	node->prev_neighbour = new_prev_index;
+	node->next_neighbour = new_next_index;
+
+	if (new_prev_index != OPAL_NODE_INDEX_NULL)
+	{
+		Opal_HeapNode *prev_prev_node = &heap->nodes[new_prev_index];
+		prev_prev_node->next_neighbour = new_index;
+	}
+
+	if (new_next_index != OPAL_NODE_INDEX_NULL)
+	{
+		Opal_HeapNode *next_next_node = &heap->nodes[new_next_index];
+		next_next_node->prev_neighbour = new_index;
+	}
 
 	return OPAL_SUCCESS;
 }
