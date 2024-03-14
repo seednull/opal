@@ -50,4 +50,4 @@ extern Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Inst
 extern Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 extern Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 
-extern uint32_t opalEvaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint);
+extern uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint);

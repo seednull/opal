@@ -172,7 +172,7 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 		if (opal_result != OPAL_SUCCESS)
 			break;
 
-		uint32_t score = opalEvaluateDevice(&info, hint);
+		uint32_t score = opal_evaluateDevice(&info, hint);
 		if (score > best_score)
 		{
 			best_score = score;

@@ -107,7 +107,7 @@ Opal_Result metal_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hi
 			return result;
 		}
 
-		uint32_t score = opalEvaluateDevice(&info, hint);
+		uint32_t score = opal_evaluateDevice(&info, hint);
 		if (best_score < score)
 		{
 			best_score = score;

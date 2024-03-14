@@ -129,7 +129,7 @@ Opal_Result directx12_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHin
 				return result;
 			}
 
-			current_score = opalEvaluateDevice(&info, hint);
+			current_score = opal_evaluateDevice(&info, hint);
 
 			if (best_score < current_score)
 			{

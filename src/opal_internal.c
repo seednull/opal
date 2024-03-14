@@ -26,7 +26,7 @@ static uint32_t gpu_type_low_power_scores[] = {
 
 /*
  */
-uint32_t opalEvaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint)
+uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint)
 {
 	assert(info);
 	
