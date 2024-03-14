@@ -138,7 +138,7 @@ Opal_Result metal_instanceCreateDevice(Instance *this, uint32_t index, Opal_Devi
 	id<MTLDevice> metal_device = metal_devices[index];
 	[metal_devices release];
 
-	*device = (Opal_Device)opal_createDevice(best_metal_device);
+	*device = (Opal_Device)opal_createDevice(metal_device);
 	return OPAL_SUCCESS;
 }
 
