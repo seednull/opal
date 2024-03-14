@@ -32,7 +32,9 @@ static uint32_t tzcnt(uint32_t value)
 #endif
 }
 
-Opal_BinIndex opal_toBinIndexRoundUp(uint32_t value)
+/*
+ */
+static Opal_BinIndex opal_toBinIndexRoundUp(uint32_t value)
 {
 	if (value < OPAL_MANTISSA_MAX)
 		return value;
@@ -53,7 +55,7 @@ Opal_BinIndex opal_toBinIndexRoundUp(uint32_t value)
 	return (Opal_BinIndex)((exponent << OPAL_MANTISSA_BITS) + mantissa);
 }
 
-uint32_t opal_toBinSize(Opal_BinIndex value)
+static uint32_t opal_toBinSize(Opal_BinIndex value)
 {
 	uint32_t mantissa = value & OPAL_MANTISSA_MASK;
 	uint32_t exponent = value >> OPAL_MANTISSA_BITS;

@@ -70,5 +70,4 @@ add_subdirectory(src)
 
 if (OPAL_BUILD_SAMPLES)
 	add_subdirectory(samples/01_enumerate_devices)
-	add_subdirectory(samples/02_heap)
 endif()

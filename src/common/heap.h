@@ -48,9 +48,6 @@ typedef struct Opal_Heap_t
 	uint32_t size;
 } Opal_Heap;
 
-extern Opal_BinIndex opal_toBinIndexRoundUp(uint32_t value);
-extern uint32_t opal_toBinSize(Opal_BinIndex value);
-
 extern Opal_Result opal_heapInitialize(Opal_Heap *heap, uint32_t size, uint32_t num_allocations);
 extern Opal_Result opal_heapShutdown(Opal_Heap *heap);
 

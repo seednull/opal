@@ -43,11 +43,13 @@ endif()
 # ==================================================================================================
 file(GLOB SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.c
+	${CMAKE_CURRENT_SOURCE_DIR}/common/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.c
 )
 
 file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
+	${CMAKE_CURRENT_SOURCE_DIR}/common/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.h
 )
 
