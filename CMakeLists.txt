@@ -5,6 +5,7 @@ project(opal VERSION 1.0.0)
 # Global options
 # ==================================================================================================
 option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
+option(OPAL_BUILD_TESTS "Build tests" TRUE)
 option(OPAL_BUILD_WITH_DIRECTX12 "Build with DirectX 12 backend" TRUE)
 option(OPAL_BUILD_WITH_WEBGPU "Build with WebGPU backend" TRUE)
 option(OPAL_BUILD_WITH_VULKAN "Build with Vulkan backend" TRUE)
@@ -17,6 +18,7 @@ option(OPAL_BUILD_WITH_VALIDATION_LAYERS "Build with Opal validation layers" FAL
 set(OPAL_DIR_THIRDPARTY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
 set(OPAL_DIR_EXPORT ${CMAKE_CURRENT_SOURCE_DIR}/build)
 set(OPAL_DIR_API ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPAL_DIR_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,6 +69,13 @@ endif()
 # Sub-projects
 # ==================================================================================================
 add_subdirectory(src)
+
+if (OPAL_BUILD_TESTS)
+	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+	add_subdirectory(3rdparty/gtest)
+
+	add_subdirectory(tests/heap)
+endif()
 
 if (OPAL_BUILD_SAMPLES)
 	add_subdirectory(samples/01_enumerate_devices)
