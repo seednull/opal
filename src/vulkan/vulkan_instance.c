@@ -26,31 +26,6 @@ static void vulkan_volkLoadInstance(VkInstance instance)
 	}
 }
 
-static Vulkan_Device *opal_createDevice(VkPhysicalDevice physical_device, VkDevice device)
-{
-	assert(physical_device != VK_NULL_HANDLE);
-	assert(device != VK_NULL_HANDLE);
-
-	Vulkan_Device *ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl.getInfo = vulkan_deviceGetInfo;
-	ptr->vtbl.destroy = vulkan_deviceDestroy;
-	ptr->vtbl.createBuffer = vulkan_deviceCreateBuffer;
-	ptr->vtbl.createTexture = vulkan_deviceCreateTexture;
-	ptr->vtbl.createTextureView = vulkan_deviceCreateTextureView;
-	ptr->vtbl.destroyBuffer = vulkan_deviceDestroyBuffer;
-	ptr->vtbl.destroyTexture = vulkan_deviceDestroyTexture;
-	ptr->vtbl.destroyTextureView = vulkan_deviceDestroyTextureView;
-
-	// data
-	ptr->physical_device = physical_device;
-	ptr->device = device;
-
-	return ptr;
-}
-
 /*
  */
 Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
@@ -88,6 +63,9 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 
 	// data
 	ptr->instance = vulkan_instance;
+	ptr->heap_size = desc->heap_size;
+	ptr->max_heap_allocations = desc->max_heap_allocations;
+	ptr->max_heaps = desc->max_heaps;
 
 	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
@@ -120,7 +98,7 @@ Opal_Result vulkan_instanceEnumerateDevices(Instance *this, uint32_t *device_cou
 		{
 			VkPhysicalDevice device = devices[i];
 
-			opal_result = vulkan_fillDeviceInfo(device, &infos[i]);
+			opal_result = vulkan_helperFillDeviceInfo(device, &infos[i]);
 			if (opal_result != OPAL_SUCCESS)
 				break;
 		}
@@ -168,7 +146,7 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 		VkPhysicalDevice device = devices[i];
 		Opal_DeviceInfo info = {0};
 
-		opal_result = vulkan_fillDeviceInfo(device, &info);
+		opal_result = vulkan_helperFillDeviceInfo(device, &info);
 		if (opal_result != OPAL_SUCCESS)
 			break;
 
@@ -188,12 +166,24 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 		return OPAL_VULKAN_ERROR;
 
 	VkDevice vulkan_device = VK_NULL_HANDLE;
-	opal_result = vulkan_createDevice(vulkan_physical_device, &vulkan_device);
+	opal_result = vulkan_helperCreateDevice(vulkan_physical_device, &vulkan_device);
 
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
 
-	*device = (Opal_Device)opal_createDevice(vulkan_physical_device, vulkan_device);
+	// create Opal handle
+	Vulkan_Device *device_ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
+	assert(device_ptr);
+
+	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl.destroy((Device *)device_ptr);
+		free(device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
 	return OPAL_SUCCESS;
 }
 
@@ -235,12 +225,24 @@ Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 		return OPAL_VULKAN_ERROR;
 
 	VkDevice vulkan_device = VK_NULL_HANDLE;
-	Opal_Result opal_result = vulkan_createDevice(vulkan_physical_device, &vulkan_device);
+	Opal_Result opal_result = vulkan_helperCreateDevice(vulkan_physical_device, &vulkan_device);
 
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
 
-	*device = (Opal_Device)opal_createDevice(vulkan_physical_device, vulkan_device);
+	// create Opal handle
+	Vulkan_Device *device_ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
+	assert(device_ptr);
+
+	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl.destroy((Device *)device_ptr);
+		free(device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
 	return OPAL_SUCCESS;
 }
 

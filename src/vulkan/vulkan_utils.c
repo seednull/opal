@@ -2,7 +2,105 @@
 
 /*
  */
-Opal_Result vulkan_createDevice(VkPhysicalDevice physical_device, VkDevice *device)
+VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
+{
+	VkBufferUsageFlags result = 0;
+
+	if (flags & OPAL_BUFFER_USAGE_TRANSFER_SRC)
+		result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+	if (flags & OPAL_BUFFER_USAGE_TRANSFER_DST)
+		result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+	if (flags & OPAL_BUFFER_USAGE_VERTEX)
+		result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+	if (flags & OPAL_BUFFER_USAGE_INDEX)
+		result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+	if (flags & OPAL_BUFFER_USAGE_UNIFORM)
+		result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+	if (flags & OPAL_BUFFER_USAGE_STORAGE)
+		result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+	if (flags & OPAL_BUFFER_USAGE_INDIRECT)
+		result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+
+	return result;
+}
+
+int32_t vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, Opal_BufferHeapType heap_type)
+{
+	assert(physical_device != VK_NULL_HANDLE);
+
+	VkPhysicalDeviceMemoryProperties memory_properties = {0};
+	vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
+
+	static VkMemoryPropertyFlags private_heap_variants[] =
+	{
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	};
+
+	static VkMemoryPropertyFlags upload_heap_variants[] =
+	{
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	};
+
+	static VkMemoryPropertyFlags readback_heap_variants[] =
+	{
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	};
+
+	VkMemoryPropertyFlags *variants = NULL;
+	uint32_t num_variants = 0;
+
+	switch (heap_type)
+	{
+		case OPAL_BUFFER_HEAP_TYPE_PRIVATE: variants = private_heap_variants; num_variants = 1; break;
+		case OPAL_BUFFER_HEAP_TYPE_UPLOAD: variants = upload_heap_variants; num_variants = 1; break;
+		case OPAL_BUFFER_HEAP_TYPE_READBACK: variants = readback_heap_variants; num_variants = 3; break;
+	}
+
+	for (uint32_t variant = 0; variant < num_variants; ++variant)
+	{
+		VkMemoryPropertyFlags flags = variants[variant];
+		VkDeviceSize largest_heap_size = 0;
+		int32_t best_index = -1;
+
+		for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; ++i)
+		{
+			VkMemoryType memory_type = memory_properties.memoryTypes[i];
+
+			if (memory_type.propertyFlags & flags == 0)
+				continue;
+
+			uint32_t heap_index = memory_type.heapIndex;
+			VkMemoryHeap memory_heap = memory_properties.memoryHeaps[heap_index];
+
+			if (memory_heap.size > largest_heap_size)
+			{
+				largest_heap_size = memory_heap.size;
+				best_index = i;
+			}
+		}
+
+		if (best_index != -1)
+			return best_index;
+	}
+
+	// Note: this could only happen if implementation decides to go against Vulkan spec which
+	//       clearly says that there must be at least one device local memory and
+	//       one host visible & host coherent memory
+	assert(0);
+	return -1;
+}
+
+/*
+ */
+Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice *device)
 {
 	assert(device);
 	assert(physical_device != VK_NULL_HANDLE);
@@ -105,7 +203,7 @@ Opal_Result vulkan_createDevice(VkPhysicalDevice physical_device, VkDevice *devi
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_fillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info)
+Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info)
 {
 	assert(device != VK_NULL_HANDLE);
 	assert(info);
