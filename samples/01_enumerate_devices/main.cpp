@@ -93,9 +93,12 @@ int main()
 
 	Opal_InstanceDesc instance_desc = {
 		"01_enumerate_devices",
-		0,
 		"Opal",
-		0
+		0,
+		0,
+		OPAL_DEFAULT_HEAP_SIZE,
+		OPAL_DEFAULT_HEAP_ALLOCATIONS,
+		OPAL_DEFAULT_HEAPS,
 	};
 
 	Opal_Result result = opalCreateInstance(OPAL_API_METAL, &instance_desc, &instance);
