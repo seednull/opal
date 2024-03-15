@@ -26,7 +26,6 @@ Opal_Result opalDestroyInstance(Opal_Instance instance)
 	Opal_Result result = ptr->destroy(ptr);
 
 	free(ptr);
-
 	return result;
 }
 
@@ -74,7 +73,6 @@ Opal_Result opalDestroyDevice(Opal_Device device)
 	Opal_Result result = ptr->destroy(ptr);
 
 	free(ptr);
-
 	return result;
 }
 
@@ -124,6 +122,34 @@ Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc
 
 /*
  */
+Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+	
+	if (buffer == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_BUFFER;
+
+	Device *device_ptr = (Device *)(device);
+	return device_ptr->mapBuffer(device_ptr, buffer, ptr);
+}
+
+Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+	
+	if (buffer == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_BUFFER;
+
+	Device *ptr = (Device *)(device);
+	return ptr->unmapBuffer(ptr, buffer);
+}
+
+/*
+ */
 Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer)
 {
 	// FIXME: change to handle + generation and do proper check
@@ -131,7 +157,10 @@ Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer)
 		return OPAL_INVALID_DEVICE;
 
 	Device *ptr = (Device *)(device);
-	return ptr->destroyBuffer(ptr, buffer);
+	Opal_Result result = ptr->destroyBuffer(ptr, buffer);
+
+	free(ptr);
+	return result;
 }
 
 Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture)
@@ -141,7 +170,10 @@ Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture)
 		return OPAL_INVALID_DEVICE;
 
 	Device *ptr = (Device *)(device);
-	return ptr->destroyTexture(ptr, texture);
+	Opal_Result result = ptr->destroyTexture(ptr, texture);
+
+	free(ptr);
+	return result;
 }
 
 Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_view)
@@ -151,5 +183,8 @@ Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_
 		return OPAL_INVALID_DEVICE;
 
 	Device *ptr = (Device *)(device);
-	return ptr->destroyTextureView(ptr, texture_view);
+	Opal_Result result = ptr->destroyTextureView(ptr, texture_view);
+
+	free(ptr);
+	return result;
 }

@@ -35,6 +35,8 @@ static Null_Device *opal_createDevice(const Opal_DeviceInfo *info)
 	ptr->vtbl.createBuffer = null_deviceCreateBuffer;
 	ptr->vtbl.createTexture = null_deviceCreateTexture;
 	ptr->vtbl.createTextureView = null_deviceCreateTextureView;
+	ptr->vtbl.mapBuffer = null_deviceMapBuffer;
+	ptr->vtbl.unmapBuffer = null_deviceUnmapBuffer;
 	ptr->vtbl.destroyBuffer = null_deviceDestroyBuffer;
 	ptr->vtbl.destroyTexture = null_deviceDestroyTexture;
 	ptr->vtbl.destroyTextureView = null_deviceDestroyTextureView;

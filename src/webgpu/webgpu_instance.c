@@ -51,6 +51,8 @@ static WebGpu_Device *opal_createDevice(WGPUAdapter adapter, WGPUDevice device)
 	ptr->vtbl.createBuffer = webgpu_deviceCreateBuffer;
 	ptr->vtbl.createTexture = webgpu_deviceCreateTexture;
 	ptr->vtbl.createTextureView = webgpu_deviceCreateTextureView;
+	ptr->vtbl.mapBuffer = webgpu_deviceMapBuffer;
+	ptr->vtbl.unmapBuffer = webgpu_deviceUnmapBuffer;
 	ptr->vtbl.destroyBuffer = webgpu_deviceDestroyBuffer;
 	ptr->vtbl.destroyTexture = webgpu_deviceDestroyTexture;
 	ptr->vtbl.destroyTextureView = webgpu_deviceDestroyTextureView;

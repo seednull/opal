@@ -43,6 +43,18 @@ Opal_Result directx12_deviceCreateTextureView(Device *this, const Opal_TextureVi
 
 /*
  */
+Opal_Result directx12_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result directx12_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
 Opal_Result directx12_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 {
 	return OPAL_NOT_SUPPORTED;

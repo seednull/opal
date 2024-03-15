@@ -43,6 +43,18 @@ Opal_Result webgpu_deviceCreateTextureView(Device *this, const Opal_TextureViewD
 
 /*
  */
+Opal_Result webgpu_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result webgpu_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
 Opal_Result webgpu_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 {
 	return OPAL_NOT_SUPPORTED;

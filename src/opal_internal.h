@@ -20,6 +20,9 @@ typedef Opal_Result (*PFN_deviceCreateBuffer)(Device *this, const Opal_BufferDes
 typedef Opal_Result (*PFN_deviceCreateTexture)(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
 typedef Opal_Result (*PFN_deviceCreateTextureView)(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 
+typedef Opal_Result (*PFN_deviceMapBuffer)(Device *this, Opal_Buffer buffer, void **ptr);
+typedef Opal_Result (*PFN_deviceUnmapBuffer)(Device *this, Opal_Buffer buffer);
+
 typedef Opal_Result (*PFN_deviceDestroyBuffer)(Device *this, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_deviceDestroyTexture)(Device *this, Opal_Texture texture);
 typedef Opal_Result (*PFN_deviceDestroyTextureView)(Device *this, Opal_TextureView texture_view);
@@ -39,6 +42,8 @@ typedef struct Device_t
 	PFN_deviceCreateBuffer createBuffer;
 	PFN_deviceCreateTexture createTexture;
 	PFN_deviceCreateTextureView createTextureView;
+	PFN_deviceMapBuffer mapBuffer;
+	PFN_deviceUnmapBuffer unmapBuffer;
 	PFN_deviceDestroyBuffer destroyBuffer;
 	PFN_deviceDestroyTexture destroyTexture;
 	PFN_deviceDestroyTextureView destroyTextureView;

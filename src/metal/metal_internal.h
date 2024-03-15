@@ -34,6 +34,9 @@ extern Opal_Result metal_deviceCreateBuffer(Device *this, const Opal_BufferDesc 
 extern Opal_Result metal_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
 extern Opal_Result metal_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 
+extern Opal_Result metal_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr);
+extern Opal_Result metal_deviceUnmapBuffer(Device *this, Opal_Buffer buffer);
+
 extern Opal_Result metal_deviceDestroyBuffer(Device *this, Opal_Buffer buffer);
 extern Opal_Result metal_deviceDestroyTexture(Device *this, Opal_Texture texture);
 extern Opal_Result metal_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view);

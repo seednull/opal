@@ -16,6 +16,8 @@ static DirectX12_Device *opal_createDevice(IDXGIAdapter1 *adapter, ID3D12Device 
 	ptr->vtbl.createBuffer = directx12_deviceCreateBuffer;
 	ptr->vtbl.createTexture = directx12_deviceCreateTexture;
 	ptr->vtbl.createTextureView = directx12_deviceCreateTextureView;
+	ptr->vtbl.mapBuffer = directx12_deviceMapBuffer;
+	ptr->vtbl.unmapBuffer = directx12_deviceUnmapBuffer;
 	ptr->vtbl.destroyBuffer = directx12_deviceDestroyBuffer;
 	ptr->vtbl.destroyTexture = directx12_deviceDestroyTexture;
 	ptr->vtbl.destroyTextureView = directx12_deviceDestroyTextureView;

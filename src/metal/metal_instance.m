@@ -15,6 +15,8 @@ static Metal_Device *opal_createDevice(id<MTLDevice> device)
 	ptr->vtbl.createBuffer = metal_deviceCreateBuffer;
 	ptr->vtbl.createTexture = metal_deviceCreateTexture;
 	ptr->vtbl.createTextureView = metal_deviceCreateTextureView;
+	ptr->vtbl.mapBuffer = metal_deviceMapBuffer;
+	ptr->vtbl.unmapBuffer = metal_deviceUnmapBuffer;
 	ptr->vtbl.destroyBuffer = metal_deviceDestroyBuffer;
 	ptr->vtbl.destroyTexture = metal_deviceDestroyTexture;
 	ptr->vtbl.destroyTextureView = metal_deviceDestroyTextureView;

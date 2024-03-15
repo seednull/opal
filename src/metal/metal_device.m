@@ -42,6 +42,18 @@ Opal_Result metal_deviceCreateTextureView(Device *this, const Opal_TextureViewDe
 
 /*
  */
+Opal_Result metal_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result metal_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
 Opal_Result metal_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 {
 	return OPAL_NOT_SUPPORTED;

@@ -37,6 +37,11 @@
 extern "C" {
 #endif
 
+// Constants
+#define OPAL_DEFAULT_HEAP_SIZE 0x10000000
+#define OPAL_DEFAULT_HEAP_ALLOCATIONS 1000000
+#define OPAL_DEFAULT_HEAPS 64
+
 // Opaque handles
 OPAL_DEFINE_HANDLE(Opal_Instance);
 OPAL_DEFINE_HANDLE(Opal_Device);
@@ -52,6 +57,7 @@ typedef enum Opal_Result_t
 	OPAL_INVALID_INSTANCE,
 	OPAL_INVALID_DEVICE,
 	OPAL_INVALID_DEVICE_INDEX,
+	OPAL_INVALID_BUFFER,
 	OPAL_NO_MEMORY,
 
 	// FIXME: add more error codes for dxgi / d3d12 stuff
@@ -330,9 +336,12 @@ typedef struct Opal_DeviceInfo_t
 typedef struct Opal_InstanceDesc_t
 {
 	const char *application_name;
-	uint32_t application_version;
 	const char *engine_name;
+	uint32_t application_version;
 	uint32_t engine_version;
+	uint32_t heap_size;
+	uint32_t max_heap_allocations;
+	uint32_t max_heaps;
 } Opal_InstanceDesc;
 
 typedef struct Opal_BufferDesc_t
@@ -380,10 +389,12 @@ typedef Opal_Result (*PFN_opalCreateBuffer)(Opal_Device device, const Opal_Buffe
 typedef Opal_Result (*PFN_opalCreateTexture)(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture);
 typedef Opal_Result (*PFN_opalCreateTextureView)(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 
+typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
+typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
+
 typedef Opal_Result (*PFN_opalDestroyBuffer)(Opal_Device device, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_opalDestroyTexture)(Opal_Device device, Opal_Texture texture);
 typedef Opal_Result (*PFN_opalDestroyTextureView)(Opal_Device device, Opal_TextureView texture_view);
-
 
 // API
 #if !defined(OPAL_NO_PROTOTYPES)
@@ -400,6 +411,9 @@ OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo 
 OPAL_APIENTRY Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
 OPAL_APIENTRY Opal_Result opalCreateTexture(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture);
 OPAL_APIENTRY Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
+
+OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
+OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
 
 OPAL_APIENTRY Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer);
 OPAL_APIENTRY Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture);
