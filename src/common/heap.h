@@ -52,4 +52,5 @@ extern Opal_Result opal_heapInitialize(Opal_Heap *heap, uint32_t size, uint32_t 
 extern Opal_Result opal_heapShutdown(Opal_Heap *heap);
 
 extern Opal_Result opal_heapAlloc(Opal_Heap *heap, uint32_t size, Opal_HeapAllocation *allocation);
+extern Opal_Result opal_heapAlignedAlloc(Opal_Heap *heap, uint32_t size, uint32_t alignment, Opal_HeapAllocation *allocation);
 extern Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation);
