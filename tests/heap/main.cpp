@@ -31,16 +31,16 @@ TEST_F(HeapTest, AlignedAllocsSameAlignment)
 	constexpr uint32_t alignment = 16;
 	Opal_HeapAllocation allocs[2];
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 9, alignment, &allocs[0]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 9, alignment, &allocs[0]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[0].offset % alignment, 0);
 	EXPECT_EQ(allocs[0].offset, 0);
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 16, alignment, &allocs[1]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 16, alignment, &allocs[1]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[1].offset % alignment, 0);
 	EXPECT_EQ(allocs[1].offset, 16);
 
 	EXPECT_EQ(opal_heapFree(&heap, allocs[0]), OPAL_SUCCESS);
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 16, alignment, &allocs[0]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 16, alignment, &allocs[0]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[0].offset % alignment, 0);
 	EXPECT_EQ(allocs[0].offset, 0);
 
@@ -55,22 +55,22 @@ TEST_F(HeapTest, AlignedAllocsDifferentAlignments)
 
 	Opal_HeapAllocation allocs[3];
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 9, alignment1, &allocs[0]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 9, alignment1, &allocs[0]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[0].offset % alignment1, 0);
 	EXPECT_EQ(allocs[0].offset, 0);
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 16, alignment1, &allocs[1]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 16, alignment1, &allocs[1]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[1].offset % alignment1, 0);
 	EXPECT_EQ(allocs[1].offset, 16);
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 32, alignment2, &allocs[2]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 32, alignment2, &allocs[2]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[2].offset % alignment2, 0);
 	EXPECT_EQ(allocs[2].offset, 32);
 
 	EXPECT_EQ(opal_heapFree(&heap, allocs[0]), OPAL_SUCCESS);
 	EXPECT_EQ(opal_heapFree(&heap, allocs[1]), OPAL_SUCCESS);
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 32, alignment2, &allocs[1]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 32, alignment2, &allocs[1]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[1].offset % alignment2, 0);
 	EXPECT_EQ(allocs[1].offset, 0);
 
@@ -94,7 +94,7 @@ TEST_F(HeapTest, NonFitAlignedAlloc)
 
 	EXPECT_EQ(opal_heapFree(&heap, allocs[1]), OPAL_SUCCESS);
 
-	EXPECT_EQ(opal_heapAlignedAlloc(&heap, 16, alignment, &allocs[1]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAllocAligned(&heap, 16, alignment, &allocs[1]), OPAL_SUCCESS);
 	EXPECT_EQ(allocs[1].offset % alignment, 0);
 	EXPECT_EQ(allocs[1].offset, 48);
 
