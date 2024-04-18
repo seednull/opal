@@ -107,14 +107,24 @@ typedef enum Opal_GpuType_t
 	OPAL_GPU_TYPE_MAX,
 } Opal_GpuType;
 
-typedef enum Opal_BufferHeapType_t
+typedef enum Opal_AllocationMemoryType_t
 {
-	OPAL_BUFFER_HEAP_TYPE_PRIVATE = 0,
-	OPAL_BUFFER_HEAP_TYPE_UPLOAD,
-	OPAL_BUFFER_HEAP_TYPE_READBACK,
+	OPAL_ALLOCATION_MEMORY_TYPE_PRIVATE = 0,
+	OPAL_ALLOCATION_MEMORY_TYPE_STREAM,
+	OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
+	OPAL_ALLOCATION_MEMORY_TYPE_READBACK,
 
-	OPAL_BUFFER_HEAP_TYPE_MAX,
-} Opal_BufferHeapType;
+	OPAL_ALLOCATION_MEMORY_TYPE_MAX,
+} Opal_AllocationMemoryType;
+
+typedef enum Opal_AllocationHint_t
+{
+	OPAL_ALLOCATION_HINT_AUTO,
+	OPAL_ALLOCATION_HINT_PREFER_DEDICATED,
+	OPAL_ALLOCATION_HINT_PREFER_HEAP,
+
+	OPAL_ALLOCATION_HINT_MAX,
+} Opal_AllocationHint;
 
 typedef enum Opal_BufferUsageFlags_t
 {
@@ -347,8 +357,9 @@ typedef struct Opal_InstanceDesc_t
 typedef struct Opal_BufferDesc_t
 {
 	Opal_BufferUsageFlags usage;
-	Opal_BufferHeapType heap;
 	uint64_t size;
+	Opal_AllocationMemoryType memory_type;
+	Opal_AllocationHint hint;
 } Opal_BufferDesc;
 
 typedef struct Opal_TextureDesc_t
@@ -362,6 +373,7 @@ typedef struct Opal_TextureDesc_t
 	uint32_t layer_count;
 	Opal_TextureSamples samples;
 	Opal_TextureUsageFlags usage;
+	Opal_AllocationHint hint;
 } Opal_TextureDesc;
 
 typedef struct Opal_TextureViewDesc_t

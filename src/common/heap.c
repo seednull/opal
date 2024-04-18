@@ -1,4 +1,5 @@
 #include "heap.h"
+#include "intrinsics.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -6,32 +7,6 @@
 
 /*
  */
-static uint32_t lzcnt(uint32_t value)
-{
-	assert(value != 0);
-
-#ifdef _MSC_VER
-	uint32_t result = 0;
-	_BitScanReverse(&result, value);
-	return 31 - result;
-#else
-	return __builtin_clz(value);
-#endif
-}
-
-static uint32_t tzcnt(uint32_t value)
-{
-	assert(value != 0);
-
-#ifdef _MSC_VER
-	uint32_t result = 0;
-	_BitScanForward(&result, value);
-	return result;
-#else
-	return __builtin_ctz(value);
-#endif
-}
-
 static uint32_t isPow2(uint32_t value)
 {
 	return (value & (value - 1)) == 0;

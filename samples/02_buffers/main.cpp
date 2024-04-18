@@ -11,8 +11,9 @@ void testBuffers(Opal_Device device)
 	Opal_BufferDesc desc =
 	{
 		OPAL_BUFFER_USAGE_UNIFORM,
-		OPAL_BUFFER_HEAP_TYPE_UPLOAD,
 		16,
+		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
+		OPAL_ALLOCATION_HINT_AUTO,
 	};
 
 	Opal_Result result = opalCreateBuffer(device, &desc, &buffers[0]);

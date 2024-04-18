@@ -1,4 +1,5 @@
 #include "vulkan_internal.h"
+#include "common/intrinsics.h"
 
 /*
  */
@@ -30,72 +31,71 @@ VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
 	return result;
 }
 
-int32_t vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, Opal_BufferHeapType heap_type)
+Opal_Result vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, uint32_t memory_type_mask, Opal_AllocationMemoryType allocation_memory_type, uint32_t *memory_type)
 {
+	assert(memory_type);
 	assert(physical_device != VK_NULL_HANDLE);
+
+	static uint32_t memory_required_flags[] =
+	{
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+	};
+
+	static uint32_t memory_preferred_flags[] =
+	{
+		0,
+		0,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+	};
+
+	static uint32_t memory_not_preferred_flags[] =
+	{
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+		0,
+	};
+
+	uint32_t required_flags = memory_required_flags[allocation_memory_type];
+	uint32_t preferred_flags = memory_preferred_flags[allocation_memory_type];
+	uint32_t not_preferred_flags = memory_not_preferred_flags[allocation_memory_type];
 
 	VkPhysicalDeviceMemoryProperties memory_properties = {0};
 	vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
 
-	static VkMemoryPropertyFlags private_heap_variants[] =
+	uint32_t best_cost = UINT32_MAX;
+	Opal_Result result = OPAL_VULKAN_ERROR;
+
+	for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; ++i)
 	{
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	};
+		uint32_t mask = 1 << i;
+		if (mask & memory_type_mask == 0)
+			continue;
 
-	static VkMemoryPropertyFlags upload_heap_variants[] =
-	{
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	};
+		VkMemoryType vulkan_memory_type = memory_properties.memoryTypes[i];
 
-	static VkMemoryPropertyFlags readback_heap_variants[] =
-	{
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	};
+		if (~vulkan_memory_type.propertyFlags & required_flags == 0)
+			continue;
 
-	VkMemoryPropertyFlags *variants = NULL;
-	uint32_t num_variants = 0;
+		// TODO: count bits
+		uint32_t preferred_cost_bits = ~vulkan_memory_type.propertyFlags & preferred_flags;
+		uint32_t not_preferred_cost_bits = vulkan_memory_type.propertyFlags & not_preferred_flags;
 
-	switch (heap_type)
-	{
-		case OPAL_BUFFER_HEAP_TYPE_PRIVATE: variants = private_heap_variants; num_variants = 1; break;
-		case OPAL_BUFFER_HEAP_TYPE_UPLOAD: variants = upload_heap_variants; num_variants = 1; break;
-		case OPAL_BUFFER_HEAP_TYPE_READBACK: variants = readback_heap_variants; num_variants = 3; break;
-	}
+		uint32_t score = popcnt(preferred_cost_bits) + popcnt(not_preferred_cost_bits);
 
-	for (uint32_t variant = 0; variant < num_variants; ++variant)
-	{
-		VkMemoryPropertyFlags flags = variants[variant];
-		VkDeviceSize largest_heap_size = 0;
-		int32_t best_index = -1;
-
-		for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; ++i)
+		if (score <= best_cost)
 		{
-			VkMemoryType memory_type = memory_properties.memoryTypes[i];
-
-			if (memory_type.propertyFlags & flags == 0)
-				continue;
-
-			uint32_t heap_index = memory_type.heapIndex;
-			VkMemoryHeap memory_heap = memory_properties.memoryHeaps[heap_index];
-
-			if (memory_heap.size > largest_heap_size)
-			{
-				largest_heap_size = memory_heap.size;
-				best_index = i;
-			}
+			*memory_type = i;
+			best_cost = score;
+			result = OPAL_SUCCESS;
 		}
-
-		if (best_index != -1)
-			return best_index;
 	}
 
-	// Note: this could only happen if implementation decides to go against Vulkan spec which
-	//       clearly says that there must be at least one device local memory and
-	//       one host visible & host coherent memory
-	assert(0);
-	return -1;
+	return result;
 }
 
 /*

@@ -25,16 +25,9 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	device_ptr->physical_device = physical_device;
 	device_ptr->device = device;
 
-	// allocators
-	for (uint32_t i = 0; i < OPAL_BUFFER_HEAP_TYPE_MAX; ++i)
-	{
-		// TODO: there could be more heaps with the same memory properties, so more allocators is actually needed
-		int32_t memory_type = vulkan_helperFindBestMemoryType(physical_device, i);
-		assert(memory_type >= 0);
-
-		Opal_Result result = vulkan_allocatorInitialize(&device_ptr->allocators[i], (uint32_t)memory_type, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);
-		assert(result == OPAL_SUCCESS);
-	}
+	// allocator
+	Opal_Result result = vulkan_allocatorInitialize(&device_ptr->allocator, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);
+	assert(result == OPAL_SUCCESS);
 
 	return OPAL_SUCCESS;
 }
@@ -56,11 +49,8 @@ Opal_Result vulkan_deviceDestroy(Device *this)
 
 	Vulkan_Device *ptr = (Vulkan_Device *)this;
 
-	for (uint32_t i = 0; i < OPAL_BUFFER_HEAP_TYPE_MAX; ++i)
-	{
-		Opal_Result result = vulkan_allocatorShutdown(&ptr->allocators[i], ptr->device);
-		assert(result == OPAL_SUCCESS);
-	}
+	Opal_Result result = vulkan_allocatorShutdown(&ptr->allocator, ptr->device);
+	assert(result == OPAL_SUCCESS);
 	
 	vkDestroyDevice(ptr->device, NULL);
 	return OPAL_SUCCESS;
@@ -72,14 +62,9 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 {
 	assert(this);
 
-	// get allocator
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
-
-	uint32_t allocator_index = desc->heap;
-
-	Vulkan_Allocator *allocator = &device_ptr->allocators[allocator_index];
-	Vulkan_Allocation allocation = {0};
+	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
 
 	// create buffer
 	VkBufferCreateInfo buffer_info = {0};
@@ -93,19 +78,75 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
-	// allocate memory
-	VkMemoryRequirements memory_requirements = {0};
-	vkGetBufferMemoryRequirements(vulkan_device, vulkan_buffer, &memory_requirements);
+	// get memory requirements
+	VkMemoryRequirements2 memory_requirements = {0};
+	VkMemoryDedicatedRequirements dedicated_requirements = {0};
 
-	VkDeviceSize size = memory_requirements.size;
-	VkDeviceSize alignment = memory_requirements.alignment;
+	VkBufferMemoryRequirementsInfo2 memory_info = {0};
+	memory_info.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
+	memory_info.buffer = vulkan_buffer;
 
-	Opal_Result opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, &allocation);
-	if (opal_result != OPAL_SUCCESS)
+	dedicated_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
+
+	memory_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+	memory_requirements.pNext = &dedicated_requirements;
+	vkGetBufferMemoryRequirements2(vulkan_device, &memory_info, &memory_requirements);
+
+	VkBool32 prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
+	VkBool32 requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
+
+	// memory type loop
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	Vulkan_Allocation allocation = {0};
+	Vulkan_AllocationDesc allocation_desc = {0};
+
+	allocation_desc.size = memory_requirements.memoryRequirements.size;
+	allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
+
+	VkBool32 dedicated = (desc->hint == OPAL_ALLOCATION_HINT_PREFER_DEDICATED);
+	const float heap_threshold = 0.7f;
+
+	switch (desc->hint)
 	{
-		vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
-		vulkan_allocatorFreeMemory(allocator, allocation);
-		return opal_result;
+		case OPAL_ALLOCATION_HINT_AUTO:
+		{
+			VkBool32 too_big_for_heap = desc->size > allocator->heap_size * heap_threshold;
+			dedicated = too_big_for_heap || requires_dedicated || prefers_dedicated;
+		}
+		break;
+
+		case OPAL_ALLOCATION_HINT_PREFER_HEAP:
+		{
+			VkBool32 wont_fit_in_heap = desc->size > allocator->heap_size;
+			dedicated = wont_fit_in_heap || requires_dedicated;
+			break;
+		}
+	}
+
+	uint32_t memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
+
+	while (memory_type_bits > 0)
+	{
+		Opal_Result opal_result = vulkan_helperFindBestMemoryType(vulkan_physical_device, memory_type_bits, desc->memory_type, &allocation_desc.memory_type);
+		if (opal_result != OPAL_SUCCESS)
+		{
+			vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
+			return OPAL_NO_MEMORY;
+		}
+
+		// allocate memory
+		opal_result = OPAL_NO_MEMORY;
+
+		if (dedicated == VK_FALSE)
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, &allocation_desc, 0, &allocation);
+
+		if (opal_result == OPAL_NO_MEMORY)
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, &allocation_desc, 1, &allocation);
+
+		if (opal_result == OPAL_SUCCESS)
+			break;
+
+		memory_type_bits &= ~(1 << allocation_desc.memory_type);
 	}
 
 	// bind memory
@@ -123,8 +164,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 
 	ptr->buffer = vulkan_buffer;
 	ptr->allocation = allocation;
-	ptr->allocator_index = allocator_index;
-	ptr->size = size;
+	ptr->size = allocation_desc.size;
 
 	*buffer = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
@@ -162,8 +202,7 @@ Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)buffer;
 
-	uint32_t allocator_index = buffer_ptr->allocator_index;
-	Vulkan_Allocator *allocator = &device_ptr->allocators[allocator_index];
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
 	assert(allocator);
 
 	vkDestroyBuffer(device_ptr->device, buffer_ptr->buffer, NULL);
