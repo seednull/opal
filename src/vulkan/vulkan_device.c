@@ -154,7 +154,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	if (result != VK_SUCCESS)
 	{
 		vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
-		vulkan_allocatorFreeMemory(allocator, allocation);
+		vulkan_allocatorFreeMemory(allocator, vulkan_device, allocation);
 		return OPAL_VULKAN_ERROR;
 	}
 
@@ -165,6 +165,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	ptr->buffer = vulkan_buffer;
 	ptr->allocation = allocation;
 	ptr->size = allocation_desc.size;
+	ptr->map_count = 0;
 
 	*buffer = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
@@ -184,12 +185,41 @@ Opal_Result vulkan_deviceCreateTextureView(Device *this, const Opal_TextureViewD
  */
 Opal_Result vulkan_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(buffer != OPAL_NULL_HANDLE);
+	assert(ptr);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)buffer;
+
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	assert(allocator);
+
+	uint8_t *block_memory = NULL;
+	Opal_Result result = vulkan_allocatorMapMemory(allocator, device_ptr->device, buffer_ptr->allocation, &block_memory);
+
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	buffer_ptr->map_count++;
+	*ptr = block_memory + buffer_ptr->allocation.offset;
+	return OPAL_SUCCESS;
 }
 
 Opal_Result vulkan_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(buffer != OPAL_NULL_HANDLE);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)buffer;
+	assert(buffer_ptr->map_count > 0);
+
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	assert(allocator);
+
+	buffer_ptr->map_count--;
+	return vulkan_allocatorUnmapMemory(allocator, device_ptr->device, buffer_ptr->allocation);
 }
 
 /*
@@ -206,7 +236,13 @@ Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 	assert(allocator);
 
 	vkDestroyBuffer(device_ptr->device, buffer_ptr->buffer, NULL);
-	return vulkan_allocatorFreeMemory(allocator, buffer_ptr->allocation);
+	Opal_Result result = vulkan_allocatorFreeMemory(allocator, device_ptr->device, buffer_ptr->allocation);
+
+	if (buffer_ptr->map_count > 0)
+		vulkan_allocatorUnmapMemory(allocator, device_ptr->device, buffer_ptr->allocation);
+
+	free(buffer_ptr);
+	return result;
 }
 
 Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture)

@@ -157,10 +157,7 @@ Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer)
 		return OPAL_INVALID_DEVICE;
 
 	Device *ptr = (Device *)(device);
-	Opal_Result result = ptr->destroyBuffer(ptr, buffer);
-
-	free(ptr);
-	return result;
+	return ptr->destroyBuffer(ptr, buffer);
 }
 
 Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture)
@@ -170,10 +167,7 @@ Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture)
 		return OPAL_INVALID_DEVICE;
 
 	Device *ptr = (Device *)(device);
-	Opal_Result result = ptr->destroyTexture(ptr, texture);
-
-	free(ptr);
-	return result;
+	return ptr->destroyTexture(ptr, texture);
 }
 
 Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_view)
@@ -183,8 +177,5 @@ Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_
 		return OPAL_INVALID_DEVICE;
 
 	Device *ptr = (Device *)(device);
-	Opal_Result result = ptr->destroyTextureView(ptr, texture_view);
-
-	free(ptr);
-	return result;
+	return ptr->destroyTextureView(ptr, texture_view);
 }

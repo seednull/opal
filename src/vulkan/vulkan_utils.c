@@ -47,16 +47,16 @@ Opal_Result vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, ui
 	static uint32_t memory_preferred_flags[] =
 	{
 		0,
-		0,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		0,
 		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
 	};
 
 	static uint32_t memory_not_preferred_flags[] =
 	{
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-		VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		0,
 	};
 
@@ -70,15 +70,15 @@ Opal_Result vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, ui
 	uint32_t best_cost = UINT32_MAX;
 	Opal_Result result = OPAL_VULKAN_ERROR;
 
-	for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; ++i)
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
 	{
 		uint32_t mask = 1 << i;
-		if (mask & memory_type_mask == 0)
+		if ((mask & memory_type_mask) == 0)
 			continue;
 
 		VkMemoryType vulkan_memory_type = memory_properties.memoryTypes[i];
 
-		if (~vulkan_memory_type.propertyFlags & required_flags == 0)
+		if ((~vulkan_memory_type.propertyFlags & required_flags) != 0)
 			continue;
 
 		// TODO: count bits

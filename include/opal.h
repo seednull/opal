@@ -60,6 +60,9 @@ typedef enum Opal_Result_t
 	OPAL_INVALID_BUFFER,
 	OPAL_NO_MEMORY,
 
+	// FIXME: add more error codes for internal errors
+	OPAL_INTERNAL_ERROR,
+
 	// FIXME: add more error codes for dxgi / d3d12 stuff
 	OPAL_DIRECX12_ERROR,
 

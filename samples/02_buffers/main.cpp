@@ -19,14 +19,19 @@ void testBuffers(Opal_Device device)
 	Opal_Result result = opalCreateBuffer(device, &desc, &buffers[0]);
 	assert(result == OPAL_SUCCESS);
 
+	result = opalCreateBuffer(device, &desc, &buffers[1]);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalMapBuffer(device, buffers[0], &ptrs[0]);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalMapBuffer(device, buffers[1], &ptrs[1]);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCreateBuffer(device, &desc, &buffers[1]);
-	assert(result == OPAL_SUCCESS);
+	uint32_t data_0 = 42;
+	uint32_t data_1 = 0xDEADBEEF;
+	memcpy(ptrs[0], &data_0, sizeof(uint32_t));
+	memcpy(ptrs[1], &data_1, sizeof(uint32_t));
 
 	result = opalDestroyBuffer(device, buffers[0]);
 	assert(result == OPAL_SUCCESS);

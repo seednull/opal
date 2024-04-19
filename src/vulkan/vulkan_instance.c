@@ -36,7 +36,7 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 
 	VkApplicationInfo app_info = {0};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	app_info.apiVersion = VK_VERSION_1_1;
+	app_info.apiVersion = VK_API_VERSION_1_1;
 	app_info.applicationVersion = desc->application_version;
 	app_info.pApplicationName = desc->application_name;
 	app_info.engineVersion = desc->engine_version;

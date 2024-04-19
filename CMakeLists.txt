@@ -75,6 +75,7 @@ if (OPAL_BUILD_TESTS)
 	add_subdirectory(3rdparty/gtest)
 
 	add_subdirectory(tests/heap)
+	add_subdirectory(tests/pool)
 endif()
 
 if (OPAL_BUILD_SAMPLES)
