@@ -2,40 +2,34 @@
 #include <cassert>
 #include <iostream>
 
-void testBuffers(Opal_Device device)
+void testTextures(Opal_Device device)
 {
-	Opal_Buffer buffers[2] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
-	void *ptrs[2] {nullptr, nullptr};
+	Opal_Texture textures[2] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 
-	Opal_BufferDesc desc =
+	Opal_TextureDesc desc =
 	{
-		OPAL_BUFFER_USAGE_UNIFORM,
-		16,
-		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
+		OPAL_TEXTURE_TYPE_2D,
+		OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
+		128,
+		128,
+		0,
+		1,
+		1,
+		OPAL_TEXTURE_SAMPLES_1,
+		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_RENDER_ATTACHMENT),
 		OPAL_ALLOCATION_HINT_AUTO,
 	};
 
-	Opal_Result result = opalCreateBuffer(device, &desc, &buffers[0]);
+	Opal_Result result = opalCreateTexture(device, &desc, &textures[0]);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCreateBuffer(device, &desc, &buffers[1]);
+	result = opalCreateTexture(device, &desc, &textures[1]);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalMapBuffer(device, buffers[0], &ptrs[0]);
+	result = opalDestroyTexture(device, textures[0]);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalMapBuffer(device, buffers[1], &ptrs[1]);
-	assert(result == OPAL_SUCCESS);
-
-	uint32_t data_0 = 42;
-	uint32_t data_1 = 0xDEADBEEF;
-	memcpy(ptrs[0], &data_0, sizeof(uint32_t));
-	memcpy(ptrs[1], &data_1, sizeof(uint32_t));
-
-	result = opalDestroyBuffer(device, buffers[0]);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalDestroyBuffer(device, buffers[1]);
+	result = opalDestroyTexture(device, textures[1]);
 	assert(result == OPAL_SUCCESS);
 }
 
@@ -44,7 +38,7 @@ int main()
 	Opal_Instance instance {OPAL_NULL_HANDLE};
 
 	Opal_InstanceDesc instance_desc = {
-		"02_buffers",
+		"03_textures",
 		"Opal",
 		0,
 		0,
@@ -60,7 +54,7 @@ int main()
 	result = opalCreateDefaultDevice(instance, OPAL_DEVICE_HINT_DEFAULT, &device);
 	assert(result == OPAL_SUCCESS);
 
-	testBuffers(device);
+	testTextures(device);
 
 	result = opalDestroyDevice(device);
 	assert(result == OPAL_SUCCESS);

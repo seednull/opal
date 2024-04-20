@@ -58,11 +58,77 @@ Opal_Result vulkan_deviceDestroy(Device *this)
 
 /*
  */
+Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation)
+{
+	assert(this);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	VkDevice vulkan_device = device_ptr->device;
+	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
+
+	// resolve allocation type (suballocated or dedicated)
+	VkBool32 prefers_dedicated = desc->prefers_dedicated;
+	VkBool32 requires_dedicated = desc->requires_dedicated;
+
+	VkDeviceSize size = desc->size;
+	VkDeviceSize alignment = desc->alignment;
+
+	VkBool32 dedicated = (desc->hint == OPAL_ALLOCATION_HINT_PREFER_DEDICATED);
+	const float heap_threshold = 0.7f;
+
+	switch (desc->hint)
+	{
+		case OPAL_ALLOCATION_HINT_AUTO:
+		{
+			VkBool32 too_big_for_heap = desc->size > allocator->heap_size * heap_threshold;
+			dedicated = too_big_for_heap || requires_dedicated || prefers_dedicated;
+		}
+		break;
+
+		case OPAL_ALLOCATION_HINT_PREFER_HEAP:
+		{
+			VkBool32 wont_fit_in_heap = desc->size > allocator->heap_size;
+			dedicated = wont_fit_in_heap || requires_dedicated;
+			break;
+		}
+	}
+
+	// loop over best memory types
+	uint32_t memory_type_bits = desc->memory_type_bits;
+	uint32_t memory_type = 0;
+
+	while (memory_type_bits > 0)
+	{
+		Opal_Result opal_result = vulkan_helperFindBestMemoryType(vulkan_physical_device, memory_type_bits, desc->required_flags, desc->preferred_flags, desc->not_preferred_flags, &memory_type);
+		if (opal_result != OPAL_SUCCESS)
+			return OPAL_NO_MEMORY;
+
+		opal_result = OPAL_NO_MEMORY;
+
+		if (dedicated == VK_FALSE)
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, memory_type, 0, allocation);
+
+		if (opal_result == OPAL_NO_MEMORY)
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, memory_type, 1, allocation);
+
+		if (opal_result == OPAL_SUCCESS)
+			return OPAL_SUCCESS;
+
+		memory_type_bits &= ~(1 << memory_type);
+	}
+
+	return OPAL_NO_MEMORY;
+}
+
+/*
+ */
 Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	assert(this);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
 	VkDevice vulkan_device = device_ptr->device;
 	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
 
@@ -92,61 +158,49 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	memory_requirements.pNext = &dedicated_requirements;
 	vkGetBufferMemoryRequirements2(vulkan_device, &memory_info, &memory_requirements);
 
-	VkBool32 prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
-	VkBool32 requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
+	// fill allocation info
+	static uint32_t memory_required_flags[] =
+	{
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+	};
 
-	// memory type loop
-	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	static uint32_t memory_preferred_flags[] =
+	{
+		0,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		0,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+	};
+
+	static uint32_t memory_not_preferred_flags[] =
+	{
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		0,
+	};
+
 	Vulkan_Allocation allocation = {0};
 	Vulkan_AllocationDesc allocation_desc = {0};
 
 	allocation_desc.size = memory_requirements.memoryRequirements.size;
 	allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
+	allocation_desc.memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
+	allocation_desc.required_flags = memory_required_flags[desc->memory_type];
+	allocation_desc.preferred_flags = memory_preferred_flags[desc->memory_type];
+	allocation_desc.not_preferred_flags = memory_not_preferred_flags[desc->memory_type];
+	allocation_desc.hint = desc->hint;
+	allocation_desc.prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
+	allocation_desc.requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
 
-	VkBool32 dedicated = (desc->hint == OPAL_ALLOCATION_HINT_PREFER_DEDICATED);
-	const float heap_threshold = 0.7f;
-
-	switch (desc->hint)
+	Opal_Result opal_result = vulkan_deviceAllocateMemory(this, &allocation_desc, &allocation);
+	if (opal_result != OPAL_SUCCESS)
 	{
-		case OPAL_ALLOCATION_HINT_AUTO:
-		{
-			VkBool32 too_big_for_heap = desc->size > allocator->heap_size * heap_threshold;
-			dedicated = too_big_for_heap || requires_dedicated || prefers_dedicated;
-		}
-		break;
-
-		case OPAL_ALLOCATION_HINT_PREFER_HEAP:
-		{
-			VkBool32 wont_fit_in_heap = desc->size > allocator->heap_size;
-			dedicated = wont_fit_in_heap || requires_dedicated;
-			break;
-		}
-	}
-
-	uint32_t memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
-
-	while (memory_type_bits > 0)
-	{
-		Opal_Result opal_result = vulkan_helperFindBestMemoryType(vulkan_physical_device, memory_type_bits, desc->memory_type, &allocation_desc.memory_type);
-		if (opal_result != OPAL_SUCCESS)
-		{
-			vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
-			return OPAL_NO_MEMORY;
-		}
-
-		// allocate memory
-		opal_result = OPAL_NO_MEMORY;
-
-		if (dedicated == VK_FALSE)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, &allocation_desc, 0, &allocation);
-
-		if (opal_result == OPAL_NO_MEMORY)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, &allocation_desc, 1, &allocation);
-
-		if (opal_result == OPAL_SUCCESS)
-			break;
-
-		memory_type_bits &= ~(1 << allocation_desc.memory_type);
+		vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
+		return opal_result;
 	}
 
 	// bind memory
@@ -167,13 +221,97 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	ptr->size = allocation_desc.size;
 	ptr->map_count = 0;
 
-	*buffer = (Opal_Instance)ptr;
+	*buffer = (Opal_Buffer)ptr;
 	return OPAL_SUCCESS;
 }
 
 Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	VkDevice vulkan_device = device_ptr->device;
+	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
+
+	// create image
+	VkImageCreateInfo image_info = {0};
+	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	image_info.flags = vulkan_helperToImageCreateFlags(desc);
+	image_info.imageType = vulkan_helperToImageType(desc->type);
+	image_info.format = vulkan_helperToImageFormat(desc->format);
+	image_info.extent.width = desc->width;
+	image_info.extent.height = desc->height;
+	image_info.extent.depth = desc->depth;
+	image_info.mipLevels = desc->mip_count;
+	image_info.arrayLayers = desc->layer_count;
+	image_info.samples = vulkan_helperToImageSamples(desc->samples);
+	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image_info.usage = vulkan_helperToImageUsage(desc->usage, desc->format);
+	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	VkImage vulkan_image = VK_NULL_HANDLE;
+	VkResult result = vkCreateImage(vulkan_device, &image_info, NULL, &vulkan_image);
+	if (result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	// get memory requirements
+	VkMemoryRequirements2 memory_requirements = {0};
+	VkMemoryDedicatedRequirements dedicated_requirements = {0};
+
+	VkImageMemoryRequirementsInfo2 memory_info = {0};
+	memory_info.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2;
+	memory_info.image = vulkan_image;
+
+	dedicated_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
+
+	memory_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+	memory_requirements.pNext = &dedicated_requirements;
+	vkGetImageMemoryRequirements2(vulkan_device, &memory_info, &memory_requirements);
+
+	// fill allocation info
+	Vulkan_Allocation allocation = {0};
+	Vulkan_AllocationDesc allocation_desc = {0};
+
+	// TODO: align size up to buffer image granularity
+	// TODO: always use buffer image granularity as alignment
+
+	allocation_desc.size = memory_requirements.memoryRequirements.size;
+	allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
+	allocation_desc.memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
+	allocation_desc.required_flags = 0;
+	allocation_desc.preferred_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	allocation_desc.not_preferred_flags = 0;
+	allocation_desc.hint = desc->hint;
+	allocation_desc.prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
+	allocation_desc.requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
+
+	Opal_Result opal_result = vulkan_deviceAllocateMemory(this, &allocation_desc, &allocation);
+	if (opal_result != OPAL_SUCCESS)
+	{
+		vkDestroyImage(vulkan_device, vulkan_image, NULL);
+		return opal_result;
+	}
+
+	// bind memory
+	result = vkBindImageMemory(vulkan_device, vulkan_image, allocation.memory, allocation.offset);
+	if (result != VK_SUCCESS)
+	{
+		vkDestroyImage(vulkan_device, vulkan_image, NULL);
+		vulkan_allocatorFreeMemory(allocator, vulkan_device, allocation);
+		return OPAL_VULKAN_ERROR;
+	}
+
+	// create opal struct
+	Vulkan_Image *ptr = (Vulkan_Image *)malloc(sizeof(Vulkan_Image));
+	assert(ptr);
+
+	ptr->image = vulkan_image;
+	ptr->allocation = allocation;
+
+	*texture = (Opal_Texture)ptr;
+	return OPAL_SUCCESS;
 }
 
 Opal_Result vulkan_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
@@ -247,7 +385,20 @@ Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 
 Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(texture != OPAL_NULL_HANDLE);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Image *image_ptr = (Vulkan_Image *)texture;
+
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	assert(allocator);
+
+	vkDestroyImage(device_ptr->device, image_ptr->image, NULL);
+	Opal_Result result = vulkan_allocatorFreeMemory(allocator, device_ptr->device, image_ptr->allocation);
+
+	free(image_ptr);
+	return result;
 }
 
 Opal_Result vulkan_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view)

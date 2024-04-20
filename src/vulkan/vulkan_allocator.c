@@ -47,12 +47,12 @@ Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice devic
 
 /*
  */
-Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, const Vulkan_AllocationDesc *desc, uint32_t dedicated, Vulkan_Allocation *allocation)
+Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation)
 {
 	assert(allocator);
 	assert(device != VK_NULL_HANDLE);
-	assert(desc);
-	assert(desc->size > 0);
+	assert(size > 0);
+	assert(memory_type < VK_MAX_MEMORY_TYPES);
 	assert(allocation);
 
 	// TODO: check budgets
@@ -61,12 +61,12 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	if (dedicated)
 	{
 		Vulkan_MemoryBlock block = {0};
-		block.size = desc->size;
+		block.size = size;
 		block.heap = OPAL_VULKAN_HEAP_NULL;
 
 		VkMemoryAllocateInfo info = {0};
 		info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		info.memoryTypeIndex = desc->memory_type;
+		info.memoryTypeIndex = memory_type;
 		info.allocationSize = block.size;
 
 		VkResult result = vkAllocateMemory(device, &info, NULL, &block.memory);
@@ -88,7 +88,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	// TODO: check if allocation can fit in heap
 
 	// find or create heap block
-	uint32_t heap_id = allocator->last_used_heaps[desc->memory_type];
+	uint32_t heap_id = allocator->last_used_heaps[memory_type];
 	Opal_PoolHandle block_handle = OPAL_POOL_HANDLE_NULL;
 
 	if (heap_id != OPAL_VULKAN_HEAP_NULL)
@@ -96,19 +96,19 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		Vulkan_MemoryHeap *heap = &allocator->heaps[heap_id];
 		block_handle = heap->block;
 
-		if (opal_heapCanAllocAligned(&heap->heap, desc->size, desc->alignment) == 0)
+		if (opal_heapCanAllocAligned(&heap->heap, size, alignment) == 0)
 		{
 			heap_id = OPAL_VULKAN_HEAP_NULL;
 			block_handle = OPAL_POOL_HANDLE_NULL;
 		}
 	}
 
-	uint32_t pending_heap_id = allocator->first_heap[desc->memory_type];
+	uint32_t pending_heap_id = allocator->first_heap[memory_type];
 	while (pending_heap_id != OPAL_VULKAN_HEAP_NULL)
 	{
 		Vulkan_MemoryHeap *heap = &allocator->heaps[pending_heap_id];
 
-		if (opal_heapCanAllocAligned(&heap->heap, desc->size, desc->alignment))
+		if (opal_heapCanAllocAligned(&heap->heap, size, alignment))
 		{
 			heap_id = pending_heap_id;
 			block_handle = heap->block;
@@ -128,7 +128,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 
 		VkMemoryAllocateInfo info = {0};
 		info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		info.memoryTypeIndex = desc->memory_type;
+		info.memoryTypeIndex = memory_type;
 		info.allocationSize = allocator->heap_size;
 
 		VkResult result = vkAllocateMemory(device, &info, NULL, &block.memory);
@@ -140,7 +140,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		Vulkan_MemoryHeap *heap = &allocator->heaps[heap_id];
 		opal_heapInitialize(&heap->heap, allocator->heap_size, allocator->max_heap_allocations);
 
-		uint32_t first_heap_id = allocator->first_heap[desc->memory_type];
+		uint32_t first_heap_id = allocator->first_heap[memory_type];
 		if (first_heap_id != OPAL_VULKAN_HEAP_NULL)
 		{
 			Vulkan_MemoryHeap *first_heap = &allocator->heaps[first_heap_id];
@@ -153,7 +153,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		heap->next_heap = first_heap_id;
 		heap->block = block_handle;
 
-		allocator->first_heap[desc->memory_type] = heap_id;
+		allocator->first_heap[memory_type] = heap_id;
 	}
 
 	// heap alloc VRAM
@@ -162,7 +162,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	assert(block);
 
 	Opal_HeapAllocation heap_allocation = {0};
-	Opal_Result result = opal_heapAllocAligned(&heap->heap, desc->size, desc->alignment, &heap_allocation);
+	Opal_Result result = opal_heapAllocAligned(&heap->heap, size, alignment, &heap_allocation);
 	assert(result == OPAL_SUCCESS);
 
 	allocation->block = block_handle;
@@ -170,6 +170,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	allocation->offset = heap_allocation.offset;
 	allocation->heap_metadata = heap_allocation.metadata;
 
+	allocator->last_used_heaps[memory_type] = heap_id;
 	// TODO: update budgets
 
 	return OPAL_SUCCESS;
