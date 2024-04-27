@@ -100,6 +100,7 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 	// loop over best memory types
 	uint32_t memory_type_bits = desc->memory_type_bits;
 	uint32_t memory_type = 0;
+	uint32_t resource_type = desc->resource_type;
 
 	while (memory_type_bits > 0)
 	{
@@ -110,10 +111,10 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 		opal_result = OPAL_NO_MEMORY;
 
 		if (dedicated == VK_FALSE)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, memory_type, 0, allocation);
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, resource_type, memory_type, 0, allocation);
 
 		if (opal_result == OPAL_NO_MEMORY)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, memory_type, 1, allocation);
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, resource_type, memory_type, 1, allocation);
 
 		if (opal_result == OPAL_SUCCESS)
 			return OPAL_SUCCESS;
@@ -195,6 +196,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	allocation_desc.required_flags = memory_required_flags[desc->memory_type];
 	allocation_desc.preferred_flags = memory_preferred_flags[desc->memory_type];
 	allocation_desc.not_preferred_flags = memory_not_preferred_flags[desc->memory_type];
+	allocation_desc.resource_type = VULKAN_RESOURCE_TYPE_LINEAR;
 	allocation_desc.hint = desc->hint;
 	allocation_desc.prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
 	allocation_desc.requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
@@ -283,6 +285,7 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 	allocation_desc.required_flags = 0;
 	allocation_desc.preferred_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	allocation_desc.not_preferred_flags = 0;
+	allocation_desc.resource_type = VULKAN_RESOURCE_TYPE_NONLINEAR;
 	allocation_desc.hint = desc->hint;
 	allocation_desc.prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
 	allocation_desc.requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
