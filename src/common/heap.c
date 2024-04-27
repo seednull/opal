@@ -338,10 +338,11 @@ Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uin
 	assert(*node_index != OPAL_NODE_INDEX_NULL);
 	Opal_HeapNode *node = &heap->nodes[*node_index];
 
+	assert(node);
 	*offset = alignUp(node->offset, alignment);
-	uint32_t remainder_start_size = *offset - node->offset;
 
-	if (remainder_start_size + size > node->size)
+	uint32_t remainder_begin_size = *offset - node->offset;
+	if (remainder_begin_size + size > node->size)
 	{
 		uint32_t max_size = size + alignment - 1;
 		result = opal_heapFindBinForSize(heap, max_size, &bin_index);
@@ -354,6 +355,7 @@ Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uin
 		assert(*node_index != OPAL_NODE_INDEX_NULL);
 		node = &heap->nodes[*node_index];
 
+		assert(node);
 		*offset = alignUp(node->offset, alignment);
 	}
 
@@ -371,12 +373,12 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 	assert(node->used == 0);
 	assert(offset >= node->offset);
 
-	uint32_t remainder_start_size = offset - node->offset;
-	uint32_t remainder_start_offset = node->offset;
-	uint32_t remainder_end_size = node->size - remainder_start_size - size;
+	uint32_t remainder_begin_size = offset - node->offset;
+	uint32_t remainder_begin_offset = node->offset;
+	uint32_t remainder_end_size = node->size - remainder_begin_size - size;
 	uint32_t remainder_end_offset = offset + size;
 
-	assert(remainder_start_size + size <= node->size);
+	assert(remainder_begin_size + size <= node->size);
 
 	Opal_NodeIndex prev_index = node->prev_neighbour;
 	Opal_NodeIndex next_index = node->next_neighbour;
@@ -387,15 +389,15 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 	node->used = 1;
 	node->size = size;
 
-	if (remainder_start_size > 0)
+	if (remainder_begin_size > 0)
 	{
 		Opal_HeapNode *prev_node = (prev_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[prev_index] : NULL;
 
 		// try merge with previous free node
 		if (prev_node != NULL && prev_node->used == 0)
 		{
-			remainder_start_offset = prev_node->offset;
-			remainder_start_size += prev_node->size;
+			remainder_begin_offset = prev_node->offset;
+			remainder_begin_size += prev_node->size;
 
 			Opal_NodeIndex prev_prev_index = prev_node->prev_neighbour;
 
@@ -406,7 +408,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 		}
 
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
-		opal_heapAddNodeToBin(heap, new_index, remainder_start_size, remainder_start_offset);
+		opal_heapAddNodeToBin(heap, new_index, remainder_begin_size, remainder_begin_offset);
 
 		Opal_HeapNode *new_node = &heap->nodes[new_index];
 		assert(new_node);
