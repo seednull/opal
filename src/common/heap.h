@@ -54,7 +54,11 @@ extern Opal_Result opal_heapShutdown(Opal_Heap *heap);
 extern Opal_Result opal_heapAlloc(Opal_Heap *heap, uint32_t size, Opal_HeapAllocation *allocation);
 extern Opal_Result opal_heapAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t alignment, Opal_HeapAllocation *allocation);
 
-extern uint32_t opal_heapCanAlloc(Opal_Heap *heap, uint32_t size);
-extern uint32_t opal_heapCanAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t alignment);
+extern Opal_Result opal_heapStageAlloc(const Opal_Heap *heap, uint32_t size, Opal_NodeIndex *node_index, uint32_t *offset);
+extern Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uint32_t alignment, Opal_NodeIndex *node_index, uint32_t *offset);
+extern Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uint32_t offset, uint32_t size);
+
+extern uint32_t opal_heapCanAlloc(const Opal_Heap *heap, uint32_t size);
+extern uint32_t opal_heapCanAllocAligned(const Opal_Heap *heap, uint32_t size, uint32_t alignment);
 
 extern Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation);

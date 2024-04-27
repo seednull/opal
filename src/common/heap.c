@@ -71,7 +71,7 @@ static Opal_Result opal_findBinFromIndex(uint32_t bins, uint8_t index, uint8_t *
 
 /*
  */
-static void opal_heapInsertNode(Opal_Heap *heap, Opal_NodeIndex index, uint32_t size, uint32_t offset)
+static void opal_heapAddNodeToBin(Opal_Heap *heap, Opal_NodeIndex index, uint32_t size, uint32_t offset)
 {
 	assert(heap);
 	assert(index != OPAL_NODE_INDEX_NULL);
@@ -106,7 +106,7 @@ static void opal_heapInsertNode(Opal_Heap *heap, Opal_NodeIndex index, uint32_t 
 	heap->bins[bin_index] = index;
 }
 
-static void opal_heapRemoveNode(Opal_Heap *heap, Opal_NodeIndex index)
+static void opal_heapRemoveNodeFromBin(Opal_Heap *heap, Opal_NodeIndex index)
 {
 	assert(heap);
 	assert(index != OPAL_NODE_INDEX_NULL);
@@ -169,7 +169,7 @@ static void opal_heapReleaseNodeIndex(Opal_Heap *heap, Opal_NodeIndex index)
 	heap->free_indices[heap->num_free_nodes - 1] = index;
 }
 
-static Opal_Result opal_heapFindBinForSize(Opal_Heap *heap, uint32_t size, Opal_BinIndex *result)
+static Opal_Result opal_heapFindBinForSize(const Opal_Heap *heap, uint32_t size, Opal_BinIndex *result)
 {
 	assert(heap);
 	assert(result);
@@ -229,7 +229,7 @@ Opal_Result opal_heapInitialize(Opal_Heap *heap, uint32_t size, uint32_t max_all
 
 	Opal_NodeIndex index = opal_heapGrabNodeIndex(heap);
 
-	opal_heapInsertNode(heap, index, size, 0);
+	opal_heapAddNodeToBin(heap, index, size, 0);
 	return OPAL_SUCCESS;
 }
 
@@ -249,50 +249,21 @@ Opal_Result opal_heapShutdown(Opal_Heap *heap)
 Opal_Result opal_heapAlloc(Opal_Heap *heap, uint32_t size, Opal_HeapAllocation *allocation)
 {
 	assert(heap);
-	assert(size > 0);
 	assert(allocation);
+	assert(size > 0);
 
-	Opal_BinIndex index = 0;
-	
-	Opal_Result result = opal_heapFindBinForSize(heap, size, &index);
+	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
+	uint32_t offset = 0;
+
+	Opal_Result result = opal_heapStageAlloc(heap, size, &node_index, &offset);
 	if (result != OPAL_SUCCESS)
 		return result;
 
-	assert(index != 0);
-	Opal_NodeIndex node_index = heap->bins[index];
+	result = opal_heapCommitAlloc(heap, node_index, offset, size);
+	if (result != OPAL_SUCCESS)
+		return result;
 
-	assert(node_index != OPAL_NODE_INDEX_NULL);
-	Opal_HeapNode *node = &heap->nodes[node_index];
-
-	uint32_t remainder = node->size - size;
-
-	Opal_NodeIndex next_index = node->next_neighbour;
-
-	opal_heapRemoveNode(heap, node_index);
-
-	node->used = 1;
-	node->size = size;
-
-	if (remainder > 0)
-	{
-		Opal_HeapNode *next_node = (next_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[next_index] : NULL;
-
-		// TODO: can we merge with next free node?
-		// TODO: what if we ran out of free nodes indices?
-		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
-		opal_heapInsertNode(heap, new_index, remainder, node->offset + size);
-
-		Opal_HeapNode *new_node = &heap->nodes[new_index];
-
-		node->next_neighbour = new_index;
-		new_node->prev_neighbour = node_index;
-
-		new_node->next_neighbour = next_index;
-		if (next_node)
-			next_node->prev_neighbour = new_index;
-	}
-
-	allocation->offset = node->offset;
+	allocation->offset = offset;
 	allocation->metadata = node_index;
 
 	return OPAL_SUCCESS;
@@ -301,55 +272,118 @@ Opal_Result opal_heapAlloc(Opal_Heap *heap, uint32_t size, Opal_HeapAllocation *
 Opal_Result opal_heapAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t alignment, Opal_HeapAllocation *allocation)
 {
 	assert(heap);
+	assert(allocation);
 	assert(size > 0);
 	assert(isPow2(alignment));
-	assert(allocation);
 
-	Opal_BinIndex index = 0;
-	
-	Opal_Result result = opal_heapFindBinForSize(heap, size, &index);
+	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
+	uint32_t offset = 0;
+
+	Opal_Result result = opal_heapStageAllocAligned(heap, size, alignment, &node_index, &offset);
 	if (result != OPAL_SUCCESS)
 		return result;
 
-	assert(index != 0);
-	Opal_NodeIndex node_index = heap->bins[index];
+	result = opal_heapCommitAlloc(heap, node_index, offset, size);
+	if (result != OPAL_SUCCESS)
+		return result;
 
-	assert(node_index != OPAL_NODE_INDEX_NULL);
-	Opal_HeapNode *node = &heap->nodes[node_index];
+	allocation->offset = offset;
+	allocation->metadata = node_index;
 
-	uint32_t aligned_offset = alignUp(node->offset, alignment);
-	uint32_t remainder_start_size = aligned_offset - node->offset;
-	uint32_t remainder_start_offset = node->offset;
+	return OPAL_SUCCESS;
+}
+
+Opal_Result opal_heapStageAlloc(const Opal_Heap *heap, uint32_t size, Opal_NodeIndex *node_index, uint32_t *offset)
+{
+	assert(heap);
+	assert(node_index);
+	assert(offset);
+	assert(size > 0);
+
+	Opal_BinIndex bin_index = 0;
+	
+	Opal_Result result = opal_heapFindBinForSize(heap, size, &bin_index);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	assert(bin_index != 0);
+	*node_index = heap->bins[bin_index];
+
+	assert(*node_index != OPAL_NODE_INDEX_NULL);
+	Opal_HeapNode *node = &heap->nodes[*node_index];
+
+	assert(node);
+	*offset = node->offset;
+
+	return OPAL_SUCCESS;
+}
+
+Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uint32_t alignment, Opal_NodeIndex *node_index, uint32_t *offset)
+{
+	assert(heap);
+	assert(node_index);
+	assert(offset);
+	assert(size > 0);
+	assert(isPow2(alignment));
+
+	Opal_BinIndex bin_index = 0;
+	
+	Opal_Result result = opal_heapFindBinForSize(heap, size, &bin_index);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	assert(bin_index != 0);
+	*node_index = heap->bins[bin_index];
+
+	assert(*node_index != OPAL_NODE_INDEX_NULL);
+	Opal_HeapNode *node = &heap->nodes[*node_index];
+
+	*offset = alignUp(node->offset, alignment);
+	uint32_t remainder_start_size = *offset - node->offset;
 
 	if (remainder_start_size + size > node->size)
 	{
 		uint32_t max_size = size + alignment - 1;
-		result = opal_heapFindBinForSize(heap, max_size, &index);
+		result = opal_heapFindBinForSize(heap, max_size, &bin_index);
 		if (result != OPAL_SUCCESS)
 			return result;
 
-		assert(index != 0);
-		node_index = heap->bins[index];
+		assert(bin_index != 0);
+		*node_index = heap->bins[bin_index];
 
-		assert(node_index != OPAL_NODE_INDEX_NULL);
-		node = &heap->nodes[node_index];
+		assert(*node_index != OPAL_NODE_INDEX_NULL);
+		node = &heap->nodes[*node_index];
 
-		aligned_offset = alignUp(node->offset, alignment);
-		remainder_start_size = aligned_offset - node->offset;
-		remainder_start_offset = node->offset;
+		*offset = alignUp(node->offset, alignment);
 	}
 
-	assert(remainder_start_size + size <= node->size);
+	return OPAL_SUCCESS;
+}
 
+Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uint32_t offset, uint32_t size)
+{
+	assert(heap);
+	assert(node_index != OPAL_NODE_INDEX_NULL);
+	assert(size > 0);
+
+	Opal_HeapNode *node = &heap->nodes[node_index];
+	assert(node);
+	assert(node->used == 0);
+	assert(offset >= node->offset);
+
+	uint32_t remainder_start_size = offset - node->offset;
+	uint32_t remainder_start_offset = node->offset;
 	uint32_t remainder_end_size = node->size - remainder_start_size - size;
-	uint32_t remainder_end_offset = remainder_start_offset + remainder_start_size + size;
+	uint32_t remainder_end_offset = offset + size;
+
+	assert(remainder_start_size + size <= node->size);
 
 	Opal_NodeIndex prev_index = node->prev_neighbour;
 	Opal_NodeIndex next_index = node->next_neighbour;
 
-	opal_heapRemoveNode(heap, node_index);
+	opal_heapRemoveNodeFromBin(heap, node_index);
 
-	node->offset = aligned_offset;
+	node->offset = offset;
 	node->used = 1;
 	node->size = size;
 
@@ -365,17 +399,17 @@ Opal_Result opal_heapAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t align
 
 			Opal_NodeIndex prev_prev_index = prev_node->prev_neighbour;
 
-			opal_heapRemoveNode(heap, prev_index);
+			opal_heapRemoveNodeFromBin(heap, prev_index);
 			opal_heapReleaseNodeIndex(heap, prev_index);
 
 			prev_index = prev_prev_index;
 		}
 
-		// TODO: what if we ran out of free nodes indices?
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
-		opal_heapInsertNode(heap, new_index, remainder_start_size, remainder_start_offset);
+		opal_heapAddNodeToBin(heap, new_index, remainder_start_size, remainder_start_offset);
 
 		Opal_HeapNode *new_node = &heap->nodes[new_index];
+		assert(new_node);
 
 		node->prev_neighbour = new_index;
 		new_node->next_neighbour = node_index;
@@ -389,12 +423,24 @@ Opal_Result opal_heapAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t align
 	{
 		Opal_HeapNode *next_node = (next_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[next_index] : NULL;
 
-		// TODO: can we merge with next free node?
-		// TODO: what if we ran out of free nodes indices?
+		// try merge with previous free node
+		if (next_node != NULL && next_node->used == 0)
+		{
+			remainder_end_size += next_node->size;
+
+			Opal_NodeIndex next_next_index = next_node->next_neighbour;
+
+			opal_heapRemoveNodeFromBin(heap, next_index);
+			opal_heapReleaseNodeIndex(heap, next_index);
+
+			next_index = next_next_index;
+		}
+
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
-		opal_heapInsertNode(heap, new_index, remainder_end_size, remainder_end_offset);
+		opal_heapAddNodeToBin(heap, new_index, remainder_end_size, remainder_end_offset);
 
 		Opal_HeapNode *new_node = &heap->nodes[new_index];
+		assert(new_node);
 
 		node->next_neighbour = new_index;
 		new_node->prev_neighbour = node_index;
@@ -404,55 +450,35 @@ Opal_Result opal_heapAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t align
 			next_node->prev_neighbour = new_index;
 	}
 
-	allocation->offset = aligned_offset;
-	allocation->metadata = node_index;
-
 	return OPAL_SUCCESS;
 }
 
-uint32_t opal_heapCanAlloc(Opal_Heap *heap, uint32_t size)
+uint32_t opal_heapCanAlloc(const Opal_Heap *heap, uint32_t size)
 {
 	assert(heap);
 	assert(size > 0);
 
-	Opal_BinIndex index = 0;
-	
-	Opal_Result result = opal_heapFindBinForSize(heap, size, &index);
+	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
+	uint32_t offset = 0;
+
+	Opal_Result result = opal_heapStageAlloc(heap, size, &node_index, &offset);
 	if (result != OPAL_SUCCESS)
 		return 0;
 
+	assert(node_index != OPAL_NODE_INDEX_NULL);
 	return 1;
 }
 
-uint32_t opal_heapCanAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t alignment)
+uint32_t opal_heapCanAllocAligned(const Opal_Heap *heap, uint32_t size, uint32_t alignment)
 {
-	assert(heap);
-	assert(size > 0);
+	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
+	uint32_t offset = 0;
 
-	Opal_BinIndex index = 0;
-	
-	Opal_Result result = opal_heapFindBinForSize(heap, size, &index);
+	Opal_Result result = opal_heapStageAllocAligned(heap, size, alignment, &node_index, &offset);
 	if (result != OPAL_SUCCESS)
 		return 0;
 
-	assert(index != 0);
-	Opal_NodeIndex node_index = heap->bins[index];
-
 	assert(node_index != OPAL_NODE_INDEX_NULL);
-	Opal_HeapNode *node = &heap->nodes[node_index];
-
-	uint32_t aligned_offset = alignUp(node->offset, alignment);
-	uint32_t remainder_start_size = aligned_offset - node->offset;
-	uint32_t remainder_start_offset = node->offset;
-
-	if (remainder_start_size + size > node->size)
-	{
-		uint32_t max_size = size + alignment - 1;
-		result = opal_heapFindBinForSize(heap, max_size, &index);
-		if (result != OPAL_SUCCESS)
-			return 0;
-	}
-
 	return 1;
 }
 
@@ -481,7 +507,7 @@ Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 
 		new_prev_index = prev_node->prev_neighbour;
 
-		opal_heapRemoveNode(heap, prev_index);
+		opal_heapRemoveNodeFromBin(heap, prev_index);
 		opal_heapReleaseNodeIndex(heap, prev_index);
 	}
 
@@ -492,15 +518,14 @@ Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 
 		new_next_index = next_node->next_neighbour;
 
-		opal_heapRemoveNode(heap, next_index);
+		opal_heapRemoveNodeFromBin(heap, next_index);
 		opal_heapReleaseNodeIndex(heap, next_index);
 	}
 
 	opal_heapReleaseNodeIndex(heap, allocation.metadata);
 
-	// TODO: what if we ran out of free nodes indices?
 	Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
-	opal_heapInsertNode(heap, new_index, node->size, node->offset);
+	opal_heapAddNodeToBin(heap, new_index, node->size, node->offset);
 
 	node = &heap->nodes[new_index];
 	node->prev_neighbour = new_prev_index;
