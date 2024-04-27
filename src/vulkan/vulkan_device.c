@@ -26,9 +26,10 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	device_ptr->device = device;
 
 	// allocator
-	uint32_t buffer_image_granularity = 1; // TODO: get from physical device
+	VkPhysicalDeviceProperties properties = {0};
+	vkGetPhysicalDeviceProperties(physical_device, &properties);
 
-	Opal_Result result = vulkan_allocatorInitialize(&device_ptr->allocator, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps, buffer_image_granularity);
+	Opal_Result result = vulkan_allocatorInitialize(&device_ptr->allocator, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps, properties.limits.bufferImageGranularity);
 	assert(result == OPAL_SUCCESS);
 
 	return OPAL_SUCCESS;

@@ -77,7 +77,7 @@ static Opal_Result vulkan_allocatorCommitAllocation(Vulkan_Allocator *allocator,
 
 /*
  */
-Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity)
+Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, VkDeviceSize buffer_image_granularity)
 {
 	assert(allocator);
 

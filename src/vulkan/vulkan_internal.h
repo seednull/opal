@@ -40,7 +40,7 @@ typedef struct Vulkan_Allocator_t
 	uint32_t heap_size;
 	uint32_t max_heaps;
 	uint32_t max_heap_allocations;
-	uint32_t buffer_image_granularity;
+	VkDeviceSize buffer_image_granularity;
 } Vulkan_Allocator;
 
 typedef struct Vulkan_AllocationDesc_t
@@ -110,7 +110,7 @@ extern Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_Devic
 extern Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device);
 extern Opal_Result vulkan_instanceDestroy(Instance *this);
 
-extern Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
+extern Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, VkDeviceSize buffer_image_granularity);
 extern Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device);
 extern Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
 extern Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr);
