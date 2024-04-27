@@ -1,6 +1,7 @@
 #pragma once
 
 #include <opal.h>
+#include <assert.h>
 
 #define OPAL_MANTISSA_BITS			3
 #define OPAL_MANTISSA_MAX 			0x00000008
@@ -62,3 +63,16 @@ extern uint32_t opal_heapCanAlloc(const Opal_Heap *heap, uint32_t size);
 extern uint32_t opal_heapCanAllocAligned(const Opal_Heap *heap, uint32_t size, uint32_t alignment);
 
 extern Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation);
+
+OPAL_INLINE uint32_t isPow2(uint32_t value)
+{
+	return (value & (value - 1)) == 0;
+}
+
+OPAL_INLINE uint32_t alignUp(uint32_t value, uint32_t alignment)
+{
+	assert(isPow2(alignment));
+
+	uint32_t mask = alignment - 1;
+	return (value + mask) & ~mask;
+}
