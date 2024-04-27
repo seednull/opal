@@ -26,7 +26,9 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	device_ptr->device = device;
 
 	// allocator
-	Opal_Result result = vulkan_allocatorInitialize(&device_ptr->allocator, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);
+	uint32_t buffer_image_granularity = 1; // TODO: get from physical device
+
+	Opal_Result result = vulkan_allocatorInitialize(&device_ptr->allocator, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps, buffer_image_granularity);
 	assert(result == OPAL_SUCCESS);
 
 	return OPAL_SUCCESS;
@@ -273,9 +275,6 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 	// fill allocation info
 	Vulkan_Allocation allocation = {0};
 	Vulkan_AllocationDesc allocation_desc = {0};
-
-	// TODO: align size up to buffer image granularity
-	// TODO: always use buffer image granularity as alignment
 
 	allocation_desc.size = memory_requirements.memoryRequirements.size;
 	allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
