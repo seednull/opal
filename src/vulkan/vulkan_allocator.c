@@ -49,7 +49,8 @@ static OPAL_INLINE uint32_t vulkan_granularityPageDecrementUsage(uint32_t page)
 	return vulkan_granularityPagePack(page_resource_type, page_usage_count - 1);
 }
 
-
+/*
+ */
 static Opal_Result vulkan_allocatorStageHeapAlloc(const Vulkan_Allocator *allocator, uint32_t heap_id, uint32_t size, uint32_t alignment, uint32_t resource_type, Opal_NodeIndex *node_index, uint32_t *offset)
 {
 	assert(allocator);
@@ -89,6 +90,8 @@ static Opal_Result vulkan_allocatorStageHeapAlloc(const Vulkan_Allocator *alloca
 
 		uint32_t page_end_index = alignUp(*offset + size, allocator->buffer_image_granularity) / allocator->buffer_image_granularity - 1;
 		uint32_t page_end = heap->granularity_pages[page_end_index];
+
+		assert(page_end_index >= page_begin_index);
 
 		if (vulkan_granularityPageIsValidResource(page_end, resource_type) == 0)
 			continue;
@@ -133,6 +136,8 @@ static Opal_Result vulkan_allocatorCommitHeapAlloc(Vulkan_Allocator *allocator, 
 		uint32_t page_end_index = alignUp(offset + size, allocator->buffer_image_granularity) / allocator->buffer_image_granularity - 1;
 		uint32_t page_end = heap->granularity_pages[page_end_index];
 
+		assert(page_end_index >= page_begin_index);
+
 		heap->granularity_pages[page_begin_index] = vulkan_granularityPageIncrementUsage(page_begin, resource_type);
 		heap->granularity_pages[page_end_index] = vulkan_granularityPageIncrementUsage(page_end, resource_type);
 	}
@@ -168,6 +173,8 @@ static Opal_Result vulkan_allocatorFreeHeapAlloc(Vulkan_Allocator *allocator, ui
 
 		uint32_t page_end_index = alignUp(offset + node->size, allocator->buffer_image_granularity) / allocator->buffer_image_granularity - 1;
 		uint32_t page_end = heap->granularity_pages[page_end_index];
+
+		assert(page_end_index >= page_begin_index);
 
 		heap->granularity_pages[page_begin_index] = vulkan_granularityPageDecrementUsage(page_begin);
 		heap->granularity_pages[page_end_index] = vulkan_granularityPageDecrementUsage(page_end);
