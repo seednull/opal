@@ -353,6 +353,8 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		allocator->first_heap[memory_type] = heap_id;
 		allocator->num_heaps++;
 
+		assert(size <= allocator->heap_size);
+
 		Opal_Result opal_result = vulkan_allocatorStageHeapAlloc(allocator, heap_id, size, alignment, resource_type, &node_index, &offset);
 		assert(opal_result == OPAL_SUCCESS);
 	}
