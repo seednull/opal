@@ -41,8 +41,6 @@ typedef struct Vulkan_Allocator_t
 	uint32_t first_heap[VK_MAX_MEMORY_TYPES];
 	uint32_t last_used_heaps[VK_MAX_MEMORY_TYPES];
 
-	// TODO: vulkan physical device memory heap budgets
-
 	uint32_t heap_size;
 	uint32_t max_heaps;
 	uint32_t max_heap_allocations;

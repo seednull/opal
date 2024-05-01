@@ -225,7 +225,6 @@ Opal_Result vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, ui
 		if ((~vulkan_memory_type.propertyFlags & required_flags) != 0)
 			continue;
 
-		// TODO: count bits
 		uint32_t preferred_cost_bits = ~vulkan_memory_type.propertyFlags & preferred_flags;
 		uint32_t not_preferred_cost_bits = vulkan_memory_type.propertyFlags & not_preferred_flags;
 

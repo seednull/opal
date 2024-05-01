@@ -242,8 +242,6 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	assert(memory_type < VK_MAX_MEMORY_TYPES);
 	assert(allocation);
 
-	// TODO: check budgets
-
 	// create dedicated block
 	if (dedicated)
 	{
@@ -266,8 +264,6 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		allocation->memory = block.memory;
 		allocation->offset = 0;
 		allocation->heap_metadata = OPAL_NODE_INDEX_NULL;
-
-		// TODO: update budgets
 
 		return OPAL_SUCCESS;
 	}
@@ -309,8 +305,9 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 			pending_heap_id = heap->next_heap;
 		}
 	}
-	
-	// TODO: check if it's possible to allocate more heaps
+
+	if (allocator->num_heaps == allocator->max_heaps)
+		return OPAL_NO_MEMORY;
 
 	if (heap_id == OPAL_VULKAN_HEAP_NULL)
 	{
@@ -364,8 +361,6 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	allocation->heap_metadata = node_index;
 
 	allocator->last_used_heaps[memory_type] = heap_id;
-
-	// TODO: update budgets
 
 	return OPAL_SUCCESS;
 }

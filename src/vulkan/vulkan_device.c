@@ -97,6 +97,16 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 		}
 	}
 
+	// fetch heap budgets & usage
+	VkPhysicalDeviceMemoryProperties2 memory_properties = {0};
+	VkPhysicalDeviceMemoryBudgetPropertiesEXT memory_budgets = {0};
+
+	memory_budgets.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
+
+	memory_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+	memory_properties.pNext = &memory_budgets;
+	vkGetPhysicalDeviceMemoryProperties2(vulkan_physical_device, &memory_properties);
+
 	// loop over best memory types
 	uint32_t memory_type_bits = desc->memory_type_bits;
 	uint32_t memory_type = 0;
@@ -106,6 +116,10 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 	{
 		Opal_Result opal_result = vulkan_helperFindBestMemoryType(vulkan_physical_device, memory_type_bits, desc->required_flags, desc->preferred_flags, desc->not_preferred_flags, &memory_type);
 		if (opal_result != OPAL_SUCCESS)
+			return OPAL_NO_MEMORY;
+
+		uint32_t heap_index = memory_properties.memoryProperties.memoryTypes[memory_type].heapIndex;
+		if (memory_budgets.heapUsage[heap_index] > memory_budgets.heapBudget[heap_index])
 			return OPAL_NO_MEMORY;
 
 		opal_result = OPAL_NO_MEMORY;
