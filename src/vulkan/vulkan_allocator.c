@@ -234,7 +234,7 @@ Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice devic
 
 /*
  */
-Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, uint32_t resource_type, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation)
+Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize budget, VkDeviceSize usage, uint32_t resource_type, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation)
 {
 	assert(allocator);
 	assert(device != VK_NULL_HANDLE);
@@ -245,9 +245,13 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	// create dedicated block
 	if (dedicated)
 	{
+		if (usage + size > budget)
+			return OPAL_NO_MEMORY;
+
 		Vulkan_MemoryBlock block = {0};
 		block.size = size;
 		block.heap = OPAL_VULKAN_HEAP_NULL;
+		block.memory_type = memory_type;
 
 		VkMemoryAllocateInfo info = {0};
 		info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -311,11 +315,15 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 
 	if (heap_id == OPAL_VULKAN_HEAP_NULL)
 	{
+		if (usage + allocator->heap_size > budget)
+			return OPAL_NO_MEMORY;
+
 		heap_id = allocator->num_heaps++;
 
 		Vulkan_MemoryBlock block = {0};
 		block.size = allocator->heap_size;
 		block.heap = heap_id;
+		block.memory_type = memory_type;
 
 		VkMemoryAllocateInfo info = {0};
 		info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -415,7 +423,10 @@ Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice dev
 	assert(block);
 
 	if (block->heap != OPAL_VULKAN_HEAP_NULL)
+	{
+		allocator->last_used_heaps[block->memory_type] = block->heap;
 		return vulkan_allocatorFreeHeapAlloc(allocator, block->heap, allocation.heap_metadata, allocation.offset);
+	}
 
 	vkFreeMemory(device, block->memory, NULL);
 	return opal_poolRemoveElement(&allocator->blocks, allocation.block);

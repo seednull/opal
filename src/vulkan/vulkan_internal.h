@@ -19,6 +19,7 @@ typedef struct Vulkan_MemoryBlock_t
 	VkDeviceMemory memory;
 	VkDeviceSize size;
 	void *mapped_ptr;
+	uint32_t memory_type;
 	uint32_t map_count;
 	uint32_t heap;
 } Vulkan_MemoryBlock;
@@ -117,7 +118,7 @@ extern Opal_Result vulkan_instanceDestroy(Instance *this);
 
 extern Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, VkDeviceSize buffer_image_granularity);
 extern Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device);
-extern Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, uint32_t resource_type, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
+extern Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize budget, VkDeviceSize usage, uint32_t resource_type, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
 extern Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr);
 extern Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
 extern Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);

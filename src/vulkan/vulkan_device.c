@@ -119,16 +119,16 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 			return OPAL_NO_MEMORY;
 
 		uint32_t heap_index = memory_properties.memoryProperties.memoryTypes[memory_type].heapIndex;
-		if (memory_budgets.heapUsage[heap_index] > memory_budgets.heapBudget[heap_index])
-			return OPAL_NO_MEMORY;
+		VkDeviceSize usage = memory_budgets.heapUsage[heap_index];
+		VkDeviceSize budget = memory_budgets.heapBudget[heap_index];
 
 		opal_result = OPAL_NO_MEMORY;
 
 		if (dedicated == VK_FALSE)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, resource_type, memory_type, 0, allocation);
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, budget, usage, resource_type, memory_type, 0, allocation);
 
 		if (opal_result == OPAL_NO_MEMORY)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, resource_type, memory_type, 1, allocation);
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, size, alignment, budget, usage, resource_type, memory_type, 1, allocation);
 
 		if (opal_result == OPAL_SUCCESS)
 			return OPAL_SUCCESS;
