@@ -318,7 +318,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		if (usage + allocator->heap_size > budget)
 			return OPAL_NO_MEMORY;
 
-		heap_id = allocator->num_heaps++;
+		heap_id = allocator->num_heaps;
 
 		Vulkan_MemoryBlock block = {0};
 		block.size = allocator->heap_size;
@@ -351,6 +351,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		heap->block = block_handle;
 
 		allocator->first_heap[memory_type] = heap_id;
+		allocator->num_heaps++;
 
 		Opal_Result opal_result = vulkan_allocatorStageHeapAlloc(allocator, heap_id, size, alignment, resource_type, &node_index, &offset);
 		assert(opal_result == OPAL_SUCCESS);
