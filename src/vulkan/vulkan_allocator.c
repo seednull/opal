@@ -215,10 +215,10 @@ Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice devic
 
 	for (uint32_t i = 0; i < allocator->num_heaps; ++i)
 	{
-		Opal_Heap *heap = &allocator->heaps[i].heap;
-		opal_heapShutdown(heap);
+		Vulkan_MemoryHeap *heap = &allocator->heaps[i];
+		opal_heapShutdown(&heap->heap);
 
-		free(allocator->heaps[i].granularity_pages);
+		free(heap->granularity_pages);
 	}
 	free(allocator->heaps);
 
