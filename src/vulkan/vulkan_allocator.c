@@ -310,11 +310,11 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 		}
 	}
 
-	if (allocator->num_heaps == allocator->max_heaps)
-		return OPAL_NO_MEMORY;
-
 	if (heap_id == OPAL_VULKAN_HEAP_NULL)
 	{
+		if (allocator->num_heaps == allocator->max_heaps)
+			return OPAL_NO_MEMORY;
+
 		if (usage + allocator->heap_size > budget)
 			return OPAL_NO_MEMORY;
 
