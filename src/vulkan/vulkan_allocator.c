@@ -104,10 +104,10 @@ static Opal_Result vulkan_allocatorStageHeapAlloc(const Vulkan_Allocator *alloca
 		if (remainder_begin_size + size > node->size)
 			continue;
 
-		break;
+		return OPAL_SUCCESS;
 	}
 
-	return OPAL_SUCCESS;
+	return OPAL_NO_MEMORY;
 }
 
 static Opal_Result vulkan_allocatorCommitHeapAlloc(Vulkan_Allocator *allocator, uint32_t heap_id, Opal_NodeIndex node_index, uint32_t offset, uint32_t size, uint32_t resource_type)
