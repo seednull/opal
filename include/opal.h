@@ -129,6 +129,11 @@ typedef enum Opal_AllocationHint_t
 	OPAL_ALLOCATION_HINT_MAX,
 } Opal_AllocationHint;
 
+typedef enum Opal_InstanceCreationFlags_t
+{
+	OPAL_INSTANCE_CREATION_FLAGS_USE_VMA = 0x00000001,
+} Opal_InstanceCreationFlags;
+
 typedef enum Opal_BufferUsageFlags_t
 {
 	OPAL_BUFFER_USAGE_TRANSFER_SRC = 0x00000001,
@@ -360,6 +365,7 @@ typedef struct Opal_InstanceDesc_t
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
+	Opal_InstanceCreationFlags flags;
 } Opal_InstanceDesc;
 
 typedef struct Opal_BufferDesc_t

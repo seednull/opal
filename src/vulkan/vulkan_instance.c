@@ -66,6 +66,7 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	ptr->heap_size = desc->heap_size;
 	ptr->max_heap_allocations = desc->max_heap_allocations;
 	ptr->max_heaps = desc->max_heaps;
+	ptr->flags = desc->flags;
 
 	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;

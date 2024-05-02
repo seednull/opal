@@ -1,10 +1,15 @@
 #pragma once
 
 #include "opal_internal.h"
-#include "common/heap.h"
-#include "common/pool.h"
 
 #include <volk.h>
+
+#ifdef OPAL_USE_VMA
+#include "vk_mem_alloc.h"
+#endif
+
+#include "common/heap.h"
+#include "common/pool.h"
 
 #define OPAL_VULKAN_HEAP_NULL 0xFFFFFFFF
 
@@ -45,7 +50,7 @@ typedef struct Vulkan_Allocator_t
 	uint32_t heap_size;
 	uint32_t max_heaps;
 	uint32_t max_heap_allocations;
-	VkDeviceSize buffer_image_granularity;
+	uint32_t buffer_image_granularity;
 } Vulkan_Allocator;
 
 typedef struct Vulkan_AllocationDesc_t
@@ -65,7 +70,7 @@ typedef struct Vulkan_AllocationDesc_t
 typedef struct Vulkan_Allocation_t
 {
 	VkDeviceMemory memory;
-	VkDeviceSize offset;
+	uint32_t offset;
 	Opal_PoolHandle block;
 	Opal_NodeIndex heap_metadata;
 } Vulkan_Allocation;
@@ -76,6 +81,7 @@ typedef struct Vulkan_Instance_t
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
+	uint32_t flags;
 	VkInstance instance;
 } Vulkan_Instance;
 
@@ -84,6 +90,10 @@ typedef struct Vulkan_Device_t
 	Device vtbl;
 	VkPhysicalDevice physical_device;
 	VkDevice device;
+	uint32_t use_vma;
+#ifdef OPAL_USE_VMA
+	VmaAllocator vma_allocator;
+#endif
 	Vulkan_Allocator allocator;
 } Vulkan_Device;
 
@@ -92,12 +102,18 @@ typedef struct Vulkan_Buffer_t
 	VkBuffer buffer;
 	VkDeviceSize size;
 	uint32_t map_count;
+#ifdef OPAL_USE_VMA
+	VmaAllocation vma_allocation;
+#endif
 	Vulkan_Allocation allocation;
 } Vulkan_Buffer;
 
 typedef struct Vulkan_Image_t
 {
 	VkImage image;
+#ifdef OPAL_USE_VMA
+	VmaAllocation vma_allocation;
+#endif
 	Vulkan_Allocation allocation;
 } Vulkan_Image;
 
@@ -109,25 +125,25 @@ extern VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
 extern VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples);
 extern VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
 extern VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
-extern Opal_Result vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
+extern Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 
 extern Opal_Result vulkan_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos);
 extern Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
 extern Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device);
 extern Opal_Result vulkan_instanceDestroy(Instance *this);
 
-extern Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, VkDeviceSize buffer_image_granularity);
+extern Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
 extern Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device);
-extern Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize budget, VkDeviceSize usage, uint32_t resource_type, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
+extern Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkPhysicalDevice physical_device, VkDeviceSize size, VkDeviceSize alignment, uint32_t resource_type, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
 extern Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr);
 extern Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
 extern Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
 
+extern Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
+
 extern Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device);
 extern Opal_Result vulkan_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
 extern Opal_Result vulkan_deviceDestroy(Device *this);
-
-extern Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
 
 extern Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
 extern Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);

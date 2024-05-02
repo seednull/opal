@@ -203,24 +203,21 @@ VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
 	return result;
 }
 
-Opal_Result vulkan_helperFindBestMemoryType(VkPhysicalDevice physical_device, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type)
+Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type)
 {
 	assert(memory_type);
-	assert(physical_device != VK_NULL_HANDLE);
-
-	VkPhysicalDeviceMemoryProperties memory_properties = {0};
-	vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
+	assert(memory_properties);
 
 	uint32_t best_cost = UINT32_MAX;
 	Opal_Result result = OPAL_VULKAN_ERROR;
 
-	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
+	for (uint32_t i = 0; i < memory_properties->memoryTypeCount; ++i)
 	{
 		uint32_t mask = 1 << i;
 		if ((mask & memory_type_mask) == 0)
 			continue;
 
-		VkMemoryType vulkan_memory_type = memory_properties.memoryTypes[i];
+		VkMemoryType vulkan_memory_type = memory_properties->memoryTypes[i];
 
 		if ((~vulkan_memory_type.propertyFlags & required_flags) != 0)
 			continue;
