@@ -6,6 +6,7 @@ project(opal VERSION 1.0.0)
 # ==================================================================================================
 option(OPAL_BUILD_SAMPLES "Build samples" TRUE)
 option(OPAL_BUILD_TESTS "Build tests" TRUE)
+option(OPAL_BUILD_BENCHMARKS "Build benchmarks" TRUE)
 option(OPAL_BUILD_WITH_DIRECTX12 "Build with DirectX 12 backend" TRUE)
 option(OPAL_BUILD_WITH_WEBGPU "Build with WebGPU backend" TRUE)
 option(OPAL_BUILD_WITH_VULKAN "Build with Vulkan backend" TRUE)
@@ -76,6 +77,14 @@ if (OPAL_BUILD_TESTS)
 
 	add_subdirectory(tests/heap)
 	add_subdirectory(tests/pool)
+endif()
+
+if (OPAL_BUILD_BENCHMARKS)
+	set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+	set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+	add_subdirectory(3rdparty/gbench)
+
+	add_subdirectory(benchmarks/allocator)
 endif()
 
 if (OPAL_BUILD_SAMPLES)
