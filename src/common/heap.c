@@ -439,35 +439,6 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 	return OPAL_SUCCESS;
 }
 
-uint32_t opal_heapCanAlloc(const Opal_Heap *heap, uint32_t size)
-{
-	assert(heap);
-	assert(size > 0);
-
-	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
-	uint32_t offset = 0;
-
-	Opal_Result result = opal_heapStageAlloc(heap, size, &node_index, &offset);
-	if (result != OPAL_SUCCESS)
-		return 0;
-
-	assert(node_index != OPAL_NODE_INDEX_NULL);
-	return 1;
-}
-
-uint32_t opal_heapCanAllocAligned(const Opal_Heap *heap, uint32_t size, uint32_t alignment)
-{
-	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
-	uint32_t offset = 0;
-
-	Opal_Result result = opal_heapStageAllocAligned(heap, size, alignment, &node_index, &offset);
-	if (result != OPAL_SUCCESS)
-		return 0;
-
-	assert(node_index != OPAL_NODE_INDEX_NULL);
-	return 1;
-}
-
 Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 {
 	assert(allocation.metadata != OPAL_NODE_INDEX_NULL);

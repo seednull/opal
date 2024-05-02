@@ -28,18 +28,3 @@ extern Opal_Result opal_poolShutdown(Opal_Pool *pool);
 extern Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data);
 extern Opal_Result opal_poolRemoveElement(Opal_Pool *pool, Opal_PoolHandle handle);
 extern void *opal_poolGetElement(const Opal_Pool *pool, Opal_PoolHandle handle);
-
-OPAL_INLINE Opal_PoolHandle opal_poolHandlePack(uint32_t index, uint8_t generation)
-{
-	return (Opal_PoolHandle)((index << 8) | generation);
-}
-
-OPAL_INLINE uint32_t opal_poolHandleGetIndex(Opal_PoolHandle handle)
-{
-	return (uint32_t)(handle >> 8);
-}
-
-OPAL_INLINE uint8_t opal_poolHandleGetGeneration(Opal_PoolHandle handle)
-{
-	return (uint8_t)(handle & 0xFF);
-}

@@ -1,4 +1,5 @@
 #include "vulkan_internal.h"
+#include "common/intrinsics.h"
 
 /*
  */

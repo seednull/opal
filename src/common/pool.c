@@ -6,6 +6,23 @@
 
 /*
  */
+OPAL_INLINE Opal_PoolHandle opal_poolHandlePack(uint32_t index, uint8_t generation)
+{
+	return (Opal_PoolHandle)((index << 8) | generation);
+}
+
+OPAL_INLINE uint32_t opal_poolHandleGetIndex(Opal_PoolHandle handle)
+{
+	return (uint32_t)(handle >> 8);
+}
+
+OPAL_INLINE uint8_t opal_poolHandleGetGeneration(Opal_PoolHandle handle)
+{
+	return (uint8_t)(handle & 0xFF);
+}
+
+/*
+ */
 OPAL_INLINE uint32_t opal_poolGrabIndex(Opal_Pool *pool)
 {
 	assert(pool);
