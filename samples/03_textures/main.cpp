@@ -12,7 +12,7 @@ void testTextures(Opal_Device device)
 		OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
 		128,
 		128,
-		0,
+		1,
 		1,
 		1,
 		OPAL_TEXTURE_SAMPLES_1,
