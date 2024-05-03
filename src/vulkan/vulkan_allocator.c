@@ -283,12 +283,7 @@ Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice devic
 	}
 	free(allocator->heaps);
 
-	Vulkan_MemoryBlock *blocks_ptr = (Vulkan_MemoryBlock *)allocator->blocks.data;
-	for (uint32_t i = 0; i < allocator->blocks.size; ++i)
-	{
-		VkDeviceMemory memory = blocks_ptr[i].memory;
-		vkFreeMemory(device, memory, NULL);
-	}
+	// TODO: proper cleanup for all previously allocated memory blocks
 	opal_poolShutdown(&allocator->blocks);
 
 	return OPAL_SUCCESS;

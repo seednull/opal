@@ -91,6 +91,8 @@ typedef struct Vulkan_Device_t
 	VkPhysicalDevice physical_device;
 	VkDevice device;
 	uint32_t use_vma;
+	Opal_Pool buffers;
+	Opal_Pool images;
 #ifdef OPAL_USE_VMA
 	VmaAllocator vma_allocator;
 #endif

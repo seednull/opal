@@ -81,6 +81,10 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 		assert(result == OPAL_SUCCESS);
 	}
 
+	// pools
+	opal_poolInitialize(&device_ptr->buffers, sizeof(Vulkan_Buffer), 32);
+	opal_poolInitialize(&device_ptr->images, sizeof(Vulkan_Image), 32);
+
 	return OPAL_SUCCESS;
 }
 
@@ -174,7 +178,11 @@ Opal_Result vulkan_deviceDestroy(Device *this)
 		Opal_Result result = vulkan_allocatorShutdown(&ptr->allocator, ptr->device);
 		assert(result == OPAL_SUCCESS);
 	}
-	
+
+	// TODO: proper cleanup for all previously created buffers & images
+	opal_poolShutdown(&ptr->buffers);
+	opal_poolShutdown(&ptr->images);
+
 	vkDestroyDevice(ptr->device, NULL);
 	return OPAL_SUCCESS;
 }
@@ -184,6 +192,30 @@ Opal_Result vulkan_deviceDestroy(Device *this)
 Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	assert(this);
+
+	static uint32_t memory_required_flags[] =
+	{
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+	};
+
+	static uint32_t memory_preferred_flags[] =
+	{
+		0,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		0,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+	};
+
+	static uint32_t memory_not_preferred_flags[] =
+	{
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+		VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		0,
+	};
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
@@ -203,7 +235,8 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	if (device_ptr->use_vma > 0)
 	{
 		VmaAllocationCreateInfo allocation_info = {0};
-		allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+		allocation_info.preferredFlags = memory_preferred_flags[desc->memory_type];
+		allocation_info.requiredFlags = memory_required_flags[desc->memory_type];
 
 		VkResult result = vmaCreateBuffer(device_ptr->vma_allocator, &buffer_info, &allocation_info, &vulkan_buffer, &vma_allocation, NULL);
 		if (result != VK_SUCCESS)
@@ -237,30 +270,6 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 		vkGetBufferMemoryRequirements2(vulkan_device, &memory_info, &memory_requirements);
 
 		// fill allocation info
-		static uint32_t memory_required_flags[] =
-		{
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-		};
-
-		static uint32_t memory_preferred_flags[] =
-		{
-			0,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			0,
-			VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-		};
-
-		static uint32_t memory_not_preferred_flags[] =
-		{
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-			VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			0,
-		};
-
 		Vulkan_AllocationDesc allocation_desc = {0};
 		allocation_desc.size = memory_requirements.memoryRequirements.size;
 		allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
@@ -291,17 +300,16 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	}
 
 	// create opal struct
-	Vulkan_Buffer *ptr = (Vulkan_Buffer *)malloc(sizeof(Vulkan_Buffer));
-	assert(ptr);
+	Vulkan_Buffer result = {0};
 
-	ptr->buffer = vulkan_buffer;
+	result.buffer = vulkan_buffer;
 #if OPAL_USE_VMA
-	ptr->vma_allocation = vma_allocation;
+	result.vma_allocation = vma_allocation;
 #endif
-	ptr->allocation = allocation;
-	ptr->map_count = 0;
+	result.allocation = allocation;
+	result.map_count = 0;
 
-	*buffer = (Opal_Buffer)ptr;
+	*buffer = (Opal_Buffer)opal_poolAddElement(&device_ptr->buffers, &result);
 	return OPAL_SUCCESS;
 }
 
@@ -337,7 +345,7 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 	if (device_ptr->use_vma > 0)
 	{
 		VmaAllocationCreateInfo allocation_info = {0};
-		allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+		allocation_info.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 		VkResult result = vmaCreateImage(device_ptr->vma_allocator, &image_info, &allocation_info, &vulkan_image, &vma_allocation, NULL);
 		if (result != VK_SUCCESS)
@@ -401,16 +409,15 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 	}
 
 	// create opal struct
-	Vulkan_Image *ptr = (Vulkan_Image *)malloc(sizeof(Vulkan_Image));
-	assert(ptr);
+	Vulkan_Image result = {0};
 
-	ptr->image = vulkan_image;
+	result.image = vulkan_image;
 #if OPAL_USE_VMA
-	ptr->vma_allocation = vma_allocation;
+	result.vma_allocation = vma_allocation;
 #endif
-	ptr->allocation = allocation;
+	result.allocation = allocation;
 
-	*texture = (Opal_Texture)ptr;
+	*texture = (Opal_Texture)opal_poolAddElement(&device_ptr->images, &result);
 	return OPAL_SUCCESS;
 }
 
@@ -427,8 +434,12 @@ Opal_Result vulkan_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
 	assert(buffer != OPAL_NULL_HANDLE);
 	assert(ptr);
 
+	Opal_PoolHandle handle = (Opal_PoolHandle)buffer;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)buffer;
+	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, handle);
+	assert(buffer_ptr);
 
 #if OPAL_USE_VMA
 	if (device_ptr->use_vma > 0)
@@ -462,8 +473,12 @@ Opal_Result vulkan_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
 	assert(this);
 	assert(buffer != OPAL_NULL_HANDLE);
 
+	Opal_PoolHandle handle = (Opal_PoolHandle)buffer;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)buffer;
+	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, handle);
+	assert(buffer_ptr);
 
 #if OPAL_USE_VMA
 	if (device_ptr->use_vma > 0)
@@ -489,8 +504,14 @@ Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 	assert(this);
 	assert(buffer != OPAL_NULL_HANDLE);
 
+	Opal_PoolHandle handle = (Opal_PoolHandle)buffer;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)buffer;
+	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, handle);
+	assert(buffer_ptr);
+
+	opal_poolRemoveElement(&device_ptr->buffers, handle);
 
 #if OPAL_USE_VMA
 	if (device_ptr->use_vma)
@@ -509,7 +530,6 @@ Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 	if (buffer_ptr->map_count > 0)
 		vulkan_allocatorUnmapMemory(allocator, device_ptr->device, buffer_ptr->allocation);
 
-	free(buffer_ptr);
 	return result;
 }
 
@@ -517,9 +537,15 @@ Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture)
 {
 	assert(this);
 	assert(texture != OPAL_NULL_HANDLE);
+ 
+	Opal_PoolHandle handle = (Opal_PoolHandle)texture;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Image *image_ptr = (Vulkan_Image *)texture;
+	Vulkan_Image *image_ptr = (Vulkan_Image *)opal_poolGetElement(&device_ptr->images, handle);
+	assert(image_ptr);
+
+	opal_poolRemoveElement(&device_ptr->images, handle);
 
 #if OPAL_USE_VMA
 	if (device_ptr->use_vma)
@@ -534,8 +560,6 @@ Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture)
 
 	vkDestroyImage(device_ptr->device, image_ptr->image, NULL);
 	Opal_Result result = vulkan_allocatorFreeMemory(allocator, device_ptr->device, image_ptr->allocation);
-
-	free(image_ptr);
 	return result;
 }
 
