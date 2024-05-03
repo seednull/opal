@@ -17,8 +17,8 @@ typedef struct Opal_Pool_t
 	uint32_t size;
 	uint32_t capacity;
 
-	uint32_t *free_masks;
-	uint32_t *free_indices;
+	uint32_t *masks;
+	uint32_t *indices;
 	uint32_t num_free_indices;
 } Opal_Pool;
 

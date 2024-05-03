@@ -1,4 +1,5 @@
 #include "pool.h"
+#include "intrinsics.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -28,15 +29,15 @@ OPAL_INLINE uint32_t opal_poolGrabIndex(Opal_Pool *pool)
 	assert(pool);
 	assert(pool->num_free_indices > 0);
 
-	uint32_t result = pool->free_indices[pool->num_free_indices - 1];
+	uint32_t index = pool->indices[pool->num_free_indices - 1];
 	pool->num_free_indices--;
 
-	uint32_t mask_index = result / 32;
-	uint32_t mask_bit = result % 32;
+	uint32_t mask_index = index / 32;
+	uint32_t mask_bit = index % 32;
 
-	pool->free_masks[mask_index] &= ~(1 << mask_bit);
+	pool->masks[mask_index] &= ~(1 << mask_bit);
 
-	return result;
+	return index;
 }
 
 OPAL_INLINE void opal_poolReleaseIndex(Opal_Pool *pool, uint32_t index)
@@ -46,12 +47,12 @@ OPAL_INLINE void opal_poolReleaseIndex(Opal_Pool *pool, uint32_t index)
 	assert(index < pool->capacity);
 
 	pool->num_free_indices++;
-	pool->free_indices[pool->num_free_indices - 1] = index;
+	pool->indices[pool->num_free_indices - 1] = index;
 
 	uint32_t mask_index = index / 32;
 	uint32_t mask_bit = index % 32;
 
-	pool->free_masks[mask_index] |= 1 << mask_bit;
+	pool->masks[mask_index] |= 1 << mask_bit;
 }
 
 OPAL_INLINE uint32_t opal_poolIsIndexFree(const Opal_Pool *pool, uint32_t index)
@@ -62,7 +63,7 @@ OPAL_INLINE uint32_t opal_poolIsIndexFree(const Opal_Pool *pool, uint32_t index)
 	uint32_t mask_index = index / 32;
 	uint32_t mask_bit = index % 32;
 
-	uint32_t free_mask = pool->free_masks[mask_index];
+	uint32_t free_mask = pool->masks[mask_index];
 	uint32_t element_mask = 1 << mask_bit;
 
 	return free_mask & element_mask;
@@ -72,11 +73,7 @@ OPAL_INLINE uint32_t opal_poolGetNumMasks(const Opal_Pool *pool)
 {
 	assert(pool);
 
-	uint32_t num_masks = pool->capacity / 32;
-	if (pool->capacity % 32 != 0)
-		num_masks++;
-
-	return num_masks;
+	return alignUp(pool->capacity, 32) / 32;
 }
 
 /*
@@ -88,25 +85,25 @@ Opal_Result opal_poolInitialize(Opal_Pool *pool, uint32_t element_size, uint32_t
 
 	memset(pool, 0, sizeof(Opal_Pool));
 
+	pool->element_size = element_size;
+	pool->capacity = capacity;
+	pool->num_free_indices = capacity;
+
 	if (capacity > 0)
 	{
 		uint32_t num_masks = opal_poolGetNumMasks(pool);
 
 		pool->data = (uint8_t *)malloc(element_size * capacity);
 		pool->generations = (uint8_t *)malloc(sizeof(uint8_t) * capacity);
-		pool->free_indices = (uint32_t *)malloc(sizeof(uint32_t) * capacity);
-		pool->free_masks = (uint32_t *)malloc(sizeof(uint32_t) * num_masks);
+		pool->indices = (uint32_t *)malloc(sizeof(uint32_t) * capacity);
+		pool->masks = (uint32_t *)malloc(sizeof(uint32_t) * num_masks);
 
 		for (uint32_t i = 0; i < capacity; ++i)
-			pool->free_indices[i] = capacity - i - 1;
+			pool->indices[i] = capacity - i - 1;
 
-		memset(pool->free_masks, 0xFFFFFFFF, sizeof(uint32_t) * num_masks);
+		memset(pool->masks, 0xFFFFFFFF, sizeof(uint32_t) * num_masks);
 		memset(pool->generations, 0, sizeof(uint8_t) * capacity);
 	}
-
-	pool->element_size = element_size;
-	pool->capacity = capacity;
-	pool->num_free_indices = capacity;
 
 	return OPAL_SUCCESS;
 }
@@ -117,7 +114,8 @@ Opal_Result opal_poolShutdown(Opal_Pool *pool)
 
 	free(pool->data);
 	free(pool->generations);
-	free(pool->free_indices);
+	free(pool->indices);
+	free(pool->masks);
 
 	memset(pool, 0, sizeof(Opal_Pool));
 
@@ -141,20 +139,20 @@ Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data)
 
 		pool->data = (uint8_t *)realloc(pool->data, pool->element_size * pool->capacity);
 		pool->generations = (uint8_t *)realloc(pool->generations, sizeof(uint8_t) * pool->capacity);
-		pool->free_indices = (uint32_t *)realloc(pool->free_indices, sizeof(uint32_t) * pool->capacity);
+		pool->indices = (uint32_t *)realloc(pool->indices, sizeof(uint32_t) * pool->capacity);
 
 		if (old_num_masks != new_num_masks)
-			pool->free_masks = (uint32_t *)realloc(pool->free_masks, sizeof(uint32_t) * new_num_masks);
+			pool->masks = (uint32_t *)realloc(pool->masks, sizeof(uint32_t) * new_num_masks);
 
 		for (uint32_t i = old_capacity; i < pool->capacity; ++i)
 		{
 			pool->num_free_indices++;
-			pool->free_indices[pool->num_free_indices - 1] = old_capacity + pool->capacity - i - 1;
+			pool->indices[pool->num_free_indices - 1] = old_capacity + pool->capacity - i - 1;
 			pool->generations[i] = 0;
 		}
 
 		for (uint32_t i = old_num_masks; i < new_num_masks; ++i)
-			pool->free_masks[i] = 0xFFFFFFFF;
+			pool->masks[i] = 0xFFFFFFFF;
 	}
 
 	assert(pool->num_free_indices > 0);
