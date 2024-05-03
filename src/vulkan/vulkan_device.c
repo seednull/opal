@@ -96,12 +96,6 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
 
 	// resolve allocation type (suballocated or dedicated)
-	VkBool32 prefers_dedicated = desc->prefers_dedicated;
-	VkBool32 requires_dedicated = desc->requires_dedicated;
-
-	VkDeviceSize size = desc->size;
-	VkDeviceSize alignment = desc->alignment;
-
 	VkBool32 dedicated = (desc->hint == OPAL_ALLOCATION_HINT_PREFER_DEDICATED);
 	const float heap_threshold = 0.7f;
 
@@ -110,26 +104,25 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 		case OPAL_ALLOCATION_HINT_AUTO:
 		{
 			VkBool32 too_big_for_heap = desc->size > allocator->heap_size * heap_threshold;
-			dedicated = too_big_for_heap || requires_dedicated || prefers_dedicated;
+			dedicated = too_big_for_heap || desc->requires_dedicated || desc->prefers_dedicated;
 		}
 		break;
 
 		case OPAL_ALLOCATION_HINT_PREFER_HEAP:
 		{
 			VkBool32 wont_fit_in_heap = desc->size > allocator->heap_size;
-			dedicated = wont_fit_in_heap || requires_dedicated;
+			dedicated = wont_fit_in_heap || desc->requires_dedicated;
 			break;
 		}
 	}
 
-	// fetch heap budgets & usage
+	// fetch memory properties
 	VkPhysicalDeviceMemoryProperties memory_properties = {0};
 	vkGetPhysicalDeviceMemoryProperties(vulkan_physical_device, &memory_properties);
 
 	// loop over best memory types
 	uint32_t memory_type_bits = desc->memory_type_bits;
 	uint32_t memory_type = 0;
-	uint32_t resource_type = desc->resource_type;
 
 	while (memory_type_bits > 0)
 	{
@@ -137,15 +130,13 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 		if (opal_result != OPAL_SUCCESS)
 			return OPAL_NO_MEMORY;
 
-		uint32_t heap_index = memory_properties.memoryTypes[memory_type].heapIndex;
-
 		opal_result = OPAL_NO_MEMORY;
 
 		if (dedicated == VK_FALSE)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, vulkan_physical_device, size, alignment, resource_type, memory_type, 0, allocation);
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, vulkan_physical_device, desc, memory_type, 0, allocation);
 
 		if (opal_result == OPAL_NO_MEMORY)
-			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, vulkan_physical_device, size, alignment, resource_type, memory_type, 1, allocation);
+			opal_result = vulkan_allocatorAllocateMemory(allocator, vulkan_device, vulkan_physical_device, desc, memory_type, 1, allocation);
 
 		if (opal_result == OPAL_SUCCESS)
 			return OPAL_SUCCESS;
@@ -221,7 +212,6 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 #endif
 
 	Vulkan_Allocation allocation = {0};
-	Vulkan_AllocationDesc allocation_desc = {0};
 
 	if (device_ptr->use_vma == 0)
 	{
@@ -271,6 +261,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 			0,
 		};
 
+		Vulkan_AllocationDesc allocation_desc = {0};
 		allocation_desc.size = memory_requirements.memoryRequirements.size;
 		allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
 		allocation_desc.memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
@@ -308,7 +299,6 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	ptr->vma_allocation = vma_allocation;
 #endif
 	ptr->allocation = allocation;
-	ptr->size = allocation_desc.size;
 	ptr->map_count = 0;
 
 	*buffer = (Opal_Buffer)ptr;
@@ -356,7 +346,6 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 #endif
 
 	Vulkan_Allocation allocation = {0};
-	Vulkan_AllocationDesc allocation_desc = {0};
 
 	if (device_ptr->use_vma == 0)
 	{
@@ -382,6 +371,7 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 		vkGetImageMemoryRequirements2(vulkan_device, &memory_info, &memory_requirements);
 
 		// fill allocation info
+		Vulkan_AllocationDesc allocation_desc = {0};
 		allocation_desc.size = memory_requirements.memoryRequirements.size;
 		allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
 		allocation_desc.memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
