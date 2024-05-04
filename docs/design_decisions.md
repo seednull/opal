@@ -16,4 +16,8 @@ Intentionally set to 1.0f for all available queues on physical device.
 
 ## Ignore VK_IMAGE_TILING_LINEAR on Vulkan
 
-All images will use VK_IMAGE_TILING_OPTIMAL, because there is no practical use case for linear tiled images. For transfer & readback it's better to create staging buffer. Therefore, images will prefer device local memory.
+All images will use VK_IMAGE_TILING_OPTIMAL, because there is no practical use case for linear tiled images.
+
+## No memory type hint for images
+
+On Vulkan, images will prefer memory with VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT flag. For transfer & readback it's better to create staging buffer.
