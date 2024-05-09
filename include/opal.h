@@ -384,6 +384,16 @@ typedef enum Opal_CompareFunc_t
 	OPAL_COMPARE_FUNC_MAX,
 } Opal_CompareFunc;
 
+typedef enum Opal_ShaderSourceType_t
+{
+	OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY = 0,
+	OPAL_SHADER_SOURCE_TYPE_DXIL_BINARY,
+	OPAL_SHADER_SOURCE_TYPE_WGSL,
+	OPAL_SHADER_SOURCE_TYPE_MSL,
+
+	OPAL_SHADER_SOURCE_MAX,
+} Opal_ShaderSourceType;
+
 // Structs
 typedef struct Opal_DeviceInfo_t
 {
@@ -461,6 +471,13 @@ typedef struct Opal_SamplerDesc_t
 	Opal_CompareFunc compare_func;
 } Opal_SamplerDesc;
 
+typedef struct Opal_ShaderDesc_t
+{
+	Opal_ShaderSourceType type;
+	const void *data;
+	uint64_t size;
+} Opal_ShaderDesc;
+
 // Function pointers
 typedef Opal_Result (*PFN_opalCreateInstance)(Opal_Api api, const Opal_InstanceDesc *desc, Opal_Instance *instance);
 typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
@@ -477,6 +494,7 @@ typedef Opal_Result (*PFN_opalCreateTexture)(Opal_Device device, const Opal_Text
 typedef Opal_Result (*PFN_opalCreateTextureView)(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 typedef Opal_Result (*PFN_opalCreateSampler)(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler);
 typedef Opal_Result (*PFN_opalCreateCommandBuffer)(Opal_Device device, Opal_CommandBuffer *command_buffer);
+typedef Opal_Result (*PFN_opalCreateShader)(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 
 typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
 typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
@@ -486,6 +504,7 @@ typedef Opal_Result (*PFN_opalDestroyTexture)(Opal_Device device, Opal_Texture t
 typedef Opal_Result (*PFN_opalDestroyTextureView)(Opal_Device device, Opal_TextureView texture_view);
 typedef Opal_Result (*PFN_opalDestroySampler)(Opal_Device device, Opal_Sampler sampler);
 typedef Opal_Result (*PFN_opalDestroyCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalDestroyShader)(Opal_Device device, Opal_Shader shader);
 
 // API
 #if !defined(OPAL_NO_PROTOTYPES)
@@ -504,6 +523,7 @@ OPAL_APIENTRY Opal_Result opalCreateTexture(Opal_Device device, const Opal_Textu
 OPAL_APIENTRY Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 OPAL_APIENTRY Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler);
 OPAL_APIENTRY Opal_Result opalCreateCommandBuffer(Opal_Device device, Opal_CommandBuffer *command_buffer);
+OPAL_APIENTRY Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
 OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
@@ -513,6 +533,7 @@ OPAL_APIENTRY Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture te
 OPAL_APIENTRY Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_view);
 OPAL_APIENTRY Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler);
 OPAL_APIENTRY Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader);
 #endif
 
 #ifdef __cplusplus
