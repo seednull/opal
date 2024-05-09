@@ -43,7 +43,7 @@ Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Dev
 	info->device_id = desc.DeviceId;
 	info->tessellation_shader = 1;
 	info->geometry_shader = 1;
-	info->compute_shader = 1;
+	info->compute_pipeline = 1;
 	info->texture_compression_bc = 1;
 	info->max_buffer_alignment = 0xFFFF;
 
@@ -67,7 +67,7 @@ Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Dev
 	D3D12_FEATURE_DATA_D3D12_OPTIONS9 mesh_options = {0};
 	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS9, &mesh_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9));
 	if (SUCCEEDED(hr))
-		info->mesh_pipeline = (mesh_options.MeshShaderPipelineStatsSupported == TRUE);
+		info->meshlet_pipeline = (mesh_options.MeshShaderPipelineStatsSupported == TRUE);
 
 	return OPAL_SUCCESS;
 }

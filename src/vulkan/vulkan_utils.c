@@ -386,9 +386,9 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->device_id = properties.deviceID;
 	info->tessellation_shader = features.features.tessellationShader;
 	info->geometry_shader = features.features.geometryShader;
-	info->compute_shader = 1;
-	info->mesh_pipeline = mesh_features.meshShader && mesh_features.taskShader;
-	info->raytrace_pipeline = raytracing_features.rayTracingPipeline && acceleration_structure_features.accelerationStructure;
+	info->compute_pipeline = 1;
+	info->meshlet_pipeline = mesh_features.meshShader && mesh_features.taskShader;
+info->raytrace_pipeline = raytracing_features.rayTracingPipeline && acceleration_structure_features.accelerationStructure;
 	info->texture_compression_etc2 = features.features.textureCompressionETC2;
 	info->texture_compression_astc = features.features.textureCompressionASTC_LDR;
 	info->texture_compression_bc = features.features.textureCompressionBC;

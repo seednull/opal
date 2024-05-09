@@ -26,8 +26,8 @@ void printDeviceInfo(const Opal_DeviceInfo *info)
 	std::cout << "Features:\n";
 	std::cout << "\tTessellation Shader: " << (info->tessellation_shader != 0) << "\n";
 	std::cout << "\tGeometry Shader: " << (info->geometry_shader != 0) << "\n";
-	std::cout << "\tCompute Shader: " << (info->compute_shader != 0) << "\n";
-	std::cout << "\tMesh Pipeline: " << (info->mesh_pipeline != 0) << "\n";
+	std::cout << "\tCompute Pipeline: " << (info->compute_pipeline != 0) << "\n";
+	std::cout << "\tMeshlet Pipeline: " << (info->meshlet_pipeline != 0) << "\n";
 	std::cout << "\tRaytrace Pipeline: " << (info->raytrace_pipeline != 0) << "\n";
 	std::cout << "\tETC2 Texture Compression: " << (info->texture_compression_etc2 != 0) << "\n";
 	std::cout << "\tASTC Texture Compression: " << (info->texture_compression_astc != 0) << "\n";

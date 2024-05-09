@@ -394,8 +394,8 @@ typedef struct Opal_DeviceInfo_t
 	uint32_t device_id;
 	uint8_t tessellation_shader : 1;
 	uint8_t geometry_shader : 1;
-	uint8_t compute_shader : 1;
-	uint8_t mesh_pipeline : 1;
+	uint8_t compute_pipeline : 1;
+	uint8_t meshlet_pipeline : 1;
 	uint8_t raytrace_pipeline : 1;
 	uint8_t texture_compression_etc2 : 1;
 	uint8_t texture_compression_astc : 1;

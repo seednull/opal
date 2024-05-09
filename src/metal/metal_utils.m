@@ -146,8 +146,8 @@ Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
 		info->gpu_type = OPAL_GPU_TYPE_INTEGRATED;
 
 	info->tessellation_shader = is_apple3_or_greater || is_mac2 || is_common2_or_greater;
-	info->compute_shader = 1;
-	info->mesh_pipeline = is_apple7_or_greater || is_mac2 || is_metal3;
+	info->compute_pipeline = 1;
+	info->meshlet_pipeline = is_apple7_or_greater || is_mac2 || is_metal3;
 	info->texture_compression_etc2 = is_apple2_or_greater && !is_mac2;
 	info->texture_compression_astc = is_apple2_or_greater && !is_mac2;
 	info->texture_compression_bc = device.supportsBCTextureCompression;
