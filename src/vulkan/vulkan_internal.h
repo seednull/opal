@@ -4,7 +4,7 @@
 
 #include <volk.h>
 
-#ifdef OPAL_USE_VMA
+#ifdef OPAL_HAS_VMA
 #include "vk_mem_alloc.h"
 #endif
 
@@ -93,7 +93,7 @@ typedef struct Vulkan_Device_t
 	uint32_t use_vma;
 	Opal_Pool buffers;
 	Opal_Pool images;
-#ifdef OPAL_USE_VMA
+#ifdef OPAL_HAS_VMA
 	VmaAllocator vma_allocator;
 #endif
 	Vulkan_Allocator allocator;
@@ -103,7 +103,7 @@ typedef struct Vulkan_Buffer_t
 {
 	VkBuffer buffer;
 	uint32_t map_count;
-#ifdef OPAL_USE_VMA
+#ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
 #endif
 	Vulkan_Allocation allocation;
@@ -112,7 +112,7 @@ typedef struct Vulkan_Buffer_t
 typedef struct Vulkan_Image_t
 {
 	VkImage image;
-#ifdef OPAL_USE_VMA
+#ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
 #endif
 	Vulkan_Allocation allocation;
@@ -122,9 +122,9 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice
 Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
-VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
+VkFormat vulkan_helperToImageFormat(Opal_Format format);
 VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples);
-VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
+VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
 Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 

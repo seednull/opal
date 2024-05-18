@@ -48,7 +48,7 @@ public:
 		static Opal_TextureDesc texture_desc =
 		{
 			OPAL_TEXTURE_TYPE_2D,
-			OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
+			OPAL_FORMAT_RGBA8_UNORM,
 			128,
 			128,
 			1,
@@ -80,7 +80,7 @@ public:
 		static Opal_TextureDesc texture_desc =
 		{
 			OPAL_TEXTURE_TYPE_2D,
-			OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
+			OPAL_FORMAT_RGBA8_UNORM,
 			128,
 			128,
 			1,

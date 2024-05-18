@@ -28,7 +28,7 @@ VkImageType vulkan_helperToImageType(Opal_TextureType type)
 	return vk_image_types[type];
 }
 
-VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format)
+VkFormat vulkan_helperToImageFormat(Opal_Format format)
 {
 	static VkFormat vk_formats[] =
 	{
@@ -145,7 +145,7 @@ VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples)
 	return vk_sample_count_bits[samples];
 }
 
-VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format)
+VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format)
 {
 	VkImageUsageFlags result = 0;
 
@@ -163,10 +163,10 @@ VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_T
 
 	if (flags & OPAL_TEXTURE_USAGE_RENDER_ATTACHMENT)
 	{
-		if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
+		if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
 			result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		
-		if (format >= OPAL_TEXTURE_FORMAT_DEPTHSTENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTHSTENCIL_END)
+		if (format >= OPAL_FORMAT_DEPTHSTENCIL_BEGIN && format <= OPAL_FORMAT_DEPTHSTENCIL_END)
 			result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
 

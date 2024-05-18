@@ -45,8 +45,7 @@ extern "C" {
 // Opaque handles
 OPAL_DEFINE_HANDLE(Opal_Instance);
 OPAL_DEFINE_HANDLE(Opal_Device);
-OPAL_DEFINE_HANDLE(Opal_Queue);
-OPAL_DEFINE_HANDLE(Opal_CommandBuffer);
+OPAL_DEFINE_HANDLE(Opal_CommandEncoder);
 
 OPAL_DEFINE_HANDLE(Opal_Buffer);
 OPAL_DEFINE_HANDLE(Opal_Texture);
@@ -204,154 +203,154 @@ typedef enum Opal_TextureSamples_t
 	OPAL_TEXTURE_SAMPLES_MAX,
 } Opal_TextureSamples;
 
-typedef enum Opal_TextureFormat_t
+typedef enum Opal_Format_t
 {
-	OPAL_TEXTURE_FORMAT_UNDEFINED = 0,
+	OPAL_FORMAT_UNDEFINED = 0,
 
-	OPAL_TEXTURE_FORMAT_R8_UNORM,
-	OPAL_TEXTURE_FORMAT_R8_SNORM,
-	OPAL_TEXTURE_FORMAT_R8_UINT,
-	OPAL_TEXTURE_FORMAT_R8_SINT,
-	OPAL_TEXTURE_FORMAT_R8_SRGB,
+	OPAL_FORMAT_R8_UNORM,
+	OPAL_FORMAT_R8_SNORM,
+	OPAL_FORMAT_R8_UINT,
+	OPAL_FORMAT_R8_SINT,
+	OPAL_FORMAT_R8_SRGB,
 
-	OPAL_TEXTURE_FORMAT_RG8_UNORM,
-	OPAL_TEXTURE_FORMAT_RG8_SNORM,
-	OPAL_TEXTURE_FORMAT_RG8_UINT,
-	OPAL_TEXTURE_FORMAT_RG8_SINT,
-	OPAL_TEXTURE_FORMAT_RG8_SRGB,
+	OPAL_FORMAT_RG8_UNORM,
+	OPAL_FORMAT_RG8_SNORM,
+	OPAL_FORMAT_RG8_UINT,
+	OPAL_FORMAT_RG8_SINT,
+	OPAL_FORMAT_RG8_SRGB,
 
-	OPAL_TEXTURE_FORMAT_RGB8_UNORM,
-	OPAL_TEXTURE_FORMAT_RGB8_SNORM,
-	OPAL_TEXTURE_FORMAT_RGB8_UINT,
-	OPAL_TEXTURE_FORMAT_RGB8_SINT,
-	OPAL_TEXTURE_FORMAT_RGB8_SRGB,
+	OPAL_FORMAT_RGB8_UNORM,
+	OPAL_FORMAT_RGB8_SNORM,
+	OPAL_FORMAT_RGB8_UINT,
+	OPAL_FORMAT_RGB8_SINT,
+	OPAL_FORMAT_RGB8_SRGB,
 
-	OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
-	OPAL_TEXTURE_FORMAT_RGBA8_SNORM,
-	OPAL_TEXTURE_FORMAT_RGBA8_UINT,
-	OPAL_TEXTURE_FORMAT_RGBA8_SINT,
-	OPAL_TEXTURE_FORMAT_RGBA8_SRGB,
+	OPAL_FORMAT_RGBA8_UNORM,
+	OPAL_FORMAT_RGBA8_SNORM,
+	OPAL_FORMAT_RGBA8_UINT,
+	OPAL_FORMAT_RGBA8_SINT,
+	OPAL_FORMAT_RGBA8_SRGB,
 
-	OPAL_TEXTURE_FORMAT_BGRA8_UNORM,
-	OPAL_TEXTURE_FORMAT_BGRA8_SNORM,
-	OPAL_TEXTURE_FORMAT_BGRA8_UINT,
-	OPAL_TEXTURE_FORMAT_BGRA8_SINT,
-	OPAL_TEXTURE_FORMAT_BGRA8_SRGB,
+	OPAL_FORMAT_BGRA8_UNORM,
+	OPAL_FORMAT_BGRA8_SNORM,
+	OPAL_FORMAT_BGRA8_UINT,
+	OPAL_FORMAT_BGRA8_SINT,
+	OPAL_FORMAT_BGRA8_SRGB,
 
-	OPAL_TEXTURE_FORMAT_R16_UNORM,
-	OPAL_TEXTURE_FORMAT_R16_SNORM,
-	OPAL_TEXTURE_FORMAT_R16_UINT,
-	OPAL_TEXTURE_FORMAT_R16_SINT,
-	OPAL_TEXTURE_FORMAT_R16_SFLOAT,
+	OPAL_FORMAT_R16_UNORM,
+	OPAL_FORMAT_R16_SNORM,
+	OPAL_FORMAT_R16_UINT,
+	OPAL_FORMAT_R16_SINT,
+	OPAL_FORMAT_R16_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_RG16_UNORM,
-	OPAL_TEXTURE_FORMAT_RG16_SNORM,
-	OPAL_TEXTURE_FORMAT_RG16_UINT,
-	OPAL_TEXTURE_FORMAT_RG16_SINT,
-	OPAL_TEXTURE_FORMAT_RG16_SFLOAT,
+	OPAL_FORMAT_RG16_UNORM,
+	OPAL_FORMAT_RG16_SNORM,
+	OPAL_FORMAT_RG16_UINT,
+	OPAL_FORMAT_RG16_SINT,
+	OPAL_FORMAT_RG16_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_RGB16_UNORM,
-	OPAL_TEXTURE_FORMAT_RGB16_SNORM,
-	OPAL_TEXTURE_FORMAT_RGB16_UINT,
-	OPAL_TEXTURE_FORMAT_RGB16_SINT,
-	OPAL_TEXTURE_FORMAT_RGB16_SFLOAT,
+	OPAL_FORMAT_RGB16_UNORM,
+	OPAL_FORMAT_RGB16_SNORM,
+	OPAL_FORMAT_RGB16_UINT,
+	OPAL_FORMAT_RGB16_SINT,
+	OPAL_FORMAT_RGB16_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_RGBA16_UNORM,
-	OPAL_TEXTURE_FORMAT_RGBA16_SNORM,
-	OPAL_TEXTURE_FORMAT_RGBA16_UINT,
-	OPAL_TEXTURE_FORMAT_RGBA16_SINT,
-	OPAL_TEXTURE_FORMAT_RGBA16_SFLOAT,
+	OPAL_FORMAT_RGBA16_UNORM,
+	OPAL_FORMAT_RGBA16_SNORM,
+	OPAL_FORMAT_RGBA16_UINT,
+	OPAL_FORMAT_RGBA16_SINT,
+	OPAL_FORMAT_RGBA16_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_R32_UINT,
-	OPAL_TEXTURE_FORMAT_R32_SINT,
-	OPAL_TEXTURE_FORMAT_R32_SFLOAT,
+	OPAL_FORMAT_R32_UINT,
+	OPAL_FORMAT_R32_SINT,
+	OPAL_FORMAT_R32_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_RG32_UINT,
-	OPAL_TEXTURE_FORMAT_RG32_SINT,
-	OPAL_TEXTURE_FORMAT_RG32_SFLOAT,
+	OPAL_FORMAT_RG32_UINT,
+	OPAL_FORMAT_RG32_SINT,
+	OPAL_FORMAT_RG32_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_RGB32_UINT,
-	OPAL_TEXTURE_FORMAT_RGB32_SINT,
-	OPAL_TEXTURE_FORMAT_RGB32_SFLOAT,
+	OPAL_FORMAT_RGB32_UINT,
+	OPAL_FORMAT_RGB32_SINT,
+	OPAL_FORMAT_RGB32_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_RGBA32_UINT,
-	OPAL_TEXTURE_FORMAT_RGBA32_SINT,
-	OPAL_TEXTURE_FORMAT_RGBA32_SFLOAT,
+	OPAL_FORMAT_RGBA32_UINT,
+	OPAL_FORMAT_RGBA32_SINT,
+	OPAL_FORMAT_RGBA32_SFLOAT,
 
-	OPAL_TEXTURE_FORMAT_B10G11R11_UFLOAT,
-	OPAL_TEXTURE_FORMAT_E5B9G9R9_UFLOAT,
+	OPAL_FORMAT_B10G11R11_UFLOAT,
+	OPAL_FORMAT_E5B9G9R9_UFLOAT,
 
-	OPAL_TEXTURE_FORMAT_BC1_RGB_UNORM,
-	OPAL_TEXTURE_FORMAT_BC1_RGB_SRGB,
-	OPAL_TEXTURE_FORMAT_BC1_RGBA_UNORM,
-	OPAL_TEXTURE_FORMAT_BC1_RGBA_SRGB,
-	OPAL_TEXTURE_FORMAT_BC2_UNORM,
-	OPAL_TEXTURE_FORMAT_BC2_SRGB,
-	OPAL_TEXTURE_FORMAT_BC3_UNORM,
-	OPAL_TEXTURE_FORMAT_BC3_SRGB,
-	OPAL_TEXTURE_FORMAT_BC4_UNORM,
-	OPAL_TEXTURE_FORMAT_BC4_SNORM,
-	OPAL_TEXTURE_FORMAT_BC5_UNORM,
-	OPAL_TEXTURE_FORMAT_BC5_SNORM,
-	OPAL_TEXTURE_FORMAT_BC6H_UFLOAT,
-	OPAL_TEXTURE_FORMAT_BC6H_SFLOAT,
-	OPAL_TEXTURE_FORMAT_BC7_UNORM,
-	OPAL_TEXTURE_FORMAT_BC7_SRGB,
+	OPAL_FORMAT_BC1_RGB_UNORM,
+	OPAL_FORMAT_BC1_RGB_SRGB,
+	OPAL_FORMAT_BC1_RGBA_UNORM,
+	OPAL_FORMAT_BC1_RGBA_SRGB,
+	OPAL_FORMAT_BC2_UNORM,
+	OPAL_FORMAT_BC2_SRGB,
+	OPAL_FORMAT_BC3_UNORM,
+	OPAL_FORMAT_BC3_SRGB,
+	OPAL_FORMAT_BC4_UNORM,
+	OPAL_FORMAT_BC4_SNORM,
+	OPAL_FORMAT_BC5_UNORM,
+	OPAL_FORMAT_BC5_SNORM,
+	OPAL_FORMAT_BC6H_UFLOAT,
+	OPAL_FORMAT_BC6H_SFLOAT,
+	OPAL_FORMAT_BC7_UNORM,
+	OPAL_FORMAT_BC7_SRGB,
 
-	OPAL_TEXTURE_FORMAT_ETC2_R8G8B8_UNORM,
-	OPAL_TEXTURE_FORMAT_ETC2_R8G8B8_SRGB,
-	OPAL_TEXTURE_FORMAT_ETC2_R8G8B8A1_UNORM,
-	OPAL_TEXTURE_FORMAT_ETC2_R8G8B8A1_SRGB,
-	OPAL_TEXTURE_FORMAT_ETC2_R8G8B8A8_UNORM,
-	OPAL_TEXTURE_FORMAT_ETC2_R8G8B8A8_SRGB,
-	OPAL_TEXTURE_FORMAT_EAC_R11_UNORM,
-	OPAL_TEXTURE_FORMAT_EAC_R11_SNORM,
-	OPAL_TEXTURE_FORMAT_EAC_R11G11_UNORM,
-	OPAL_TEXTURE_FORMAT_EAC_R11G11_SNORM,
+	OPAL_FORMAT_ETC2_R8G8B8_UNORM,
+	OPAL_FORMAT_ETC2_R8G8B8_SRGB,
+	OPAL_FORMAT_ETC2_R8G8B8A1_UNORM,
+	OPAL_FORMAT_ETC2_R8G8B8A1_SRGB,
+	OPAL_FORMAT_ETC2_R8G8B8A8_UNORM,
+	OPAL_FORMAT_ETC2_R8G8B8A8_SRGB,
+	OPAL_FORMAT_EAC_R11_UNORM,
+	OPAL_FORMAT_EAC_R11_SNORM,
+	OPAL_FORMAT_EAC_R11G11_UNORM,
+	OPAL_FORMAT_EAC_R11G11_SNORM,
 
-	OPAL_TEXTURE_FORMAT_ASTC_4x4_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_4x4_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_5x4_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_5x4_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_5x5_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_5x5_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_6x5_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_6x5_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_6x6_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_6x6_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_8x5_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_8x5_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_8x6_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_8x6_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_8x8_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_8x8_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_10x5_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_10x5_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_10x6_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_10x6_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_10x8_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_10x8_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_10x10_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_10x10_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_12x10_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_12x10_SRGB,
-	OPAL_TEXTURE_FORMAT_ASTC_12x12_UNORM,
-	OPAL_TEXTURE_FORMAT_ASTC_12x12_SRGB,
+	OPAL_FORMAT_ASTC_4x4_UNORM,
+	OPAL_FORMAT_ASTC_4x4_SRGB,
+	OPAL_FORMAT_ASTC_5x4_UNORM,
+	OPAL_FORMAT_ASTC_5x4_SRGB,
+	OPAL_FORMAT_ASTC_5x5_UNORM,
+	OPAL_FORMAT_ASTC_5x5_SRGB,
+	OPAL_FORMAT_ASTC_6x5_UNORM,
+	OPAL_FORMAT_ASTC_6x5_SRGB,
+	OPAL_FORMAT_ASTC_6x6_UNORM,
+	OPAL_FORMAT_ASTC_6x6_SRGB,
+	OPAL_FORMAT_ASTC_8x5_UNORM,
+	OPAL_FORMAT_ASTC_8x5_SRGB,
+	OPAL_FORMAT_ASTC_8x6_UNORM,
+	OPAL_FORMAT_ASTC_8x6_SRGB,
+	OPAL_FORMAT_ASTC_8x8_UNORM,
+	OPAL_FORMAT_ASTC_8x8_SRGB,
+	OPAL_FORMAT_ASTC_10x5_UNORM,
+	OPAL_FORMAT_ASTC_10x5_SRGB,
+	OPAL_FORMAT_ASTC_10x6_UNORM,
+	OPAL_FORMAT_ASTC_10x6_SRGB,
+	OPAL_FORMAT_ASTC_10x8_UNORM,
+	OPAL_FORMAT_ASTC_10x8_SRGB,
+	OPAL_FORMAT_ASTC_10x10_UNORM,
+	OPAL_FORMAT_ASTC_10x10_SRGB,
+	OPAL_FORMAT_ASTC_12x10_UNORM,
+	OPAL_FORMAT_ASTC_12x10_SRGB,
+	OPAL_FORMAT_ASTC_12x12_UNORM,
+	OPAL_FORMAT_ASTC_12x12_SRGB,
 
-	OPAL_TEXTURE_FORMAT_D16_UNORM,
-	OPAL_TEXTURE_FORMAT_D32_SFLOAT,
-	OPAL_TEXTURE_FORMAT_D16_UNORM_S8_UINT,
-	OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT,
-	OPAL_TEXTURE_FORMAT_D32_SFLOAT_S8_UINT,
+	OPAL_FORMAT_D16_UNORM,
+	OPAL_FORMAT_D32_SFLOAT,
+	OPAL_FORMAT_D16_UNORM_S8_UINT,
+	OPAL_FORMAT_D24_UNORM_S8_UINT,
+	OPAL_FORMAT_D32_SFLOAT_S8_UINT,
 
-	OPAL_TEXTURE_FORMAT_MAX,
+	OPAL_FORMAT_MAX,
 
-	OPAL_TEXTURE_FORMAT_COLOR_BEGIN = OPAL_TEXTURE_FORMAT_R8_UNORM,
-	OPAL_TEXTURE_FORMAT_COLOR_END = OPAL_TEXTURE_FORMAT_ASTC_12x12_SRGB,
+	OPAL_FORMAT_COLOR_BEGIN = OPAL_FORMAT_R8_UNORM,
+	OPAL_FORMAT_COLOR_END = OPAL_FORMAT_ASTC_12x12_SRGB,
 
-	OPAL_TEXTURE_FORMAT_DEPTHSTENCIL_BEGIN = OPAL_TEXTURE_FORMAT_D16_UNORM,
-	OPAL_TEXTURE_FORMAT_DEPTHSTENCIL_END = OPAL_TEXTURE_FORMAT_D32_SFLOAT_S8_UINT,
-} Opal_TextureFormat;
+	OPAL_FORMAT_DEPTHSTENCIL_BEGIN = OPAL_FORMAT_D16_UNORM,
+	OPAL_FORMAT_DEPTHSTENCIL_END = OPAL_FORMAT_D32_SFLOAT_S8_UINT,
+} Opal_Format;
 
 typedef enum Opal_SamplerFilterMode_t
 {
@@ -393,6 +392,39 @@ typedef enum Opal_ShaderSourceType_t
 
 	OPAL_SHADER_SOURCE_MAX,
 } Opal_ShaderSourceType;
+
+typedef enum Opal_GraphicsPassTarget_t
+{
+	OPAL_GRAPHICS_PASS_TARGET_FRAMEBUFFER = 0,
+	OPAL_GRAPHICS_PASS_TARGET_SWAPCHAIN,
+
+	OPAL_GRAPHICS_PASS_TARGET_MAX,
+} Opal_GraphicsPassTarget;
+
+typedef enum Opal_LoadOp_t
+{
+	OPAL_LOAD_OP_DONT_CARE = 0,
+	OPAL_LOAD_OP_CLEAR,
+	OPAL_LOAD_OP_LOAD,
+
+	OPAL_LOAD_OP_MAX,
+} Opal_LoadOp;
+
+typedef enum Opal_StoreOp_t
+{
+	OPAL_STORE_OP_DONT_CARE = 0,
+	OPAL_STORE_OP_STORE,
+
+	OPAL_STORE_OP_MAX,
+} Opal_StoreOp;
+
+typedef enum Opal_VertexInputRate_t
+{
+	OPAL_VERTEX_INPUT_RATE_VERTEX = 0,
+	OPAL_VERTEX_INPUT_RATE_INSTANCE,
+
+	OPAL_VERTEX_INPUT_RATE_MAX,
+} Opal_VertexInputRate;
 
 // Structs
 typedef struct Opal_DeviceInfo_t
@@ -436,7 +468,7 @@ typedef struct Opal_BufferDesc_t
 typedef struct Opal_TextureDesc_t
 {
 	Opal_TextureType type;
-	Opal_TextureFormat format;
+	Opal_Format format;
 	uint32_t width;
 	uint32_t height;
 	uint32_t depth;
@@ -478,6 +510,126 @@ typedef struct Opal_ShaderDesc_t
 	uint64_t size;
 } Opal_ShaderDesc;
 
+typedef union Opal_ClearValue_t
+{
+	union
+	{
+		float f[4];
+		uint32_t u[4];
+		int32_t i[4];
+	} color;
+	struct
+	{
+		float depth;
+		uint32_t stencil;
+	};
+} Opal_ClearValue;
+
+typedef struct Opal_FramebufferAttachment_t
+{
+	Opal_TextureView texture_view;
+	Opal_LoadOp load_op;
+	Opal_StoreOp store_op;
+	Opal_ClearValue clear_value;
+} Opal_FramebufferAttachment;
+
+typedef struct Opal_GraphicsPassDesc_t
+{
+	Opal_GraphicsPassTarget target;
+	union
+	{
+		struct
+		{
+			const Opal_FramebufferAttachment *attachments;
+			uint32_t num_attachments;
+		};
+		struct
+		{
+			Opal_SwapChain swap_chain;
+			Opal_LoadOp load_op;
+			Opal_StoreOp store_op;
+			Opal_ClearValue clear_value;
+		};
+	};
+} Opal_GraphicsPassDesc;
+
+typedef struct Opal_BufferView_t
+{
+	Opal_Buffer buffer;
+	uint64_t offset;
+} Opal_BufferView;
+
+typedef struct Opal_VertexAttribute_t
+{
+	Opal_Format format;
+	uint32_t offset;
+} Opal_VertexAttribute;
+
+typedef struct Opal_VertexStream_t
+{
+	const Opal_VertexAttribute *attributes;
+	uint32_t num_vertex_attributes;
+	uint32_t stride;
+	Opal_VertexInputRate rate;
+} Opal_VertexStream;
+
+typedef struct Opal_DrawIndexedInstancedDesc_t
+{
+	Opal_GraphicsPipeline pipeline;
+	Opal_BindSet bind_sets[4];
+	Opal_BufferView vertex_buffers[4];
+	Opal_BufferView index_buffer;
+	uint32_t num_indices;
+	uint32_t base_index;
+	uint32_t num_instances;
+	uint32_t base_instance;
+} Opal_DrawIndexedInstancedDesc;
+
+typedef struct Opal_ComputeDispatchDesc_t
+{
+	Opal_ComputePipeline pipeline;
+	Opal_BindSet bind_sets[4];
+	uint32_t group_count_x;
+	uint32_t group_count_y;
+	uint32_t group_count_z;
+} Opal_ComputeDispatchDesc;
+
+typedef struct Opal_MeshletDispatchDesc_t
+{
+	Opal_MeshletPipeline pipeline;
+	Opal_BindSet bind_sets[4];
+	uint32_t group_count_x;
+	uint32_t group_count_y;
+	uint32_t group_count_z;
+} Opal_MeshletDispatchDesc;
+
+typedef struct Opal_RaytraceDispatchDesc_t
+{
+	Opal_RaytracePipeline pipeline;
+	Opal_BindSet bind_sets[4];
+	uint32_t base_raygen_index;
+	uint32_t base_hitgroup_index;
+	uint32_t base_miss_index;
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
+} Opal_RaytraceDispatchDesc;
+
+typedef struct Opal_BufferCopyDesc_t
+{
+	Opal_BufferView src_buffer;
+	Opal_BufferView dst_buffer;
+	uint64_t size;
+} Opal_BufferCopyDesc;
+
+typedef struct Opal_BufferTextureCopyDesc_t
+{
+	Opal_BufferView buffer;
+	Opal_Texture texture;
+	int32_t texture_offset[3];
+	uint32_t texture_extent[3];
+} Opal_BufferTextureCopyDesc;
+
 // Function pointers
 typedef Opal_Result (*PFN_opalCreateInstance)(Opal_Api api, const Opal_InstanceDesc *desc, Opal_Instance *instance);
 typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
@@ -493,7 +645,7 @@ typedef Opal_Result (*PFN_opalCreateBuffer)(Opal_Device device, const Opal_Buffe
 typedef Opal_Result (*PFN_opalCreateTexture)(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture);
 typedef Opal_Result (*PFN_opalCreateTextureView)(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 typedef Opal_Result (*PFN_opalCreateSampler)(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler);
-typedef Opal_Result (*PFN_opalCreateCommandBuffer)(Opal_Device device, Opal_CommandBuffer *command_buffer);
+typedef Opal_Result (*PFN_opalCreateCommandEncoder)(Opal_Device device, Opal_CommandEncoder *command_encoder);
 typedef Opal_Result (*PFN_opalCreateShader)(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 
 typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
@@ -503,8 +655,30 @@ typedef Opal_Result (*PFN_opalDestroyBuffer)(Opal_Device device, Opal_Buffer buf
 typedef Opal_Result (*PFN_opalDestroyTexture)(Opal_Device device, Opal_Texture texture);
 typedef Opal_Result (*PFN_opalDestroyTextureView)(Opal_Device device, Opal_TextureView texture_view);
 typedef Opal_Result (*PFN_opalDestroySampler)(Opal_Device device, Opal_Sampler sampler);
-typedef Opal_Result (*PFN_opalDestroyCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalDestroyCommandEncoder)(Opal_Device device, Opal_CommandEncoder command_encoder);
 typedef Opal_Result (*PFN_opalDestroyShader)(Opal_Device device, Opal_Shader shader);
+
+typedef Opal_Result (*PFN_opalBeginCommands)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalEndCommands)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalSubmitCommands)(Opal_Device device, Opal_CommandEncoder command_encoder);
+
+typedef Opal_Result (*PFN_opalCmdBeginAsyncTransferPass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdEndAsyncTransferPass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdBeginAsyncComputePass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdEndAsyncComputePass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_CommandEncoder command_encoder, const Opal_GraphicsPassDesc *desc);
+typedef Opal_Result (*PFN_opalCmdEndGraphicsPass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdBeginComputePass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdEndComputePass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdBeginRaytracePass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdEndRaytracePass)(Opal_CommandEncoder command_encoder);
+typedef Opal_Result (*PFN_opalCmdDrawIndexedInstanced)(Opal_CommandEncoder command_encoder, const Opal_DrawIndexedInstancedDesc *desc);
+typedef Opal_Result (*PFN_opalCmdMeshletDispatch)(Opal_CommandEncoder command_encoder, const Opal_MeshletDispatchDesc *desc);
+typedef Opal_Result (*PFN_opalCmdComputeDispatch)(Opal_CommandEncoder command_encoder, const Opal_ComputeDispatchDesc *desc);
+typedef Opal_Result (*PFN_opalCmdRaytraceDispatch)(Opal_CommandEncoder command_encoder, const Opal_RaytraceDispatchDesc *desc);
+typedef Opal_Result (*PFN_opalCmdCopyBufferToBuffer)(Opal_CommandEncoder command_encoder, const Opal_BufferCopyDesc *desc);
+typedef Opal_Result (*PFN_opalCmdCopyBufferToTexture)(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc);
+typedef Opal_Result (*PFN_opalCmdCopyTextureToBuffer)(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc);
 
 // API
 #if !defined(OPAL_NO_PROTOTYPES)
@@ -522,7 +696,7 @@ OPAL_APIENTRY Opal_Result opalCreateBuffer(Opal_Device device, const Opal_Buffer
 OPAL_APIENTRY Opal_Result opalCreateTexture(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture);
 OPAL_APIENTRY Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 OPAL_APIENTRY Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler);
-OPAL_APIENTRY Opal_Result opalCreateCommandBuffer(Opal_Device device, Opal_CommandBuffer *command_buffer);
+OPAL_APIENTRY Opal_Result opalCreateCommandEncoder(Opal_Device device, Opal_CommandEncoder *command_encoder);
 OPAL_APIENTRY Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
@@ -532,8 +706,30 @@ OPAL_APIENTRY Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buff
 OPAL_APIENTRY Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture);
 OPAL_APIENTRY Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_view);
 OPAL_APIENTRY Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler);
-OPAL_APIENTRY Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalDestroyCommandEncoder(Opal_Device device, Opal_CommandEncoder command_encoder);
 OPAL_APIENTRY Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader);
+
+OPAL_APIENTRY Opal_Result opalBeginCommands(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalEndCommands(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalSubmitCommands(Opal_Device device, Opal_CommandEncoder command_encoder);
+
+OPAL_APIENTRY Opal_Result opalCmdBeginAsyncTransferPass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdEndAsyncTransferPass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdBeginAsyncComputePass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdEndAsyncComputePass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_CommandEncoder command_encoder, const Opal_GraphicsPassDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdEndGraphicsPass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdBeginComputePass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdEndComputePass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdBeginRaytracePass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdEndRaytracePass(Opal_CommandEncoder command_encoder);
+OPAL_APIENTRY Opal_Result opalCmdDrawIndexedInstanced(Opal_CommandEncoder command_encoder, const Opal_DrawIndexedInstancedDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdMeshletDispatch(Opal_CommandEncoder command_encoder, const Opal_MeshletDispatchDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdComputeDispatch(Opal_CommandEncoder command_encoder, const Opal_ComputeDispatchDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdRaytraceDispatch(Opal_CommandEncoder command_encoder, const Opal_RaytraceDispatchDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdCopyBufferToBuffer(Opal_CommandEncoder command_encoder, const Opal_BufferCopyDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdCopyBufferToTexture(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc);
+OPAL_APIENTRY Opal_Result opalCmdCopyTextureToBuffer(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc);
 #endif
 
 #ifdef __cplusplus

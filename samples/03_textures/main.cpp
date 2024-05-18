@@ -9,7 +9,7 @@ void testTextures(Opal_Device device)
 	Opal_TextureDesc desc =
 	{
 		OPAL_TEXTURE_TYPE_2D,
-		OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
+		OPAL_FORMAT_RGBA8_UNORM,
 		128,
 		128,
 		1,

@@ -120,6 +120,21 @@ Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc
 	return ptr->createTextureView(ptr, desc, texture_view);
 }
 
+Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateCommandEncoder(Opal_Device device, Opal_CommandEncoder *command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 /*
  */
 Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr)
@@ -178,4 +193,123 @@ Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_
 
 	Device *ptr = (Device *)(device);
 	return ptr->destroyTextureView(ptr, texture_view);
+}
+
+Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyCommandEncoder(Opal_Device device, Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
+Opal_Result opalBeginCommands(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalEndCommands(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalSubmitCommands(Opal_Device device, Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
+Opal_Result opalCmdBeginAsyncTransferPass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdEndAsyncTransferPass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBeginAsyncComputePass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdEndAsyncComputePass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBeginGraphicsPass(Opal_CommandEncoder command_encoder, const Opal_GraphicsPassDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdEndGraphicsPass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBeginComputePass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdEndComputePass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBeginRaytracePass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdEndRaytracePass(Opal_CommandEncoder command_encoder)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdDrawIndexedInstanced(Opal_CommandEncoder command_encoder, const Opal_DrawIndexedInstancedDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdMeshletDispatch(Opal_CommandEncoder command_encoder, const Opal_MeshletDispatchDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdComputeDispatch(Opal_CommandEncoder command_encoder, const Opal_ComputeDispatchDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdRaytraceDispatch(Opal_CommandEncoder command_encoder, const Opal_RaytraceDispatchDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdCopyBufferToBuffer(Opal_CommandEncoder command_encoder, const Opal_BufferCopyDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdCopyBufferToTexture(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdCopyTextureToBuffer(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
 }
