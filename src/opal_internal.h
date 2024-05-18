@@ -49,10 +49,10 @@ typedef struct Device_t
 	PFN_deviceDestroyTextureView destroyTextureView;
 } Device;
 
-extern Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-extern Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-extern Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-extern Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-extern Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 
-extern uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint);
+uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint);

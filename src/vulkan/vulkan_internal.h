@@ -118,41 +118,41 @@ typedef struct Vulkan_Image_t
 	Vulkan_Allocation allocation;
 } Vulkan_Image;
 
-extern Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice *device);
-extern Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
-extern VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
-extern VkImageType vulkan_helperToImageType(Opal_TextureType type);
-extern VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
-extern VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples);
-extern VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
-extern VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
-extern Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
+Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice *device);
+Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
+VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
+VkImageType vulkan_helperToImageType(Opal_TextureType type);
+VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
+VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples);
+VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
+VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
+Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 
-extern Opal_Result vulkan_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos);
-extern Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
-extern Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device);
-extern Opal_Result vulkan_instanceDestroy(Instance *this);
+Opal_Result vulkan_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos);
+Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device);
+Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device);
+Opal_Result vulkan_instanceDestroy(Instance *this);
 
-extern Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
-extern Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device);
-extern Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkPhysicalDevice physical_device, const Vulkan_AllocationDesc *desc, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
-extern Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr);
-extern Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
-extern Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
+Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
+Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device);
+Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkPhysicalDevice physical_device, const Vulkan_AllocationDesc *desc, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
+Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr);
+Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
+Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
 
-extern Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
+Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
 
-extern Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device);
-extern Opal_Result vulkan_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
-extern Opal_Result vulkan_deviceDestroy(Device *this);
+Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device);
+Opal_Result vulkan_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
+Opal_Result vulkan_deviceDestroy(Device *this);
 
-extern Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
-extern Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
-extern Opal_Result vulkan_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
+Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
+Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture);
+Opal_Result vulkan_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
 
-extern Opal_Result vulkan_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr);
-extern Opal_Result vulkan_deviceUnmapBuffer(Device *this, Opal_Buffer buffer);
+Opal_Result vulkan_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr);
+Opal_Result vulkan_deviceUnmapBuffer(Device *this, Opal_Buffer buffer);
 
-extern Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer);
-extern Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture);
-extern Opal_Result vulkan_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view);
+Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer);
+Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture);
+Opal_Result vulkan_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view);
