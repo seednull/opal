@@ -90,7 +90,8 @@ typedef enum Opal_Result_t
 	// FIXME: add more error codes for metal stuff
 	OPAL_METAL_ERROR,
 
-	OPAL_RESULT_MAX,
+	OPAL_RESULT_ENUM_MAX,
+	OPAL_RESULT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_Result;
 
 typedef enum Opal_Api_t
@@ -101,8 +102,10 @@ typedef enum Opal_Api_t
 	OPAL_API_WEBGPU,
 	OPAL_API_NULL,
 
-	OPAL_API_MAX,
 	OPAL_API_DEFAULT = OPAL_API_VULKAN,
+
+	OPAL_API_ENUM_MAX,
+	OPAL_API_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_Api;
 
 typedef enum Opal_DeviceHint_t
@@ -111,7 +114,8 @@ typedef enum Opal_DeviceHint_t
 	OPAL_DEVICE_HINT_PREFER_HIGH_PERFORMANCE,
 	OPAL_DEVICE_HINT_PREFER_LOW_POWER,
 
-	OPAL_DEFAULT_DEVICE_MAX,
+	OPAL_DEVICE_HINT_ENUM_MAX,
+	OPAL_DEVICE_HINT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_DeviceHint;
 
 typedef enum Opal_GpuType_t
@@ -122,7 +126,8 @@ typedef enum Opal_GpuType_t
 	OPAL_GPU_TYPE_EXTERNAL,
 	OPAL_GPU_TYPE_UNKNOWN,
 
-	OPAL_GPU_TYPE_MAX,
+	OPAL_GPU_TYPE_ENUM_MAX,
+	OPAL_GPU_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_GpuType;
 
 typedef enum Opal_AllocationMemoryType_t
@@ -132,7 +137,8 @@ typedef enum Opal_AllocationMemoryType_t
 	OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 	OPAL_ALLOCATION_MEMORY_TYPE_READBACK,
 
-	OPAL_ALLOCATION_MEMORY_TYPE_MAX,
+	OPAL_ALLOCATION_MEMORY_TYPE_ENUM_MAX,
+	OPAL_ALLOCATION_MEMORY_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_AllocationMemoryType;
 
 typedef enum Opal_AllocationHint_t
@@ -141,7 +147,8 @@ typedef enum Opal_AllocationHint_t
 	OPAL_ALLOCATION_HINT_PREFER_DEDICATED,
 	OPAL_ALLOCATION_HINT_PREFER_HEAP,
 
-	OPAL_ALLOCATION_HINT_MAX,
+	OPAL_ALLOCATION_HINT_ENUM_MAX,
+	OPAL_ALLOCATION_HINT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_AllocationHint;
 
 typedef enum Opal_InstanceCreationFlags_t
@@ -158,6 +165,8 @@ typedef enum Opal_BufferUsageFlags_t
 	OPAL_BUFFER_USAGE_UNIFORM = 0x00000010,
 	OPAL_BUFFER_USAGE_STORAGE = 0x00000020,
 	OPAL_BUFFER_USAGE_INDIRECT = 0x00000040,
+
+	OPAL_BUFFER_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_BufferUsageFlags;
 
 typedef enum Opal_TextureUsageFlags_t
@@ -167,6 +176,8 @@ typedef enum Opal_TextureUsageFlags_t
 	OPAL_TEXTURE_USAGE_SHADER_SAMPLED = 0x00000004,
 	OPAL_TEXTURE_USAGE_SHADER_STORAGE = 0x00000008,
 	OPAL_TEXTURE_USAGE_RENDER_ATTACHMENT = 0x00000010,
+
+	OPAL_TEXTURE_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_TextureUsageFlags;
 
 typedef enum Opal_TextureType_t
@@ -175,7 +186,8 @@ typedef enum Opal_TextureType_t
 	OPAL_TEXTURE_TYPE_2D,
 	OPAL_TEXTURE_TYPE_3D,
 
-	OPAL_TEXTURE_TYPE_MAX,
+	OPAL_TEXTURE_TYPE_ENUM_MAX,
+	OPAL_TEXTURE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_TextureType;
 
 typedef enum Opal_TextureViewType_t
@@ -187,21 +199,23 @@ typedef enum Opal_TextureViewType_t
 	OPAL_TEXTURE_VIEW_TYPE_CUBE_ARRAY,
 	OPAL_TEXTURE_VIEW_TYPE_3D,
 
-	OPAL_TEXTURE_VIEW_TYPE_MAX,
+	OPAL_TEXTURE_VIEW_TYPE_ENUM_MAX,
+	OPAL_TEXTURE_VIEW_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_TextureViewType;
 
-typedef enum Opal_TextureSamples_t
+typedef enum Opal_Samples_t
 {
-	OPAL_TEXTURE_SAMPLES_1 = 0,
-	OPAL_TEXTURE_SAMPLES_2,
-	OPAL_TEXTURE_SAMPLES_4,
-	OPAL_TEXTURE_SAMPLES_8,
-	OPAL_TEXTURE_SAMPLES_16,
-	OPAL_TEXTURE_SAMPLES_32,
-	OPAL_TEXTURE_SAMPLES_64,
+	OPAL_SAMPLES_1 = 0,
+	OPAL_SAMPLES_2,
+	OPAL_SAMPLES_4,
+	OPAL_SAMPLES_8,
+	OPAL_SAMPLES_16,
+	OPAL_SAMPLES_32,
+	OPAL_SAMPLES_64,
 
-	OPAL_TEXTURE_SAMPLES_MAX,
-} Opal_TextureSamples;
+	OPAL_SAMPLES_ENUM_MAX,
+	OPAL_SAMPLES_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_Samples;
 
 typedef enum Opal_Format_t
 {
@@ -343,13 +357,14 @@ typedef enum Opal_Format_t
 	OPAL_FORMAT_D24_UNORM_S8_UINT,
 	OPAL_FORMAT_D32_SFLOAT_S8_UINT,
 
-	OPAL_FORMAT_MAX,
-
 	OPAL_FORMAT_COLOR_BEGIN = OPAL_FORMAT_R8_UNORM,
 	OPAL_FORMAT_COLOR_END = OPAL_FORMAT_ASTC_12x12_SRGB,
 
 	OPAL_FORMAT_DEPTHSTENCIL_BEGIN = OPAL_FORMAT_D16_UNORM,
 	OPAL_FORMAT_DEPTHSTENCIL_END = OPAL_FORMAT_D32_SFLOAT_S8_UINT,
+
+	OPAL_FORMAT_ENUM_MAX,
+	OPAL_FORMAT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_Format;
 
 typedef enum Opal_SamplerFilterMode_t
@@ -357,7 +372,8 @@ typedef enum Opal_SamplerFilterMode_t
 	OPAL_SAMPLER_FILTER_MODE_NEAREST = 0,
 	OPAL_SAMPLER_FILTER_MODE_LINEAR,
 
-	OPAL_SAMPLER_FILTER_MODE_MAX,
+	OPAL_SAMPLER_FILTER_MODE_ENUM_MAX,
+	OPAL_SAMPLER_FILTER_MODE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_SamplerFilterMode;
 
 typedef enum Opal_SamplerAddressMode_t
@@ -366,7 +382,8 @@ typedef enum Opal_SamplerAddressMode_t
 	OPAL_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
 	OPAL_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 
-	OPAL_SAMPLER_ADDRESS_MODE_MAX,
+	OPAL_SAMPLER_ADDRESS_MODE_ENUM_MAX,
+	OPAL_SAMPLER_ADDRESS_MODE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_SamplerAddressMode;
 
 typedef enum Opal_CompareFunc_t
@@ -380,7 +397,8 @@ typedef enum Opal_CompareFunc_t
 	OPAL_COMPARE_FUNC_GREATER_OR_EQUAL,
 	OPAL_COMPARE_FUNC_ALWAYS,
 
-	OPAL_COMPARE_FUNC_MAX,
+	OPAL_COMPARE_FUNC_ENUM_MAX,
+	OPAL_COMPARE_FUNC_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_CompareFunc;
 
 typedef enum Opal_ShaderSourceType_t
@@ -390,7 +408,8 @@ typedef enum Opal_ShaderSourceType_t
 	OPAL_SHADER_SOURCE_TYPE_WGSL,
 	OPAL_SHADER_SOURCE_TYPE_MSL,
 
-	OPAL_SHADER_SOURCE_MAX,
+	OPAL_SHADER_SOURCE_ENUM_MAX,
+	OPAL_SHADER_SOURCE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_ShaderSourceType;
 
 typedef enum Opal_GraphicsPassTarget_t
@@ -398,7 +417,8 @@ typedef enum Opal_GraphicsPassTarget_t
 	OPAL_GRAPHICS_PASS_TARGET_FRAMEBUFFER = 0,
 	OPAL_GRAPHICS_PASS_TARGET_SWAPCHAIN,
 
-	OPAL_GRAPHICS_PASS_TARGET_MAX,
+	OPAL_GRAPHICS_PASS_TARGET_ENUM_MAX,
+	OPAL_GRAPHICS_PASS_TARGET_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_GraphicsPassTarget;
 
 typedef enum Opal_LoadOp_t
@@ -407,7 +427,8 @@ typedef enum Opal_LoadOp_t
 	OPAL_LOAD_OP_CLEAR,
 	OPAL_LOAD_OP_LOAD,
 
-	OPAL_LOAD_OP_MAX,
+	OPAL_LOAD_OP_ENUM_MAX,
+	OPAL_LOAD_OP_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_LoadOp;
 
 typedef enum Opal_StoreOp_t
@@ -415,16 +436,139 @@ typedef enum Opal_StoreOp_t
 	OPAL_STORE_OP_DONT_CARE = 0,
 	OPAL_STORE_OP_STORE,
 
-	OPAL_STORE_OP_MAX,
+	OPAL_STORE_OP_ENUM_MAX,
+	OPAL_STORE_OP_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_StoreOp;
+
+typedef enum Opal_CompareOp_t {
+	OPAL_COMPARE_OP_NEVER = 0,
+	OPAL_COMPARE_OP_LESS,
+	OPAL_COMPARE_OP_EQUAL,
+	OPAL_COMPARE_OP_LESS_OR_EQUAL,
+	OPAL_COMPARE_OP_GREATER,
+	OPAL_COMPARE_OP_NOT_EQUAL,
+	OPAL_COMPARE_OP_GREATER_OR_EQUAL,
+	OPAL_COMPARE_OP_ALWAYS,
+
+	OPAL_COMPARE_OP_ENUM_MAX,
+	OPAL_COMPARE_OP_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_CompareOp;
+
+typedef enum Opal_StencilOp_t {
+	OPAL_STENCIL_OP_KEEP = 0,
+	OPAL_STENCIL_OP_ZERO,
+	OPAL_STENCIL_OP_REPLACE,
+	OPAL_STENCIL_OP_INVERT,
+	OPAL_STENCIL_OP_INCREMENT_AND_CLAMP,
+	OPAL_STENCIL_OP_DECREMENT_AND_CLAMP,
+	OPAL_STENCIL_OP_INCREMENT_AND_WRAP,
+	OPAL_STENCIL_OP_DECREMENT_AND_WRAP,
+
+	OPAL_STENCIL_OP_ENUM_MAX,
+	OPAL_STENCIL_OP_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_StencilOp;
+
+typedef enum Opal_BlendOp_t {
+	OPAL_BLEND_OP_ADD = 0,
+	OPAL_BLEND_OP_SUBTRACT,
+	OPAL_BLEND_OP_REVERSE_SUBTRACT,
+	OPAL_BLEND_OP_MIN,
+	OPAL_BLEND_OP_MAX,
+
+	OPAL_BLEND_OP_ENUM_MAX,
+	OPAL_BLEND_OP_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_BlendOp;
+
+typedef enum Opal_BlendFactor_t {
+	OPAL_BLEND_FACTOR_ZERO = 0,
+	OPAL_BLEND_FACTOR_ONE,
+	OPAL_BLEND_FACTOR_SRC_COLOR,
+	OPAL_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
+	OPAL_BLEND_FACTOR_DST_COLOR,
+	OPAL_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+	OPAL_BLEND_FACTOR_SRC_ALPHA,
+	OPAL_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	OPAL_BLEND_FACTOR_DST_ALPHA,
+	OPAL_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,
+
+	OPAL_BLEND_FACTOR_ENUM_MAX,
+	OPAL_BLEND_FACTOR_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_BlendFactor;
 
 typedef enum Opal_VertexInputRate_t
 {
 	OPAL_VERTEX_INPUT_RATE_VERTEX = 0,
 	OPAL_VERTEX_INPUT_RATE_INSTANCE,
 
-	OPAL_VERTEX_INPUT_RATE_MAX,
+	OPAL_VERTEX_INPUT_RATE_ENUM_MAX,
+	OPAL_VERTEX_INPUT_RATE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_VertexInputRate;
+
+typedef enum Opal_ShaderStage_t
+{
+	OPAL_SHADER_STAGE_NONE = 0x00000000,
+	OPAL_SHADER_STAGE_VERTEX = 0x00000001,
+	OPAL_SHADER_STAGE_TESSELLATION_CONTROL = 0x00000002,
+	OPAL_SHADER_STAGE_TESSELLATION_EVALUATION = 0x00000004,
+	OPAL_SHADER_STAGE_GEOMETRY = 0x00000008,
+	OPAL_SHADER_STAGE_FRAGMENT = 0x00000010,
+	OPAL_SHADER_STAGE_COMPUTE = 0x00000020,
+
+	OPAL_SHADER_STAGE_TASK = 0x00000040,
+	OPAL_SHADER_STAGE_MESH = 0x00000080,
+
+	OPAL_SHADER_STAGE_RAYGEN = 0x00000100,
+	OPAL_SHADER_STAGE_ANY_HIT = 0x00000200,
+	OPAL_SHADER_STAGE_CLOSEST_HIT = 0x00000400,
+	OPAL_SHADER_STAGE_MISS = 0x00000800,
+	OPAL_SHADER_STAGE_INTERSECTION = 0x00001000,
+
+	OPAL_SHADER_STAGE_ALL_GRAPHICS = 0x0000001F,
+	OPAL_SHADER_STAGE_ALL_MESHLET = 0x000000C0,
+	OPAL_SHADER_STAGE_ALL_RAYTRACE = 0x00001F00,
+	OPAL_SHADER_STAGE_ALL = 0x7FFFFFFF,
+
+	OPAL_SHADER_STAGE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_ShaderStage;
+
+typedef enum Opal_BindingType_t
+{
+	OPAL_BINDING_TYPE_BUFFER = 0,
+	OPAL_BINDING_TYPE_TEXTURE,
+	// TODO: more types
+
+	OPAL_BINDING_TYPE_ENUM_MAX,
+	OPAL_BINDING_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_BindingType;
+
+typedef enum Opal_PrimitiveType_t {
+	OPAL_PRIMITIVE_TYPE_POINT = 0,
+	OPAL_PRIMITIVE_TYPE_LINE = 1,
+	OPAL_PRIMITIVE_TYPE_TRIANGLE = 3,
+	OPAL_PRIMITIVE_TYPE_TRIANGLE_PATCH,
+	OPAL_PRIMITIVE_TYPE_QUAD_PATCH,
+
+	OPAL_PRIMITIVE_TYPE_ENUM_MAX,
+	OPAL_PRIMITIVE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_PrimitiveType;
+
+typedef enum Opal_CullMode_t {
+	OPAL_CULL_MODE_NONE = 0,
+	OPAL_CULL_MODE_FRONT,
+	OPAL_CULL_MODE_BACK,
+	OPAL_CULL_MODE_FRONT_AND_BACK,
+
+	OPAL_CULL_MODE_ENUM_MAX,
+	OPAL_CULL_MODE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_CullMode;
+
+typedef enum Opal_FrontFace_t {
+	OPAL_FRONT_FACE_COUNTER_CLOCKWISE = 0,
+	OPAL_FRONT_FACE_CLOCKWISE,
+
+	OPAL_FRONT_FACE_ENUM_MAX,
+	OPAL_FRONT_FACE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_FrontFace;
 
 // Structs
 typedef struct Opal_DeviceInfo_t
@@ -474,7 +618,7 @@ typedef struct Opal_TextureDesc_t
 	uint32_t depth;
 	uint32_t mip_count;
 	uint32_t layer_count;
-	Opal_TextureSamples samples;
+	Opal_Samples samples;
 	Opal_TextureUsageFlags usage;
 	Opal_AllocationHint hint;
 } Opal_TextureDesc;
@@ -567,11 +711,143 @@ typedef struct Opal_VertexAttribute_t
 
 typedef struct Opal_VertexStream_t
 {
-	const Opal_VertexAttribute *attributes;
-	uint32_t num_vertex_attributes;
 	uint32_t stride;
+	uint32_t num_vertex_attributes;
+	const Opal_VertexAttribute *attributes;
 	Opal_VertexInputRate rate;
 } Opal_VertexStream;
+
+typedef struct Opal_BindSetLayoutBinding_t
+{
+	uint32_t binding;
+	Opal_BindingType type;
+	Opal_ShaderStage visibility;
+} Opal_BindSetLayoutBinding;
+
+typedef struct Opal_BindSetLayoutDesc_t
+{
+	uint32_t num_bindings;
+	const Opal_BindSetLayoutBinding *bindings;
+} Opal_BindSetLayoutDesc;
+
+typedef struct Opal_BindSetBinding_t
+{
+	uint32_t binding;
+	union
+	{
+		Opal_Texture texture;
+		Opal_BufferView buffer;
+		// TODO: add more types
+	};
+} Opal_BindSetBinding;
+
+typedef struct Opal_BindSetDesc_t
+{
+	Opal_BindSetLayout bindset_layout;
+	uint32_t num_bindings;
+	const Opal_BindSetBinding *bindings;
+} Opal_BindSetDesc;
+
+typedef struct Opal_PipelineLayoutDesc_t
+{
+	uint32_t num_bindset_layouts;
+	const Opal_BindSetLayout *bindset_layouts;
+} Opal_PipelineLayoutDesc;
+
+typedef struct Opal_BlendState_t {
+	uint32_t enable;
+	Opal_BlendFactor src_color;
+	Opal_BlendFactor dst_color;
+	Opal_BlendOp color_op;
+	Opal_BlendFactor src_alpha;
+	Opal_BlendFactor dst_alpha;
+	Opal_BlendOp alpha_op;
+} Opal_BlendState;
+
+typedef struct Opal_StencilFaceState_t {
+	Opal_StencilOp pass_op;
+	Opal_StencilOp depth_fail_op;
+	Opal_StencilOp fail_op;
+	Opal_CompareOp compare_op;
+} Opal_StencilFaceState;
+
+typedef struct Opal_GraphicsPipelineDesc_t
+{
+	Opal_PipelineLayout pipeline_layout;
+
+	Opal_Shader vertex_shader;
+	Opal_Shader tessellation_control_shader;
+	Opal_Shader tessellation_evaluation_shader;
+	Opal_Shader geometry_shader;
+	Opal_Shader fragment_shader;
+
+	uint32_t num_vertex_streams;
+	const Opal_VertexStream *vertex_streams;
+	Opal_PrimitiveType primitive_type;
+
+	Opal_CullMode cull_mode;
+	Opal_FrontFace front_face;
+	Opal_Samples rasterization_samples;
+
+	uint32_t depth_enable;
+	uint32_t depth_write;
+	Opal_CompareOp depth_compare_op;
+
+	uint32_t stencil_enable;
+	Opal_StencilFaceState stentil_front;
+	Opal_StencilFaceState stentil_back;
+
+	uint32_t num_blend_states;
+	const Opal_BlendState *blend_states;
+} Opal_GraphicsPipelineDesc;
+
+typedef struct Opal_MeshletPipelineDesc_t
+{
+	Opal_PipelineLayout pipeline_layout;
+
+	Opal_Shader task_shader;
+	Opal_Shader mesh_shader;
+	Opal_Shader fragment_shader;
+
+	Opal_CullMode cull_mode;
+	Opal_FrontFace front_face;
+	Opal_Samples rasterization_samples;
+
+	uint32_t depth_enable;
+	uint32_t depth_write;
+	Opal_CompareOp depth_compare_op;
+
+	uint32_t stencil_enable;
+	Opal_StencilFaceState stentil_front;
+	Opal_StencilFaceState stentil_back;
+
+	uint32_t num_blend_states;
+	const Opal_BlendState *blend_states;
+} Opal_MeshletPipelineDesc;
+
+typedef struct Opal_ComputePipelineDesc_t
+{
+	Opal_PipelineLayout pipeline_layout;
+	Opal_Shader compute_shader;
+} Opal_ComputePipelineDesc;
+
+typedef struct Opal_RaytracePipelineDesc_t
+{
+	Opal_PipelineLayout pipeline_layout;
+
+	uint32_t num_raygen_shaders;
+	const Opal_Shader *raygen_shaders;
+
+	uint32_t num_hitgroup_shaders;
+	const Opal_Shader *intersection_shaders;
+	const Opal_Shader *anyhit_shaders;
+	const Opal_Shader *closesthit_shaders;
+
+	uint32_t num_miss_shaders;
+	const Opal_Shader *miss_shaders;
+
+	// TODO: additional state (payload size, recursion depth, etc.)
+} Opal_RaytracePipelineDesc;
 
 typedef struct Opal_DrawIndexedInstancedDesc_t
 {
@@ -647,9 +923,13 @@ typedef Opal_Result (*PFN_opalCreateTextureView)(Opal_Device device, const Opal_
 typedef Opal_Result (*PFN_opalCreateSampler)(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler);
 typedef Opal_Result (*PFN_opalCreateCommandEncoder)(Opal_Device device, Opal_CommandEncoder *command_encoder);
 typedef Opal_Result (*PFN_opalCreateShader)(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
-
-typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
-typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
+typedef Opal_Result (*PFN_opalCreateBindSetLayout)(Opal_Device device, const Opal_BindSetLayoutDesc *desc, Opal_BindSetLayout *bindset_layout);
+typedef Opal_Result (*PFN_opalCreateBindSet)(Opal_Device device, const Opal_BindSetDesc *desc, Opal_BindSet *bindset);
+typedef Opal_Result (*PFN_opalCreatePipelineLayout)(Opal_Device device, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout);
+typedef Opal_Result (*PFN_opalCreateGraphicsPipeline)(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline);
+typedef Opal_Result (*PFN_opalCreateMeshletPipeline)(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline);
+typedef Opal_Result (*PFN_opalCreateComputePipeline)(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline);
+typedef Opal_Result (*PFN_opalCreateRaytracePipeline)(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline);
 
 typedef Opal_Result (*PFN_opalDestroyBuffer)(Opal_Device device, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_opalDestroyTexture)(Opal_Device device, Opal_Texture texture);
@@ -657,6 +937,18 @@ typedef Opal_Result (*PFN_opalDestroyTextureView)(Opal_Device device, Opal_Textu
 typedef Opal_Result (*PFN_opalDestroySampler)(Opal_Device device, Opal_Sampler sampler);
 typedef Opal_Result (*PFN_opalDestroyCommandEncoder)(Opal_Device device, Opal_CommandEncoder command_encoder);
 typedef Opal_Result (*PFN_opalDestroyShader)(Opal_Device device, Opal_Shader shader);
+typedef Opal_Result (*PFN_opalDestroyBindSetLayout)(Opal_Device device, Opal_BindSetLayout bindset_layout);
+typedef Opal_Result (*PFN_opalDestroyBindSet)(Opal_Device device, Opal_BindSet bindset);
+typedef Opal_Result (*PFN_opalDestroyPipelineLayout)(Opal_Device device, Opal_PipelineLayout pipeline_layout);
+typedef Opal_Result (*PFN_opalDestroyGraphicsPipeline)(Opal_Device device, Opal_GraphicsPipeline pipeline);
+typedef Opal_Result (*PFN_opalDestroyMeshletPipeline)(Opal_Device device, Opal_MeshletPipeline pipeline);
+typedef Opal_Result (*PFN_opalDestroyComputePipeline)(Opal_Device device, Opal_ComputePipeline pipeline);
+typedef Opal_Result (*PFN_opalDestroyRaytracePipeline)(Opal_Device device, Opal_RaytracePipeline pipeline);
+
+typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
+typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
+
+typedef Opal_Result (*PFN_opalUpdateBindSet)(Opal_Device device, Opal_BindSet bindset, uint32_t num_bindings, const Opal_BindSetBinding *bindings);
 
 typedef Opal_Result (*PFN_opalBeginCommands)(Opal_CommandEncoder command_encoder);
 typedef Opal_Result (*PFN_opalEndCommands)(Opal_CommandEncoder command_encoder);
@@ -698,9 +990,13 @@ OPAL_APIENTRY Opal_Result opalCreateTextureView(Opal_Device device, const Opal_T
 OPAL_APIENTRY Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, Opal_Sampler *sampler);
 OPAL_APIENTRY Opal_Result opalCreateCommandEncoder(Opal_Device device, Opal_CommandEncoder *command_encoder);
 OPAL_APIENTRY Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
-
-OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
-OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
+OPAL_APIENTRY Opal_Result opalCreateBindSetLayout(Opal_Device device, const Opal_BindSetLayoutDesc *desc, Opal_BindSetLayout *bindset_layout);
+OPAL_APIENTRY Opal_Result opalCreateBindSet(Opal_Device device, const Opal_BindSetDesc *desc, Opal_BindSet *bindset);
+OPAL_APIENTRY Opal_Result opalCreatePipelineLayout(Opal_Device device, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout);
+OPAL_APIENTRY Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline);
+OPAL_APIENTRY Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline);
+OPAL_APIENTRY Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline);
+OPAL_APIENTRY Opal_Result opalCreateRaytracePipeline(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline);
 
 OPAL_APIENTRY Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer);
 OPAL_APIENTRY Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture);
@@ -708,6 +1004,18 @@ OPAL_APIENTRY Opal_Result opalDestroyTextureView(Opal_Device device, Opal_Textur
 OPAL_APIENTRY Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler);
 OPAL_APIENTRY Opal_Result opalDestroyCommandEncoder(Opal_Device device, Opal_CommandEncoder command_encoder);
 OPAL_APIENTRY Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader);
+OPAL_APIENTRY Opal_Result opalDestroyBindSetLayout(Opal_Device device, Opal_BindSetLayout bindset_layout);
+OPAL_APIENTRY Opal_Result opalDestroyBindSet(Opal_Device device, Opal_BindSet bindset);
+OPAL_APIENTRY Opal_Result opalDestroyPipelineLayout(Opal_Device device, Opal_PipelineLayout pipeline_layout);
+OPAL_APIENTRY Opal_Result opalDestroyGraphicsPipeline(Opal_Device device, Opal_GraphicsPipeline pipeline);
+OPAL_APIENTRY Opal_Result opalDestroyMeshletPipeline(Opal_Device device, Opal_MeshletPipeline pipeline);
+OPAL_APIENTRY Opal_Result opalDestroyComputePipeline(Opal_Device device, Opal_ComputePipeline pipeline);
+OPAL_APIENTRY Opal_Result opalDestroyRaytracePipeline(Opal_Device device, Opal_RaytracePipeline pipeline);
+
+OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
+OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
+
+OPAL_APIENTRY Opal_Result opalUpdateBindSet(Opal_Device device, Opal_BindSet bindset, uint32_t num_bindings, const Opal_BindSetBinding *bindings);
 
 OPAL_APIENTRY Opal_Result opalBeginCommands(Opal_CommandEncoder command_encoder);
 OPAL_APIENTRY Opal_Result opalEndCommands(Opal_CommandEncoder command_encoder);

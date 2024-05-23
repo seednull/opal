@@ -135,32 +135,39 @@ Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Op
 	return OPAL_NOT_SUPPORTED;
 }
 
-/*
- */
-Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr)
+Opal_Result opalCreateBindSetLayout(Opal_Device device, const Opal_BindSetLayoutDesc *desc, Opal_BindSetLayout *bindset_layout)
 {
-	// FIXME: change to handle + generation and do proper check
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-	
-	if (buffer == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_BUFFER;
-
-	Device *device_ptr = (Device *)(device);
-	return device_ptr->mapBuffer(device_ptr, buffer, ptr);
+	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer)
+Opal_Result opalCreateBindSet(Opal_Device device, const Opal_BindSetDesc *desc, Opal_BindSet *bindset)
 {
-	// FIXME: change to handle + generation and do proper check
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-	
-	if (buffer == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_BUFFER;
+	return OPAL_NOT_SUPPORTED;
+}
 
-	Device *ptr = (Device *)(device);
-	return ptr->unmapBuffer(ptr, buffer);
+Opal_Result opalCreatePipelineLayout(Opal_Device device, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateRaytracePipeline(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
 }
 
 /*
@@ -206,6 +213,76 @@ Opal_Result opalDestroyCommandEncoder(Opal_Device device, Opal_CommandEncoder co
 }
 
 Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyBindSetLayout(Opal_Device device, Opal_BindSetLayout bindset_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyBindSet(Opal_Device device, Opal_BindSet bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyPipelineLayout(Opal_Device device, Opal_PipelineLayout pipeline_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyGraphicsPipeline(Opal_Device device, Opal_GraphicsPipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyMeshletPipeline(Opal_Device device, Opal_MeshletPipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyComputePipeline(Opal_Device device, Opal_ComputePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroyRaytracePipeline(Opal_Device device, Opal_RaytracePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
+Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+	
+	if (buffer == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_BUFFER;
+
+	Device *device_ptr = (Device *)(device);
+	return device_ptr->mapBuffer(device_ptr, buffer, ptr);
+}
+
+Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer)
+{
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+	
+	if (buffer == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_BUFFER;
+
+	Device *ptr = (Device *)(device);
+	return ptr->unmapBuffer(ptr, buffer);
+}
+
+/*
+ */
+Opal_Result opalUpdateBindSet(Opal_Device device, Opal_BindSet bindset, uint32_t num_bindings, const Opal_BindSetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
 }

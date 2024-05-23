@@ -54,7 +54,7 @@ public:
 			1,
 			1,
 			1,
-			OPAL_TEXTURE_SAMPLES_1,
+			OPAL_SAMPLES_1,
 			(Opal_TextureUsageFlags)OPAL_TEXTURE_USAGE_SHADER_SAMPLED,
 			OPAL_ALLOCATION_HINT_AUTO,
 		};
@@ -86,7 +86,7 @@ public:
 			1,
 			1,
 			1,
-			OPAL_TEXTURE_SAMPLES_1,
+			OPAL_SAMPLES_1,
 			(Opal_TextureUsageFlags)OPAL_TEXTURE_USAGE_SHADER_SAMPLED,
 			OPAL_ALLOCATION_HINT_AUTO,
 		};

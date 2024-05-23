@@ -123,7 +123,7 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
 VkFormat vulkan_helperToImageFormat(Opal_Format format);
-VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples);
+VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_Samples samples);
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
 Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);

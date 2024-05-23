@@ -129,7 +129,7 @@ VkFormat vulkan_helperToImageFormat(Opal_Format format)
 	return vk_formats[format];
 }
 
-VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_TextureSamples samples)
+VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_Samples samples)
 {
 	static VkSampleCountFlagBits vk_sample_count_bits[] =
 	{
