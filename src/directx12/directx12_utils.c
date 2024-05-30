@@ -36,8 +36,8 @@ Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Dev
 
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
-	wcstombs(info->name, &desc.Description[0], 256);
-	info->gpu_type = OPAL_GPU_TYPE_DISCRETE;
+	WideCharToMultiByte(CP_UTF8, 0, &desc.Description[0], 128, info->name, 256, NULL, NULL);
+	info->device_type = OPAL_DEVICE_TYPE_DISCRETE;
 	info->driver_version = umd.QuadPart;
 	info->vendor_id = desc.VendorId;
 	info->device_id = desc.DeviceId;
