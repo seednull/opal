@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iostream>
 
-static const char *gpu_type[] = {
+static const char *device_types[] = {
 	"Discrete",
 	"Integrated",
 	"CPU",
@@ -10,7 +10,7 @@ static const char *gpu_type[] = {
 	"Unknown",
 };
 
-static const char *hint_type[] = {
+static const char *hint_types[] = {
 	"Device",
 	"High Performance Device",
 	"Low Power Device",
@@ -19,7 +19,7 @@ static const char *hint_type[] = {
 void printDeviceInfo(const Opal_DeviceInfo *info)
 {
 	std::cout << "Device name: " << info->name << "\n";
-	std::cout << "GPU type: " << gpu_type[info->gpu_type] << "\n";
+	std::cout << "Device type: " << device_types[info->device_type] << "\n";
 	std::cout << "Driver version: " << info->driver_version << "\n";
 	std::cout << "Vendor ID: " << info->vendor_id << "\n";
 	std::cout << "Device ID: " << info->device_id << "\n";
@@ -80,7 +80,7 @@ void testCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint)
 	Opal_DeviceInfo info = {};
 	result = opalGetDeviceInfo(device, &info);
 	assert(result == OPAL_SUCCESS);
-	std::cout << " ------ [CreateDefault " << hint_type[hint] << "] ------\n";
+	std::cout << " ------ [CreateDefault " << hint_types[hint] << "] ------\n";
 	printDeviceInfo(&info);
 
 	result = opalDestroyDevice(device);
@@ -101,7 +101,7 @@ int main()
 		OPAL_DEFAULT_HEAPS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_METAL, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_DIRECTX12, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	testEnumerateDevices(instance);

@@ -48,15 +48,15 @@ Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Dev
 	info->max_buffer_alignment = 0xFFFF;
 
 	if (desc.Flags == DXGI_ADAPTER_FLAG_SOFTWARE)
-		info->gpu_type = OPAL_GPU_TYPE_CPU;
+		info->device_type = OPAL_DEVICE_TYPE_CPU;
 
-	if (info->gpu_type == OPAL_GPU_TYPE_DISCRETE)
+	if (info->device_type == OPAL_DEVICE_TYPE_DISCRETE)
 	{
 		D3D12_FEATURE_DATA_ARCHITECTURE architecture = {0};
 		hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_ARCHITECTURE, &architecture, sizeof(D3D12_FEATURE_DATA_ARCHITECTURE));
 		if (SUCCEEDED(hr))
 			if (architecture.UMA == TRUE)
-				info->gpu_type = OPAL_GPU_TYPE_INTEGRATED;
+				info->device_type = OPAL_DEVICE_TYPE_INTEGRATED;
 	}
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS5 raytracing_options = {0};

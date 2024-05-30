@@ -21,10 +21,10 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 
 	switch (properties.adapterType)
 	{
-		case WGPUAdapterType_DiscreteGPU: info->gpu_type = OPAL_GPU_TYPE_DISCRETE; break;
-		case WGPUAdapterType_IntegratedGPU: info->gpu_type = OPAL_GPU_TYPE_INTEGRATED; break;
-		case WGPUAdapterType_CPU: info->gpu_type = OPAL_GPU_TYPE_CPU; break;
-		default: info->gpu_type = OPAL_GPU_TYPE_UNKNOWN; break;
+		case WGPUAdapterType_DiscreteGPU: info->device_type = OPAL_DEVICE_TYPE_DISCRETE; break;
+		case WGPUAdapterType_IntegratedGPU: info->device_type = OPAL_DEVICE_TYPE_INTEGRATED; break;
+		case WGPUAdapterType_CPU: info->device_type = OPAL_DEVICE_TYPE_CPU; break;
+		default: info->device_type = OPAL_DEVICE_TYPE_UNKNOWN; break;
 	}
 
 	info->compute_shader = 1;

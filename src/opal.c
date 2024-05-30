@@ -125,7 +125,7 @@ Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, 
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreateCommandEncoder(Opal_Device device, Opal_CommandEncoder *command_encoder)
+Opal_Result opalCreateCommandBuffer(Opal_Device device, Opal_CommandBuffer *command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -135,17 +135,17 @@ Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Op
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreateBindSetLayout(Opal_Device device, const Opal_BindSetLayoutDesc *desc, Opal_BindSetLayout *bindset_layout)
+Opal_Result opalCreateBindSetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreateBindSet(Opal_Device device, const Opal_BindSetDesc *desc, Opal_BindSet *bindset)
+Opal_Result opalCreateBindSet(Opal_Device device, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreatePipelineLayout(Opal_Device device, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout)
+Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -166,6 +166,11 @@ Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipe
 }
 
 Opal_Result opalCreateRaytracePipeline(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCreateSwapChain(Opal_Device device, const void *handle, Opal_SwapChain *swap_chain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -207,7 +212,7 @@ Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler)
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalDestroyCommandEncoder(Opal_Device device, Opal_CommandEncoder command_encoder)
+Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -217,12 +222,12 @@ Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalDestroyBindSetLayout(Opal_Device device, Opal_BindSetLayout bindset_layout)
+Opal_Result opalDestroyBindSetLayout(Opal_Device device, Opal_BindsetLayout bindset_layout)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalDestroyBindSet(Opal_Device device, Opal_BindSet bindset)
+Opal_Result opalDestroyBindSet(Opal_Device device, Opal_Bindset bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -248,6 +253,11 @@ Opal_Result opalDestroyComputePipeline(Opal_Device device, Opal_ComputePipeline 
 }
 
 Opal_Result opalDestroyRaytracePipeline(Opal_Device device, Opal_RaytracePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalDestroySwapChain(Opal_Device device, Opal_SwapChain swap_chain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -280,113 +290,143 @@ Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer)
 	return ptr->unmapBuffer(ptr, buffer);
 }
 
-/*
- */
-Opal_Result opalUpdateBindSet(Opal_Device device, Opal_BindSet bindset, uint32_t num_bindings, const Opal_BindSetBinding *bindings)
+Opal_Result opalDeviceWaitIdle(Opal_Device device)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 /*
  */
-Opal_Result opalBeginCommands(Opal_CommandEncoder command_encoder)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result opalEndCommands(Opal_CommandEncoder command_encoder)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result opalSubmitCommands(Opal_Device device, Opal_CommandEncoder command_encoder)
+Opal_Result opalUpdateBindSet(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 /*
  */
-Opal_Result opalCmdBeginAsyncTransferPass(Opal_CommandEncoder command_encoder)
+Opal_Result opalBeginCommands(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdEndAsyncTransferPass(Opal_CommandEncoder command_encoder)
+Opal_Result opalEndCommands(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdBeginAsyncComputePass(Opal_CommandEncoder command_encoder)
+Opal_Result opalSubmitCommands(Opal_Device device, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdEndAsyncComputePass(Opal_CommandEncoder command_encoder)
+Opal_Result opalAcquire(Opal_SwapChain swap_chain, Opal_TextureView *texture_view)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdBeginGraphicsPass(Opal_CommandEncoder command_encoder, const Opal_GraphicsPassDesc *desc)
+Opal_Result opalPresent(Opal_SwapChain swap_chain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdEndGraphicsPass(Opal_CommandEncoder command_encoder)
+/*
+ */
+Opal_Result opalCmdBeginAsyncTransferPass(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdBeginComputePass(Opal_CommandEncoder command_encoder)
+Opal_Result opalCmdEndAsyncTransferPass(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdEndComputePass(Opal_CommandEncoder command_encoder)
+Opal_Result opalCmdBeginAsyncComputePass(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdBeginRaytracePass(Opal_CommandEncoder command_encoder)
+Opal_Result opalCmdEndAsyncComputePass(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdEndRaytracePass(Opal_CommandEncoder command_encoder)
+Opal_Result opalCmdBeginGraphicsPass(Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdDrawIndexedInstanced(Opal_CommandEncoder command_encoder, const Opal_DrawIndexedInstancedDesc *desc)
+Opal_Result opalCmdEndGraphicsPass(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdMeshletDispatch(Opal_CommandEncoder command_encoder, const Opal_MeshletDispatchDesc *desc)
+Opal_Result opalCmdSetGraphicsPipeline(Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdComputeDispatch(Opal_CommandEncoder command_encoder, const Opal_ComputeDispatchDesc *desc)
+Opal_Result opalCmdSetMeshletPipeline(Opal_CommandBuffer command_buffer, Opal_MeshletPipeline pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdRaytraceDispatch(Opal_CommandEncoder command_encoder, const Opal_RaytraceDispatchDesc *desc)
+Opal_Result opalCmdSetComputePipeline(Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdCopyBufferToBuffer(Opal_CommandEncoder command_encoder, const Opal_BufferCopyDesc *desc)
+Opal_Result opalCmdSetRaytracePipeline(Opal_CommandBuffer command_buffer, Opal_RaytracePipeline pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdCopyBufferToTexture(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc)
+Opal_Result opalCmdSetBindsets(Opal_CommandBuffer command_buffer, uint32_t num_bindsets, const Opal_Bindset *bindsets)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdCopyTextureToBuffer(Opal_CommandEncoder command_encoder, const Opal_BufferTextureCopyDesc *desc)
+Opal_Result opalCmdSetVertexBuffers(Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdSetIndexBuffer(Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdDrawIndexedInstanced(Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdMeshletDispatch(Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdComputeDispatch(Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdRaytraceDispatch(Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableView shader_table, uint32_t width, uint32_t height, uint32_t depth)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdCopyBufferToBuffer(Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdCopyBufferToTexture(Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdCopyTextureToBuffer(Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
 {
 	return OPAL_NOT_SUPPORTED;
 }

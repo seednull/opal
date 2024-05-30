@@ -1,6 +1,6 @@
 #include "opal_internal.h"
 
-static uint32_t gpu_type_default_scores[] = {
+static uint32_t device_type_default_scores[] = {
 	1000,
 	100,
 	0,
@@ -8,7 +8,7 @@ static uint32_t gpu_type_default_scores[] = {
 	0,
 };
 
-static uint32_t gpu_type_high_performance_scores[] = {
+static uint32_t device_type_high_performance_scores[] = {
 	1000,
 	100,
 	0,
@@ -16,7 +16,7 @@ static uint32_t gpu_type_high_performance_scores[] = {
 	0,
 };
 
-static uint32_t gpu_type_low_power_scores[] = {
+static uint32_t device_type_low_power_scores[] = {
 	100,
 	1000,
 	0,
@@ -34,9 +34,9 @@ uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint)
 
 	switch (hint)
 	{
-		case OPAL_DEVICE_HINT_PREFER_HIGH_PERFORMANCE: score += gpu_type_high_performance_scores[info->gpu_type]; break;
-		case OPAL_DEVICE_HINT_PREFER_LOW_POWER: score += gpu_type_low_power_scores[info->gpu_type]; break;
-		default: score += gpu_type_default_scores[info->gpu_type]; break;
+		case OPAL_DEVICE_HINT_PREFER_HIGH_PERFORMANCE: score += device_type_high_performance_scores[info->device_type]; break;
+		case OPAL_DEVICE_HINT_PREFER_LOW_POWER: score += device_type_low_power_scores[info->device_type]; break;
+		default: score += device_type_default_scores[info->device_type]; break;
 	}
 
 	score += info->tessellation_shader;

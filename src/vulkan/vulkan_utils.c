@@ -375,10 +375,10 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 
 	switch (properties.deviceType)
 	{
-		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: info->gpu_type = OPAL_GPU_TYPE_DISCRETE; break;
-		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: info->gpu_type = OPAL_GPU_TYPE_INTEGRATED; break;
-		case VK_PHYSICAL_DEVICE_TYPE_CPU: info->gpu_type = OPAL_GPU_TYPE_CPU; break;
-		default: info->gpu_type = OPAL_GPU_TYPE_UNKNOWN; break;
+		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: info->device_type = OPAL_DEVICE_TYPE_DISCRETE; break;
+		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: info->device_type = OPAL_DEVICE_TYPE_INTEGRATED; break;
+		case VK_PHYSICAL_DEVICE_TYPE_CPU: info->device_type = OPAL_DEVICE_TYPE_CPU; break;
+		default: info->device_type = OPAL_DEVICE_TYPE_UNKNOWN; break;
 	}
 
 	info->driver_version = properties.driverVersion;

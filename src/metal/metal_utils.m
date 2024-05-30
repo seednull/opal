@@ -140,10 +140,10 @@ Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
 			metal_tryFillBySearchingAll(info);
 	}
 
-	info->gpu_type = OPAL_GPU_TYPE_DISCRETE;
+	info->device_type = OPAL_DEVICE_TYPE_DISCRETE;
 
 	if (device.isLowPower)
-		info->gpu_type = OPAL_GPU_TYPE_INTEGRATED;
+		info->device_type = OPAL_DEVICE_TYPE_INTEGRATED;
 
 	info->tessellation_shader = is_apple3_or_greater || is_mac2 || is_common2_or_greater;
 	info->compute_pipeline = 1;

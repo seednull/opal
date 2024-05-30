@@ -5,7 +5,7 @@
 static Opal_DeviceInfo default_info =
 {
 	"Null Device",
-	OPAL_GPU_TYPE_UNKNOWN,
+	OPAL_DEVICE_TYPE_UNKNOWN,
 	0,
 	0,
 	0,
