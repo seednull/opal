@@ -12,6 +12,7 @@ option(OPAL_BUILD_WITH_WEBGPU "Build with WebGPU backend" TRUE)
 option(OPAL_BUILD_WITH_VULKAN "Build with Vulkan backend" TRUE)
 option(OPAL_BUILD_WITH_METAL "Build with Metal backend" TRUE)
 option(OPAL_BUILD_WITH_VALIDATION_LAYERS "Build with Opal validation layers" FALSE)
+option(OPAL_BUILD_WITH_VMA "Build with Vulkan Memory Allocator along with built-in memory allocator" FALSE)
 
 # ==================================================================================================
 # Global Variables

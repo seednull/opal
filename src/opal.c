@@ -297,24 +297,29 @@ Opal_Result opalDeviceWaitIdle(Opal_Device device)
 
 /*
  */
-Opal_Result opalUpdateBindSet(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
+Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 /*
  */
-Opal_Result opalBeginCommands(Opal_CommandBuffer command_buffer)
+Opal_Result opalBeginCommandBuffer(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalEndCommands(Opal_CommandBuffer command_buffer)
+Opal_Result opalEndCommandBuffer(Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalSubmitCommands(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalWaitCommandBuffers(uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalSubmit(Opal_Device device, Opal_QueueType queue_type, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -324,33 +329,13 @@ Opal_Result opalAcquire(Opal_SwapChain swap_chain, Opal_TextureView *texture_vie
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalPresent(Opal_SwapChain swap_chain)
+Opal_Result opalPresent(Opal_Device device, Opal_QueueType queue_type, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 /*
  */
-Opal_Result opalCmdBeginAsyncTransferPass(Opal_CommandBuffer command_buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result opalCmdEndAsyncTransferPass(Opal_CommandBuffer command_buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result opalCmdBeginAsyncComputePass(Opal_CommandBuffer command_buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result opalCmdEndAsyncComputePass(Opal_CommandBuffer command_buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
 Opal_Result opalCmdBeginGraphicsPass(Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -427,6 +412,36 @@ Opal_Result opalCmdCopyBufferToTexture(Opal_CommandBuffer command_buffer, Opal_B
 }
 
 Opal_Result opalCmdCopyTextureToBuffer(Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBufferTransitionBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBufferQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdBufferQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdTextureTransitionBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdTextureQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_QueueType queue_type)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result opalCmdTextureQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_QueueType queue_type)
 {
 	return OPAL_NOT_SUPPORTED;
 }

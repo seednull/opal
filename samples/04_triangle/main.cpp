@@ -28,6 +28,11 @@ private:
 	};
 
 private:
+	enum
+	{
+		IN_FLIGHT_FRAMES = 2,
+	};
+
 	Opal_Instance instance {OPAL_NULL_HANDLE};
 	Opal_Device device {OPAL_NULL_HANDLE};
 	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
@@ -37,7 +42,9 @@ private:
 	Opal_Bindset bindset {OPAL_NULL_HANDLE};
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
 	Opal_GraphicsPipeline pipeline {OPAL_NULL_HANDLE};
-	Opal_CommandBuffer command_buffer {OPAL_NULL_HANDLE};
+	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
+
+	uint32_t current_in_flight_frame {0};
 };
 
 /*
@@ -108,7 +115,7 @@ void Application::init()
 	result = opalCreateCommandBuffer(device, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalBeginCommands(staging_command_buffer);
+	result = opalBeginCommandBuffer(staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferView staging_buffer_view = { staging_buffer, 0 };
@@ -117,13 +124,13 @@ void Application::init()
 	result = opalCmdCopyBufferToBuffer(staging_command_buffer, staging_buffer_view, triangle_buffer_view, sizeof(TriangleData));
 	assert(result == OPAL_SUCCESS);
 
-	result = opalEndCommands(staging_command_buffer);
+	result = opalEndCommandBuffer(staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmitCommands(device, staging_command_buffer);
+	result = opalSubmit(device, OPAL_QUEUE_TYPE_MAIN, 1, &staging_command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDeviceWaitIdle(device);
+	result = opalWaitCommandBuffers(1, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandBuffer(device, staging_command_buffer);
@@ -202,13 +209,21 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	// command buffer
-	result = opalCreateCommandBuffer(device, &command_buffer);
-	assert(result == OPAL_SUCCESS);
+	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
+	{
+		result = opalCreateCommandBuffer(device, &command_buffers[i]);
+		assert(result == OPAL_SUCCESS);
+	}
+
+	current_in_flight_frame = 0;
 }
 
 void Application::shutdown()
 {
-	Opal_Result result = opalDestroyBuffer(device, triangle_buffer);
+	Opal_Result result = opalDeviceWaitIdle(device);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroyBuffer(device, triangle_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyShader(device, vertex_shader);
@@ -229,8 +244,11 @@ void Application::shutdown()
 	result = opalDestroyGraphicsPipeline(device, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyCommandBuffer(device, command_buffer);
-	assert(result == OPAL_SUCCESS);
+	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
+	{
+		result = opalDestroyCommandBuffer(device, command_buffers[i]);
+		assert(result == OPAL_SUCCESS);
+	}
 
 	result = opalDestroyDevice(device);
 	assert(result == OPAL_SUCCESS);
@@ -246,12 +264,18 @@ void Application::update(float dt)
 
 void Application::render(Opal_SwapChain swap_chain)
 {
+	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
+
 	Opal_TextureView swap_chain_texture_view {OPAL_NULL_HANDLE};
+	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
 	Opal_Result result = opalAcquire(swap_chain, &swap_chain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalBeginCommands(command_buffer);
+	result = opalWaitCommandBuffers(1, &command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalBeginCommandBuffer(command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_FramebufferAttachment attachments = {
@@ -260,6 +284,9 @@ void Application::render(Opal_SwapChain swap_chain)
 		OPAL_STORE_OP_STORE,
 		{1.0f, 0.0f, 0.0f, 1.0f}
 	};
+
+	result = opalCmdTextureTransitionBarrier(command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdBeginGraphicsPass(command_buffer, 1, &attachments);
 	assert(result == OPAL_SUCCESS);
@@ -285,17 +312,26 @@ void Application::render(Opal_SwapChain swap_chain)
 	result = opalCmdEndGraphicsPass(command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalEndCommands(command_buffer);
+	result = opalCmdTextureTransitionBarrier(command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmitCommands(device, command_buffer);
+	result = opalEndCommandBuffer(command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalSubmit(device, OPAL_QUEUE_TYPE_MAIN, 1, &command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 }
 
 void Application::present(Opal_SwapChain swap_chain)
 {
-	Opal_Result result = opalPresent(swap_chain);
+	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
+
+	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
+
+	Opal_Result result = opalPresent(device, OPAL_QUEUE_TYPE_MAIN, swap_chain, 1, &command_buffer);
 	assert(result == OPAL_SUCCESS);
+
+	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
 }
 
 #ifdef OPAL_PLATFORM_WINDOWS

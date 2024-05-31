@@ -1,5 +1,12 @@
 #pragma once
 
+// TOOD: add Opal_Queue opaque handle
+// TODO: add queue info to device info
+// TODO: opalDeviceGetQueue(type, index, &queue);
+// TODO: opalSubmit should use queue
+// TODO: opalPresent should use queue
+// TODO: opalCmd*Queue*Barrier should use queue
+
 #include <stdint.h> // TODO: get rid of this dependency later
 
 // Version
@@ -108,6 +115,13 @@ typedef enum Opal_Api_t
 	OPAL_API_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_Api;
 
+typedef enum Opal_InstanceCreationFlags_t
+{
+	OPAL_INSTANCE_CREATION_FLAGS_USE_VMA = 0x00000001,
+
+	OPAL_INSTANCE_CREATION_FLAGS_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_InstanceCreationFlags;
+
 typedef enum Opal_DeviceHint_t
 {
 	OPAL_DEVICE_HINT_DEFAULT = 0,
@@ -151,10 +165,34 @@ typedef enum Opal_AllocationHint_t
 	OPAL_ALLOCATION_HINT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_AllocationHint;
 
-typedef enum Opal_InstanceCreationFlags_t
+typedef enum Opal_ResourceState_t
 {
-	OPAL_INSTANCE_CREATION_FLAGS_USE_VMA = 0x00000001,
-} Opal_InstanceCreationFlags;
+	OPAL_RESOURCE_STATE_UNKNOWN = 0x00000000,
+	OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER = 0x00000001,
+	OPAL_RESOURCE_STATE_INDEX_BUFFER = 0x00000002,
+	OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT = 0x00000004,
+	OPAL_RESOURCE_STATE_UNORDERED_ACCESS = 0x00000008,
+	OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE = 0x00000010,
+	OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ = 0x00000020,
+	OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE = 0x00000040,
+	OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE = 0x00000080,
+	OPAL_RESOURCE_STATE_COPY_DEST = 0x00000100,
+	OPAL_RESOURCE_STATE_COPY_SOURCE = 0x00000200,
+	OPAL_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 0x00000400,
+	OPAL_RESOURCE_STATE_PRESENT = 0x00000800,
+
+	OPAL_RESOURCE_STATE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_ResourceState;
+
+typedef enum Opal_QueueType_t
+{
+	OPAL_QUEUE_TYPE_MAIN = 0,
+	OPAL_QUEUE_TYPE_ASYNC_COMPUTE,
+	OPAL_QUEUE_TYPE_ASYNC_TRANSFER,
+
+	OPAL_QUEUE_TYPE_ENUM_MAX,
+	OPAL_QUEUE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_QueueType;
 
 typedef enum Opal_BufferUsageFlags_t
 {
@@ -174,8 +212,8 @@ typedef enum Opal_TextureUsageFlags_t
 	OPAL_TEXTURE_USAGE_TRANSFER_SRC = 0x00000001,
 	OPAL_TEXTURE_USAGE_TRANSFER_DST = 0x00000002,
 	OPAL_TEXTURE_USAGE_SHADER_SAMPLED = 0x00000004,
-	OPAL_TEXTURE_USAGE_SHADER_STORAGE = 0x00000008,
-	OPAL_TEXTURE_USAGE_RENDER_ATTACHMENT = 0x00000010,
+	OPAL_TEXTURE_USAGE_UNORDERED_ACCESS = 0x00000008,
+	OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT = 0x00000010,
 
 	OPAL_TEXTURE_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_TextureUsageFlags;
@@ -861,19 +899,16 @@ typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer,
 typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_opalDeviceWaitIdle)(Opal_Device device);
 
-typedef Opal_Result (*PFN_opalUpdateBindSet)(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+typedef Opal_Result (*PFN_opalUpdateBindset)(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
 
-typedef Opal_Result (*PFN_opalBeginCommands)(Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalEndCommands)(Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalSubmitCommands)(Opal_Device device, Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalBeginCommandBuffer)(Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalEndCommandBuffer)(Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalWaitCommandBuffers)(uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 
+typedef Opal_Result (*PFN_opalSubmit)(Opal_Device device, Opal_QueueType queue_type, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 typedef Opal_Result (*PFN_opalAcquire)(Opal_SwapChain swap_chain, Opal_TextureView *texture_view);
-typedef Opal_Result (*PFN_opalPresent)(Opal_SwapChain swap_chain);
+typedef Opal_Result (*PFN_opalPresent)(Opal_Device device, Opal_QueueType queue_type, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 
-typedef Opal_Result (*PFN_opalCmdBeginAsyncTransferPass)(Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalCmdEndAsyncTransferPass)(Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalCmdBeginAsyncComputePass)(Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalCmdEndAsyncComputePass)(Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments);
 typedef Opal_Result (*PFN_opalCmdEndGraphicsPass)(Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdSetGraphicsPipeline)(Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline);
@@ -890,6 +925,12 @@ typedef Opal_Result (*PFN_opalCmdRaytraceDispatch)(Opal_CommandBuffer command_bu
 typedef Opal_Result (*PFN_opalCmdCopyBufferToBuffer)(Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size);
 typedef Opal_Result (*PFN_opalCmdCopyBufferToTexture)(Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst);
 typedef Opal_Result (*PFN_opalCmdCopyTextureToBuffer)(Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst);
+typedef Opal_Result (*PFN_opalCmdBufferTransitionBarrier)(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after);
+typedef Opal_Result (*PFN_opalCmdBufferQueueGrabBarrier)(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type);
+typedef Opal_Result (*PFN_opalCmdBufferQueueReleaseBarrier)(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type);
+typedef Opal_Result (*PFN_opalCmdTextureTransitionBarrier)(Opal_CommandBuffer command_buffer, Opal_TextureView texture, Opal_ResourceState state_before, Opal_ResourceState state_after);
+typedef Opal_Result (*PFN_opalCmdTextureQueueGrabBarrier)(Opal_CommandBuffer command_buffer, Opal_TextureView texture, Opal_QueueType queue_type);
+typedef Opal_Result (*PFN_opalCmdTextureQueueReleaseBarrier)(Opal_CommandBuffer command_buffer, Opal_TextureView texture, Opal_QueueType queue_type);
 
 // API
 #if !defined(OPAL_NO_PROTOTYPES)
@@ -937,19 +978,16 @@ OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, 
 OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
 OPAL_APIENTRY Opal_Result opalDeviceWaitIdle(Opal_Device device);
 
-OPAL_APIENTRY Opal_Result opalUpdateBindSet(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+OPAL_APIENTRY Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
 
-OPAL_APIENTRY Opal_Result opalBeginCommands(Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalEndCommands(Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalSubmitCommands(Opal_Device device, Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalBeginCommandBuffer(Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalEndCommandBuffer(Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalWaitCommandBuffers(uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 
+OPAL_APIENTRY Opal_Result opalSubmit(Opal_Device device, Opal_QueueType queue_type, uint32_t num_command_buffer, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 OPAL_APIENTRY Opal_Result opalAcquire(Opal_SwapChain swap_chain, Opal_TextureView *texture_view);
-OPAL_APIENTRY Opal_Result opalPresent(Opal_SwapChain swap_chain);
+OPAL_APIENTRY Opal_Result opalPresent(Opal_Device device, Opal_QueueType queue_type, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 
-OPAL_APIENTRY Opal_Result opalCmdBeginAsyncTransferPass(Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalCmdEndAsyncTransferPass(Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalCmdBeginAsyncComputePass(Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalCmdEndAsyncComputePass(Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments);
 OPAL_APIENTRY Opal_Result opalCmdEndGraphicsPass(Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdSetGraphicsPipeline(Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline);
@@ -966,6 +1004,12 @@ OPAL_APIENTRY Opal_Result opalCmdRaytraceDispatch(Opal_CommandBuffer command_buf
 OPAL_APIENTRY Opal_Result opalCmdCopyBufferToBuffer(Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size);
 OPAL_APIENTRY Opal_Result opalCmdCopyBufferToTexture(Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst);
 OPAL_APIENTRY Opal_Result opalCmdCopyTextureToBuffer(Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst);
+OPAL_APIENTRY Opal_Result opalCmdBufferTransitionBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after);
+OPAL_APIENTRY Opal_Result opalCmdBufferQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type);
+OPAL_APIENTRY Opal_Result opalCmdBufferQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type);
+OPAL_APIENTRY Opal_Result opalCmdTextureTransitionBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after);
+OPAL_APIENTRY Opal_Result opalCmdTextureQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_QueueType queue_type);
+OPAL_APIENTRY Opal_Result opalCmdTextureQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_QueueType queue_type);
 #endif
 
 #ifdef __cplusplus

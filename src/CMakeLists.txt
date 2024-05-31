@@ -6,7 +6,6 @@ project(${TARGET} LANGUAGES C CXX OBJC)
 # ==================================================================================================
 # Options
 # ==================================================================================================
-option(OPAL_USE_VMA "Use Vulkan Memory Allocator along with built-in memory allocator" TRUE)
 
 # ==================================================================================================
 # Variables
@@ -88,7 +87,7 @@ if (OPAL_HAS_VULKAN)
 		${OPAL_DIR_THIRDPARTY}/volk/include/volk.c
 	)
 
-	if (OPAL_USE_VMA)
+	if (OPAL_BUILD_WITH_VMA)
 		list(APPEND VULKAN_SOURCES ${OPAL_DIR_THIRDPARTY}/vma/include/vk_mem_alloc.cpp)
 		list(APPEND OPAL_PLATFORM_DEFINES OPAL_HAS_VMA)
 	endif()
