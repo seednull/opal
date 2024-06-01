@@ -171,14 +171,14 @@ void Application::init()
 	// bindings
 	Opal_BindsetLayoutBinding bindset_layout_binding = { 0, OPAL_BINDING_TYPE_BUFFER, OPAL_SHADER_STAGE_ALL_GRAPHICS };
 
-	result = opalCreateBindSetLayout(device, 1, &bindset_layout_binding, &bindset_layout);
+	result = opalCreateBindsetLayout(device, 1, &bindset_layout_binding, &bindset_layout);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BindsetBinding bindset_binding = {};
 	bindset_binding.binding = 0;
 	bindset_binding.buffer = {triangle_buffer, 0};
 
-	result = opalCreateBindSet(device, bindset_layout, 1, &bindset_binding, &bindset);
+	result = opalCreateBindset(device, bindset_layout, 1, &bindset_binding, &bindset);
 	assert(result == OPAL_SUCCESS);
 
 	// pipeline
@@ -244,10 +244,10 @@ void Application::shutdown()
 	result = opalDestroyShader(device, fragment_shader);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyBindSetLayout(device, bindset_layout);
+	result = opalDestroyBindsetLayout(device, bindset_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyBindSet(device, bindset);
+	result = opalDestroyBindset(device, bindset);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyPipelineLayout(device, pipeline_layout);
