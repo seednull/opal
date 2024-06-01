@@ -227,12 +227,12 @@ Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalDestroyBindSetLayout(Opal_Device device, Opal_BindsetLayout bindset_layout)
+Opal_Result opalDestroyBindsetLayout(Opal_Device device, Opal_BindsetLayout bindset_layout)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalDestroyBindSet(Opal_Device device, Opal_Bindset bindset)
+Opal_Result opalDestroyBindset(Opal_Device device, Opal_Bindset bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
