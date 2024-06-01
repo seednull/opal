@@ -4,7 +4,7 @@
 
 void testTextures(Opal_Device device)
 {
-	Opal_Texture textures[2] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
+	Opal_Texture textures[2] = {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 
 	Opal_TextureDesc desc =
 	{
@@ -35,9 +35,10 @@ void testTextures(Opal_Device device)
 
 int main()
 {
-	Opal_Instance instance {OPAL_NULL_HANDLE};
+	Opal_Instance instance = OPAL_NULL_HANDLE;
 
-	Opal_InstanceDesc instance_desc = {
+	Opal_InstanceDesc instance_desc =
+	{
 		"03_textures",
 		"Opal",
 		0,
@@ -50,7 +51,7 @@ int main()
 	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_Device device {OPAL_NULL_HANDLE};
+	Opal_Device device = OPAL_NULL_HANDLE;
 	result = opalCreateDefaultDevice(instance, OPAL_DEVICE_HINT_DEFAULT, &device);
 	assert(result == OPAL_SUCCESS);
 

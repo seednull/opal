@@ -52,7 +52,8 @@ private:
 void Application::init()
 {
 	// instance & device
-	Opal_InstanceDesc instance_desc = {
+	Opal_InstanceDesc instance_desc =
+	{
 		"04_triangle",
 		"Opal",
 		0,
@@ -69,7 +70,8 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	// buffers
-	Opal_BufferDesc triangle_buffer_desc = {
+	Opal_BufferDesc triangle_buffer_desc =
+	{
 		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_VERTEX | OPAL_BUFFER_USAGE_INDEX | OPAL_BUFFER_USAGE_TRANSFER_DST),
 		sizeof(TriangleData),
 		OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL,
@@ -79,14 +81,15 @@ void Application::init()
 	result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_BufferDesc staging_buffer_desc = {
+	Opal_BufferDesc staging_buffer_desc =
+	{
 		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_TRANSFER_SRC),
 		sizeof(TriangleData),
 		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 		OPAL_ALLOCATION_HINT_AUTO,
 	};
 
-	Opal_Buffer staging_buffer {OPAL_NULL_HANDLE};
+	Opal_Buffer staging_buffer = OPAL_NULL_HANDLE;
 	result = opalCreateBuffer(device, &staging_buffer_desc, &staging_buffer);
 	assert(result == OPAL_SUCCESS);
 
@@ -95,7 +98,8 @@ void Application::init()
 	result = opalMapBuffer(device, staging_buffer, &staging_ptr);
 	assert(result == OPAL_SUCCESS);
 
-	TriangleData triangle_data = {
+	TriangleData triangle_data =
+	{
 		// vertices
 		-1.0f, 0.0f, 0.0f, 0.0f,
 		 1.0f, 0.0f, 0.0f, 0.0f,
@@ -111,7 +115,7 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	// transfer
-	Opal_CommandBuffer staging_command_buffer {OPAL_NULL_HANDLE};
+	Opal_CommandBuffer staging_command_buffer = OPAL_NULL_HANDLE;
 	result = opalCreateCommandBuffer(device, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
@@ -140,13 +144,15 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	// shaders
-	Opal_ShaderDesc vertex_shader_desc = {
+	Opal_ShaderDesc vertex_shader_desc =
+	{
 		OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
 		nullptr, // TODO:
 		0, // TODO:
 	};
 
-	Opal_ShaderDesc fragment_shader_desc = {
+	Opal_ShaderDesc fragment_shader_desc =
+	{
 		OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
 		nullptr, // TODO:
 		0, // TODO:
@@ -175,12 +181,14 @@ void Application::init()
 	result = opalCreatePipelineLayout(device, 1, &bindset_layout, &pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_VertexAttribute vertex_attribute = {
+	Opal_VertexAttribute vertex_attribute =
+	{
 		OPAL_FORMAT_RGBA32_SFLOAT,
 		0,
 	};
 
-	Opal_VertexStream vertex_stream = {
+	Opal_VertexStream vertex_stream =
+	{
 		sizeof(float) * 4,
 		1, &vertex_attribute,
 		OPAL_VERTEX_INPUT_RATE_VERTEX
@@ -266,7 +274,7 @@ void Application::render(Opal_SwapChain swap_chain)
 {
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
-	Opal_TextureView swap_chain_texture_view {OPAL_NULL_HANDLE};
+	Opal_TextureView swap_chain_texture_view = OPAL_NULL_HANDLE;
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
 	Opal_Result result = opalAcquire(swap_chain, &swap_chain_texture_view);
@@ -278,7 +286,8 @@ void Application::render(Opal_SwapChain swap_chain)
 	result = opalBeginCommandBuffer(command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_FramebufferAttachment attachments = {
+	Opal_FramebufferAttachment attachments =
+	{
 		swap_chain_texture_view,
 		OPAL_LOAD_OP_CLEAR,
 		OPAL_STORE_OP_STORE,
@@ -358,12 +367,7 @@ HWND createWindow(const char *title)
 	int size = static_cast<int>(strlen(title));
 
 	wchar_t titlew[4096];
-
-	int sizew = MultiByteToWideChar(CP_UTF8, 0, title, size, NULL, 0);
-	assert(sizew < 4096);
-
-	MultiByteToWideChar(CP_UTF8, 0, title, size, titlew, sizew);
-	titlew[sizew] = 0;
+	MultiByteToWideChar(CP_UTF8, 0, title, size, titlew, 4096);
 
 	HWND handle = CreateWindowExW(
 		0,
@@ -388,7 +392,7 @@ void destroyWindow(HWND handle)
 
 void mainloop()
 {
-	static char title[] = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
+	const char *title = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
 
 	bool running = true;
 
@@ -398,7 +402,7 @@ void mainloop()
 	HWND handle = createWindow(title);
 	ShowWindow(handle, SW_SHOW);
 
-	Opal_SwapChain swap_chain {OPAL_NULL_HANDLE};
+	Opal_SwapChain swap_chain = OPAL_NULL_HANDLE;
 	Opal_Result result = opalCreateSwapChain(app.getDevice(), handle, &swap_chain);
 	assert(result == OPAL_SUCCESS);
 	

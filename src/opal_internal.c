@@ -1,6 +1,7 @@
 #include "opal_internal.h"
 
-static uint32_t device_type_default_scores[] = {
+static uint32_t device_type_default_scores[] =
+{
 	1000,
 	100,
 	0,
@@ -8,7 +9,8 @@ static uint32_t device_type_default_scores[] = {
 	0,
 };
 
-static uint32_t device_type_high_performance_scores[] = {
+static uint32_t device_type_high_performance_scores[] =
+{
 	1000,
 	100,
 	0,
@@ -16,7 +18,8 @@ static uint32_t device_type_high_performance_scores[] = {
 	0,
 };
 
-static uint32_t device_type_low_power_scores[] = {
+static uint32_t device_type_low_power_scores[] =
+{
 	100,
 	1000,
 	0,

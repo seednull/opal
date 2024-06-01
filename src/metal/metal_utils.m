@@ -82,7 +82,8 @@ uint32_t metal_getAppleDeviceID(MTLGPUFamily family)
 
 MTLGPUFamily metal_getAppleDeviceFamily(id<MTLDevice> device)
 {
-	static MTLGPUFamily supported_families[] = {
+	static MTLGPUFamily supported_families[] =
+	{
 		MTLGPUFamilyMac2,
 		MTLGPUFamilyApple1,
 		MTLGPUFamilyApple2,

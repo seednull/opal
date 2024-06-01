@@ -7,7 +7,8 @@ class AllocatorBench : public benchmark::Fixture
 public:
 	void SetUp(benchmark::State &state)
 	{
-		static Opal_InstanceDesc instance_desc = {
+		static Opal_InstanceDesc instance_desc =
+		{
 			"allocator benchmark",
 			"Opal",
 			0,

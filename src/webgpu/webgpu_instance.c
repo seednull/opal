@@ -6,7 +6,8 @@ EM_ASYNC_JS(WGPUAdapter, webgpu_requestAdapterSync, (WGPUInstance instanceId, in
 {
 	assert(instanceId === 1);
 
-	var opts = {
+	var opts =
+	{
 		powerPreference: WebGPU.PowerPreference[powerPreference],
 		forceFallbackAdapter: forceFallback
 	};
@@ -28,7 +29,11 @@ EM_ASYNC_JS(WGPUDevice, webgpu_requestDeviceSync, (WGPUAdapter adapterId),
 	var deviceId = 0;
 	if (device)
 	{
-		var deviceWrapper = { queueId: WebGPU.mgrQueue.create(device["queue"]) };
+		var deviceWrapper =
+		{
+			queueId: WebGPU.mgrQueue.create(device["queue"])
+		};
+
 		deviceId = WebGPU.mgrDevice.create(device, deviceWrapper);
 	}
 

@@ -2,7 +2,8 @@
 #include <cassert>
 #include <iostream>
 
-static const char *device_types[] = {
+static const char *device_types[] =
+{
 	"Discrete",
 	"Integrated",
 	"CPU",
@@ -10,7 +11,8 @@ static const char *device_types[] = {
 	"Unknown",
 };
 
-static const char *hint_types[] = {
+static const char *hint_types[] =
+{
 	"Device",
 	"High Performance Device",
 	"Low Power Device",
@@ -57,7 +59,7 @@ void testEnumerateDevices(Opal_Instance instance)
 
 void testCreateDevice(Opal_Instance instance, uint32_t index)
 {
-	Opal_Device device {OPAL_NULL_HANDLE};
+	Opal_Device device = OPAL_NULL_HANDLE;
 	Opal_Result result = opalCreateDevice(instance, index, &device);
 	assert(result == OPAL_SUCCESS);
 
@@ -73,7 +75,7 @@ void testCreateDevice(Opal_Instance instance, uint32_t index)
 
 void testCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint)
 {
-	Opal_Device device {OPAL_NULL_HANDLE};
+	Opal_Device device = OPAL_NULL_HANDLE;
 	Opal_Result result = opalCreateDefaultDevice(instance, hint, &device);
 	assert(result == OPAL_SUCCESS);
 
@@ -89,9 +91,10 @@ void testCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint)
 
 int main()
 {
-	Opal_Instance instance {OPAL_NULL_HANDLE};
+	Opal_Instance instance = OPAL_NULL_HANDLE;
 
-	Opal_InstanceDesc instance_desc = {
+	Opal_InstanceDesc instance_desc =
+	{
 		"01_enumerate_devices",
 		"Opal",
 		0,
