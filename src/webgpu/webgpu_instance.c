@@ -52,6 +52,7 @@ static WebGpu_Device *opal_createDevice(WGPUAdapter adapter, WGPUDevice device)
 
 	// vtable
 	ptr->vtbl.getInfo = webgpu_deviceGetInfo;
+	ptr->vtbl.getQueue = webgpu_deviceGetQueue;
 	ptr->vtbl.destroy = webgpu_deviceDestroy;
 	ptr->vtbl.createBuffer = webgpu_deviceCreateBuffer;
 	ptr->vtbl.createTexture = webgpu_deviceCreateTexture;

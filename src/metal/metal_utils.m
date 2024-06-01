@@ -154,6 +154,9 @@ Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
 	info->texture_compression_bc = device.supportsBCTextureCompression;
 	info->raytrace_pipeline = device.supportsRaytracing;
 	info->max_buffer_alignment = 16;
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
 
 	return OPAL_SUCCESS;
 }

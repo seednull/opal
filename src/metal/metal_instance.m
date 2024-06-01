@@ -11,6 +11,7 @@ static Metal_Device *opal_createDevice(id<MTLDevice> device)
 
 	// vtable
 	ptr->vtbl.getInfo = metal_deviceGetInfo;
+	ptr->vtbl.getQueue = metal_deviceGetQueue;
 	ptr->vtbl.destroy = metal_deviceDestroy;
 	ptr->vtbl.createBuffer = metal_deviceCreateBuffer;
 	ptr->vtbl.createTexture = metal_deviceCreateTexture;

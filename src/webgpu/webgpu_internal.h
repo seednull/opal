@@ -26,6 +26,7 @@ Opal_Result webgpu_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 Opal_Result webgpu_instanceDestroy(Instance *this);
 
 Opal_Result webgpu_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
+Opal_Result webgpu_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 Opal_Result webgpu_deviceDestroy(Device *this);
 
 Opal_Result webgpu_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);

@@ -36,6 +36,9 @@ void printDeviceInfo(const Opal_DeviceInfo *info)
 	std::cout << "\tBC Texture Compression: " << (info->texture_compression_bc != 0) << "\n";
 	std::cout << "Limits:\n";
 	std::cout << "\tMax buffer alignment: " << info->max_buffer_alignment << "\n";
+	std::cout << "\tMain queue count: " << info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] << "\n";
+	std::cout << "\tCompute queue count: " << info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] << "\n";
+	std::cout << "\tCopy queue count: " << info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] << "\n";
 	std::cout << "\n";
 }
 
@@ -104,7 +107,7 @@ int main()
 		OPAL_DEFAULT_HEAPS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_DIRECTX12, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	testEnumerateDevices(instance);

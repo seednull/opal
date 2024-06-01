@@ -29,6 +29,7 @@ Opal_Result directx12_instanceCreateDevice(Instance *this, uint32_t index, Opal_
 Opal_Result directx12_instanceDestroy(Instance *this);
 
 Opal_Result directx12_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
+Opal_Result directx12_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 Opal_Result directx12_deviceDestroy(Device *this);
 
 Opal_Result directx12_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);

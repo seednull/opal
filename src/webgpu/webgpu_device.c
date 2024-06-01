@@ -11,6 +11,15 @@ Opal_Result webgpu_deviceGetInfo(Device *this, Opal_DeviceInfo *info)
 	return webgpu_fillDeviceInfo(ptr->adapter, info);
 }
 
+Opal_Result webgpu_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
+{
+	assert(this);
+	assert(queue);
+	assert(engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 /*
  */
 Opal_Result webgpu_deviceDestroy(Device *this)

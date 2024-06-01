@@ -90,7 +90,18 @@ Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info)
 
 Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
-	return OPAL_NOT_SUPPORTED;
+	// FIXME: change to handle + generation and do proper check
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	if (engine_type >= OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX)
+		return OPAL_INVALID_DEVICE_ENGINE_INDEX;
+
+	if (queue == NULL)
+		return OPAL_INVALID_OUTPUT_ARGUMENT;
+
+	Device *ptr = (Device *)(device);
+	return ptr->getQueue(ptr, engine_type, index, queue);
 }
 
 /*

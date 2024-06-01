@@ -2,35 +2,30 @@
 
 /*
  */
-static Opal_DeviceInfo default_info =
+static void null_fillDefaultDeviceInfo(Opal_DeviceInfo *info)
 {
-	"Null Device",
-	OPAL_DEVICE_TYPE_UNKNOWN,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	256,
-};
+	static const char *device_name = "Null Device";
+
+	assert(info);
+
+	memset(info, 0, sizeof(Opal_DeviceInfo));
+	memcpy(info->name, device_name, sizeof(char) * 12);
+
+	info->device_type = OPAL_DEVICE_TYPE_UNKNOWN;
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
+	info->max_buffer_alignment = 256;
+}
 
 /*
  */
-static Null_Device *opal_createDevice(const Opal_DeviceInfo *info)
+static Null_Device *null_createDefaultDevice()
 {
-	assert(info);
-
 	Null_Device *ptr = (Null_Device *)malloc(sizeof(Null_Device));
 	assert(ptr);
 
 	// vtable
 	ptr->vtbl.getInfo = null_deviceGetInfo;
+	ptr->vtbl.getQueue = null_deviceGetQueue;
 	ptr->vtbl.destroy = null_deviceDestroy;
 	ptr->vtbl.createBuffer = null_deviceCreateBuffer;
 	ptr->vtbl.createTexture = null_deviceCreateTexture;
@@ -42,7 +37,7 @@ static Null_Device *opal_createDevice(const Opal_DeviceInfo *info)
 	ptr->vtbl.destroyTextureView = null_deviceDestroyTextureView;
 
 	// data
-	memcpy(&ptr->info, info, sizeof(Opal_DeviceInfo));
+	null_fillDefaultDeviceInfo(&ptr->info);
 
 	return ptr;
 }
@@ -83,9 +78,7 @@ Opal_Result null_instanceEnumerateDevices(Instance *this, uint32_t *device_count
 	*device_count = 1;
 
 	if (infos)
-	{
-		memcpy(&infos[0], &default_info, sizeof(Opal_DeviceInfo));
-	}
+		null_fillDefaultDeviceInfo(&infos[0]);
 
 	return OPAL_SUCCESS;
 }
@@ -95,7 +88,7 @@ Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hin
 	assert(this);
 	assert(device);
 
-	*device = (Opal_Device)opal_createDevice(&default_info);
+	*device = (Opal_Device)null_createDefaultDevice();
 	return OPAL_SUCCESS;
 }
 
@@ -107,7 +100,7 @@ Opal_Result null_instanceCreateDevice(Instance *this, uint32_t index, Opal_Devic
 	if (index != 0)
 		return OPAL_INVALID_DEVICE_INDEX;
 
-	*device = (Opal_Device)opal_createDevice(&default_info);
+	*device = (Opal_Device)null_createDefaultDevice();
 	return OPAL_SUCCESS;
 }
 

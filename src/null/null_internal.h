@@ -24,6 +24,7 @@ Opal_Result null_instanceCreateDevice(Instance *this, uint32_t index, Opal_Devic
 Opal_Result null_instanceDestroy(Instance *this);
 
 Opal_Result null_deviceGetInfo(Device *this, Opal_DeviceInfo *info);
+Opal_Result null_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 Opal_Result null_deviceDestroy(Device *this);
 
 Opal_Result null_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);

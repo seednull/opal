@@ -167,7 +167,8 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 		return OPAL_VULKAN_ERROR;
 
 	VkDevice vulkan_device = VK_NULL_HANDLE;
-	opal_result = vulkan_helperCreateDevice(vulkan_physical_device, &vulkan_device);
+	Vulkan_DeviceEnginesInfo device_engine_infos = {0};
+	opal_result = vulkan_helperCreateDevice(vulkan_physical_device, &device_engine_infos, &vulkan_device);
 
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
@@ -175,6 +176,8 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 	// create Opal handle
 	Vulkan_Device *device_ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
 	assert(device_ptr);
+
+	memcpy(&device_ptr->device_engines_info, &device_engine_infos, sizeof(Vulkan_DeviceEnginesInfo));
 
 	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
 	if (result != OPAL_SUCCESS)
@@ -226,7 +229,8 @@ Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 		return OPAL_VULKAN_ERROR;
 
 	VkDevice vulkan_device = VK_NULL_HANDLE;
-	Opal_Result opal_result = vulkan_helperCreateDevice(vulkan_physical_device, &vulkan_device);
+	Vulkan_DeviceEnginesInfo device_engine_infos = {0};
+	Opal_Result opal_result = vulkan_helperCreateDevice(vulkan_physical_device, &device_engine_infos, &vulkan_device);
 
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
@@ -234,6 +238,8 @@ Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 	// create Opal handle
 	Vulkan_Device *device_ptr = (Vulkan_Device *)malloc(sizeof(Vulkan_Device));
 	assert(device_ptr);
+
+	memcpy(&device_ptr->device_engines_info, &device_engine_infos, sizeof(Vulkan_DeviceEnginesInfo));
 
 	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
 	if (result != OPAL_SUCCESS)

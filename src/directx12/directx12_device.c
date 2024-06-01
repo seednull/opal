@@ -11,6 +11,15 @@ Opal_Result directx12_deviceGetInfo(Device *this, Opal_DeviceInfo *info)
 	return directx12_fillDeviceInfoWithDevice(ptr->adapter, ptr->device, info);
 }
 
+Opal_Result directx12_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
+{
+	assert(this);
+	assert(queue);
+	assert(engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 /*
  */
 Opal_Result directx12_deviceDestroy(Device *this)

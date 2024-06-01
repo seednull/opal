@@ -70,9 +70,12 @@ typedef enum Opal_Result_t
 {
 	OPAL_SUCCESS = 0,
 	OPAL_NOT_SUPPORTED,
+	OPAL_INVALID_OUTPUT_ARGUMENT,
 	OPAL_INVALID_INSTANCE,
 	OPAL_INVALID_DEVICE,
+	OPAL_INVALID_DEVICE_ENGINE_INDEX,
 	OPAL_INVALID_DEVICE_INDEX,
+	OPAL_INVALID_QUEUE_INDEX,
 	OPAL_INVALID_BUFFER,
 	OPAL_NO_MEMORY,
 
@@ -609,7 +612,6 @@ typedef struct Opal_DeviceInfo_t
 	uint8_t texture_compression_etc2 : 1;
 	uint8_t texture_compression_astc : 1;
 	uint8_t texture_compression_bc : 1;
-	uint8_t present_support : 1;
 	uint64_t max_buffer_alignment;
 	uint32_t queue_count[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 } Opal_DeviceInfo;

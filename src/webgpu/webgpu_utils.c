@@ -31,11 +31,10 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	info->texture_compression_etc2 = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionETC2) != 0;
 	info->texture_compression_astc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionASTC) != 0;
 	info->texture_compression_bc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionBC) != 0;
-	
-	uint32_t offset = 256;  // FIXME: not sure if this is good default
-	// FIXME: use wgpuAdapterGetLimits when it'll be implemented
+	info->max_buffer_alignment = 256;  // FIXME: not sure if this is good default
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
 
-	info->max_buffer_alignment = offset;
+	// TODO: use wgpuAdapterGetLimits when it'll be implemented
 
 	return OPAL_SUCCESS;
 }

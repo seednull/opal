@@ -12,6 +12,7 @@ static DirectX12_Device *opal_createDevice(IDXGIAdapter1 *adapter, ID3D12Device 
 
 	// vtable
 	ptr->vtbl.getInfo = directx12_deviceGetInfo;
+	ptr->vtbl.getQueue = directx12_deviceGetQueue;
 	ptr->vtbl.destroy = directx12_deviceDestroy;
 	ptr->vtbl.createBuffer = directx12_deviceCreateBuffer;
 	ptr->vtbl.createTexture = directx12_deviceCreateTexture;

@@ -203,6 +203,65 @@ VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
 	return result;
 }
 
+Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info)
+{
+	assert(info);
+
+	uint32_t queue_family_count = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
+
+	VkQueueFamilyProperties *queue_families = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
+	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
+
+	static VkQueueFlags device_engine_required_masks[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX] =
+	{
+		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
+		VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
+		VK_QUEUE_TRANSFER_BIT,
+	};
+
+	static VkQueueFlags device_engine_exclude_masks[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX] =
+	{
+		0,
+		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR,
+		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR,
+	};
+
+	for (uint32_t engine_type = 0; engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++engine_type)
+	{
+		VkQueueFlags required_mask = device_engine_required_masks[engine_type];
+		VkQueueFlags exclude_mask = device_engine_exclude_masks[engine_type];
+
+		uint32_t queue_count = 0;
+		uint32_t queue_family_index = VK_QUEUE_FAMILY_IGNORED;
+
+		for (uint32_t i = 0; i < queue_family_count; ++i)
+		{
+			const VkQueueFamilyProperties *queue_family = &queue_families[i];
+
+			VkQueueFlags current_flags = queue_family->queueFlags;
+
+			if ((current_flags & exclude_mask) != 0)
+				continue;
+
+			if ((~current_flags & required_mask) != 0)
+				continue;
+			
+			if (queue_count < queue_family->queueCount)
+			{
+				queue_family_index = i;
+				queue_count = queue_family->queueCount;
+			}
+		}
+
+		info->queue_families[engine_type] = queue_family_index;
+		info->queue_counts[engine_type] = queue_count;
+	}
+
+	free(queue_families);
+	return OPAL_SUCCESS;
+}
+
 Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type)
 {
 	assert(memory_type);
@@ -240,10 +299,11 @@ Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperti
 
 /*
  */
-Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice *device)
+Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info, VkDevice *device)
 {
-	assert(device);
 	assert(physical_device != VK_NULL_HANDLE);
+	assert(info);
+	assert(device);
 
 	// get physical device extensions
 	uint32_t extension_count = 0;
@@ -286,38 +346,31 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice
 	vkGetPhysicalDeviceFeatures2(physical_device, &features);
 
 	// get physical device queues
-	uint32_t queue_family_count = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
-
-	VkQueueFamilyProperties *queue_families = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
-	VkDeviceQueueCreateInfo *queue_infos = (VkDeviceQueueCreateInfo *)malloc(sizeof(VkDeviceQueueCreateInfo) * queue_family_count);
-
-	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
+	vulkan_helperFillDeviceEnginesInfo(physical_device, info);
+	VkDeviceQueueCreateInfo queue_infos[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 
 	uint32_t max_queues = 0;
-	for (uint32_t i = 0; i < queue_family_count; ++i)
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
 	{
-		VkQueueFamilyProperties *family = &queue_families[i];
-
-		if (max_queues < family->queueCount)
-			max_queues = family->queueCount;
+		uint32_t queue_count = info->queue_counts[i];
+		if (max_queues < queue_count)
+			max_queues = queue_count;
 	}
 
 	float *queue_priorities = (float *)malloc(sizeof(float) * max_queues);
 	for (uint32_t i = 0; i < max_queues; ++i)
 		queue_priorities[i] = 1.0f;
 
-	for (uint32_t i = 0; i < queue_family_count; ++i)
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
 	{
-		VkQueueFamilyProperties *family = &queue_families[i];
-		VkDeviceQueueCreateInfo *info = &queue_infos[i];
+		VkDeviceQueueCreateInfo *queue_info = &queue_infos[i];
 
-		info->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		info->pNext = NULL;
-		info->flags = 0;
-		info->pQueuePriorities = queue_priorities;
-		info->queueCount = family->queueCount;
-		info->queueFamilyIndex = i;
+		queue_info->sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queue_info->pNext = NULL;
+		queue_info->flags = 0;
+		queue_info->pQueuePriorities = queue_priorities;
+		queue_info->queueCount = info->queue_counts[i];
+		queue_info->queueFamilyIndex = info->queue_families[i];
 	}
 
 	// create vulkan device
@@ -326,16 +379,14 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, VkDevice
 	create_info.pNext = &features;
 	create_info.enabledExtensionCount = extension_count;
 	create_info.ppEnabledExtensionNames = extension_names;
-	create_info.queueCreateInfoCount = queue_family_count;
+	create_info.queueCreateInfoCount = OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX;
 	create_info.pQueueCreateInfos = queue_infos;
 
 	result = vkCreateDevice(physical_device, &create_info, NULL, device);
 
 	free(extensions);
 	free(extension_names);
-	free(queue_families);
 	free(queue_priorities);
-	free(queue_infos);
 
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
@@ -398,6 +449,25 @@ info->raytrace_pipeline = raytracing_features.rayTracingPipeline && acceleration
 		offset = properties.limits.minStorageBufferOffsetAlignment;
 
 	info->max_buffer_alignment = offset;
+
+	VkQueueFlags device_engine_required_masks[] =
+	{
+		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
+		VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
+		VK_QUEUE_TRANSFER_BIT,
+	};
+
+	VkQueueFlags device_engine_exclude_masks[] =
+	{
+		0,
+		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR,
+		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR,
+	};
+
+	Vulkan_DeviceEnginesInfo device_engines_info = {0};
+	vulkan_helperFillDeviceEnginesInfo(device, &device_engines_info);
+
+	memcpy(info->queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
 
 	return OPAL_SUCCESS;
 }

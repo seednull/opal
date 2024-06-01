@@ -14,6 +14,7 @@ typedef Opal_Result (*PFN_instanceCreateDevice)(Instance *this, uint32_t index, 
 typedef Opal_Result (*PFN_instanceDestroy)(Instance *this);
 
 typedef Opal_Result (*PFN_deviceGetInfo)(Device *this, Opal_DeviceInfo *info);
+typedef Opal_Result (*PFN_deviceGetQueue)(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 typedef Opal_Result (*PFN_deviceDestroy)(Device *this);
 
 typedef Opal_Result (*PFN_deviceCreateBuffer)(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
@@ -38,6 +39,7 @@ typedef struct Instance_t
 typedef struct Device_t
 {
 	PFN_deviceGetInfo getInfo;
+	PFN_deviceGetQueue getQueue;
 	PFN_deviceDestroy destroy;
 	PFN_deviceCreateBuffer createBuffer;
 	PFN_deviceCreateTexture createTexture;

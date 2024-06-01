@@ -10,7 +10,7 @@ One possible solution might be based on provided vendor ID and device ID.
 
 Intentionally disabled as WebGPU expects to work with a single device. Use opalCreateDefaultDevice with proper hint.
 
-## Queue priorities on Vulkan
+## No queue priorities on Vulkan
 
 Intentionally set to 1.0f for all available queues on physical device.
 
@@ -21,3 +21,11 @@ All images will use VK_IMAGE_TILING_OPTIMAL, because there is no practical use c
 ## No memory type hint for images
 
 On Vulkan, images will prefer memory with VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT flag. For transfer & readback it's better to create staging buffer.
+
+## Artifical queue limits on DirectX 12 and Metal
+
+Both API allow creating an arbitary number of queues, however, in order to keep the API consistent there are artifical limits for each device engine type.
+
+- Main (aka direct or graphics) engine will have 16 queues.
+- Compute (aka async compute) engine will have 8 queues.
+- Copy (aka async transfer) engine will have 2 queues.

@@ -46,6 +46,9 @@ Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Dev
 	info->compute_pipeline = 1;
 	info->texture_compression_bc = 1;
 	info->max_buffer_alignment = 0xFFFF;
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
 
 	if (desc.Flags == DXGI_ADAPTER_FLAG_SOFTWARE)
 		info->device_type = OPAL_DEVICE_TYPE_CPU;
@@ -64,10 +67,10 @@ Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Dev
 	if (SUCCEEDED(hr))
 		info->raytrace_pipeline = (raytracing_options.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
 
-	D3D12_FEATURE_DATA_D3D12_OPTIONS9 mesh_options = {0};
-	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS9, &mesh_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9));
+	D3D12_FEATURE_DATA_D3D12_OPTIONS9 meshlet_options = {0};
+	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS9, &meshlet_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9));
 	if (SUCCEEDED(hr))
-		info->meshlet_pipeline = (mesh_options.MeshShaderPipelineStatsSupported == TRUE);
+		info->meshlet_pipeline = (meshlet_options.MeshShaderPipelineStatsSupported == TRUE);
 
 	return OPAL_SUCCESS;
 }
