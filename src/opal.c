@@ -88,6 +88,11 @@ Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info)
 	return ptr->getInfo(ptr, info);
 }
 
+Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 /*
  */
 Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
@@ -125,7 +130,7 @@ Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, 
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreateCommandBuffer(Opal_Device device, Opal_CommandBuffer *command_buffer)
+Opal_Result opalCreateCommandBuffer(Opal_Device device, Opal_DeviceEngineType engine_type, Opal_CommandBuffer *command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -135,12 +140,12 @@ Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Op
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreateBindSetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
+Opal_Result opalCreateBindsetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCreateBindSet(Opal_Device device, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+Opal_Result opalCreateBindset(Opal_Device device, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -319,7 +324,7 @@ Opal_Result opalWaitCommandBuffers(uint32_t num_wait_command_buffers, const Opal
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalSubmit(Opal_Device device, Opal_QueueType queue_type, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+Opal_Result opalSubmit(Opal_Queue queue, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -329,7 +334,7 @@ Opal_Result opalAcquire(Opal_SwapChain swap_chain, Opal_TextureView *texture_vie
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalPresent(Opal_Device device, Opal_QueueType queue_type, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+Opal_Result opalPresent(Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -421,12 +426,12 @@ Opal_Result opalCmdBufferTransitionBarrier(Opal_CommandBuffer command_buffer, Op
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdBufferQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type)
+Opal_Result opalCmdBufferQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdBufferQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_QueueType queue_type)
+Opal_Result opalCmdBufferQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -436,12 +441,12 @@ Opal_Result opalCmdTextureTransitionBarrier(Opal_CommandBuffer command_buffer, O
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdTextureQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_QueueType queue_type)
+Opal_Result opalCmdTextureQueueGrabBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result opalCmdTextureQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_QueueType queue_type)
+Opal_Result opalCmdTextureQueueReleaseBarrier(Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
 {
 	return OPAL_NOT_SUPPORTED;
 }

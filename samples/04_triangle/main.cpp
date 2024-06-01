@@ -35,6 +35,7 @@ private:
 
 	Opal_Instance instance {OPAL_NULL_HANDLE};
 	Opal_Device device {OPAL_NULL_HANDLE};
+	Opal_Queue queue {OPAL_NULL_HANDLE};
 	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
 	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
 	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
@@ -67,6 +68,9 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCreateDefaultDevice(instance, OPAL_DEVICE_HINT_DEFAULT, &device);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalGetDeviceQueue(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, 0, &queue);
 	assert(result == OPAL_SUCCESS);
 
 	// buffers
@@ -116,7 +120,7 @@ void Application::init()
 
 	// transfer
 	Opal_CommandBuffer staging_command_buffer = OPAL_NULL_HANDLE;
-	result = opalCreateCommandBuffer(device, &staging_command_buffer);
+	result = opalCreateCommandBuffer(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalBeginCommandBuffer(staging_command_buffer);
@@ -131,7 +135,7 @@ void Application::init()
 	result = opalEndCommandBuffer(staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmit(device, OPAL_QUEUE_TYPE_MAIN, 1, &staging_command_buffer, 0, nullptr);
+	result = opalSubmit(queue, 1, &staging_command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalWaitCommandBuffers(1, &staging_command_buffer);
@@ -219,7 +223,7 @@ void Application::init()
 	// command buffer
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
 	{
-		result = opalCreateCommandBuffer(device, &command_buffers[i]);
+		result = opalCreateCommandBuffer(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, &command_buffers[i]);
 		assert(result == OPAL_SUCCESS);
 	}
 
@@ -327,7 +331,7 @@ void Application::render(Opal_SwapChain swap_chain)
 	result = opalEndCommandBuffer(command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmit(device, OPAL_QUEUE_TYPE_MAIN, 1, &command_buffer, 0, nullptr);
+	result = opalSubmit(queue, 1, &command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 }
 
@@ -337,7 +341,7 @@ void Application::present(Opal_SwapChain swap_chain)
 
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
-	Opal_Result result = opalPresent(device, OPAL_QUEUE_TYPE_MAIN, swap_chain, 1, &command_buffer);
+	Opal_Result result = opalPresent(swap_chain, 1, &command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
