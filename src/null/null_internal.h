@@ -19,5 +19,3 @@ typedef struct Null_Device_t
 
 Opal_Result null_deviceInitialize(Null_Device *device_ptr, Null_Instance *instance_ptr);
 Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info);
-
-Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);

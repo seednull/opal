@@ -1,46 +1,11 @@
 #include "directx12_internal.h"
+
 #include <assert.h>
+#include <stdlib.h>
 
 /*
  */
-static Opal_InstanceTable instance_vtbl =
-{
-	directx12_instanceDestroy,
-	directx12_instanceEnumerateDevices,
-	directx12_instanceCreateDevice,
-	directx12_instanceCreateDefaultDevice,
-};
-
-/*
- */
-Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
-{
-	assert(desc);
-	assert(instance);
-
-	IDXGIFactory1 *factory = NULL;
-
-	// factory
-	HRESULT hr = CreateDXGIFactory1(&IID_IDXGIFactory1, &factory);
-	if (!SUCCEEDED(hr))
-		return OPAL_DIRECX12_ERROR;
-
-	DirectX12_Instance *ptr = (DirectX12_Instance *)malloc(sizeof(DirectX12_Instance));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl = &instance_vtbl;
-
-	// data
-	ptr->factory = factory;
-
-	*instance = (Opal_Instance)ptr;
-	return OPAL_SUCCESS;
-}
-
-/*
- */
-Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
+static Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 	assert(device_count);
@@ -71,7 +36,7 @@ Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32_t *dev
 	return OPAL_SUCCESS;
 }
 
-Opal_Result directx12_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
+static Opal_Result directx12_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -150,7 +115,7 @@ Opal_Result directx12_instanceCreateDefaultDevice(Opal_Instance this, Opal_Devic
 	return result;
 }
 
-Opal_Result directx12_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
+static Opal_Result directx12_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -186,7 +151,7 @@ Opal_Result directx12_instanceCreateDevice(Opal_Instance this, uint32_t index, O
 	return OPAL_SUCCESS;
 }
 
-Opal_Result directx12_instanceDestroy(Opal_Instance this)
+static Opal_Result directx12_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 
@@ -194,5 +159,42 @@ Opal_Result directx12_instanceDestroy(Opal_Instance this)
 	IDXGIFactory1_Release(ptr->factory);
 
 	free(ptr);
+	return OPAL_SUCCESS;
+}
+
+/*
+ */
+static Opal_InstanceTable instance_vtbl =
+{
+	directx12_instanceDestroy,
+	directx12_instanceEnumerateDevices,
+	directx12_instanceCreateDevice,
+	directx12_instanceCreateDefaultDevice,
+};
+
+/*
+ */
+Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	IDXGIFactory1 *factory = NULL;
+
+	// factory
+	HRESULT hr = CreateDXGIFactory1(&IID_IDXGIFactory1, &factory);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECX12_ERROR;
+
+	DirectX12_Instance *ptr = (DirectX12_Instance *)malloc(sizeof(DirectX12_Instance));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl = &instance_vtbl;
+
+	// data
+	ptr->factory = factory;
+
+	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
 }

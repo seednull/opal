@@ -4,14 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static Opal_InstanceTable instance_vtbl =
-{
-	vulkan_instanceDestroy,
-	vulkan_instanceEnumerateDevices,
-	vulkan_instanceCreateDevice,
-	vulkan_instanceCreateDefaultDevice,
-};
-
+/*
+ */
 static Opal_Result vulkan_volkInitialize()
 {
 	static int once = 0;
@@ -40,48 +34,7 @@ static void vulkan_volkLoadInstance(VkInstance instance)
 
 /*
  */
-Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
-{
-	vulkan_volkInitialize();
-
-	VkInstance vulkan_instance = VK_NULL_HANDLE;
-
-	VkApplicationInfo app_info = {0};
-	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	app_info.apiVersion = VK_API_VERSION_1_1;
-	app_info.applicationVersion = desc->application_version;
-	app_info.pApplicationName = desc->application_name;
-	app_info.engineVersion = desc->engine_version;
-	app_info.pEngineName = desc->engine_name;
-
-	VkInstanceCreateInfo info = {0};
-	info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	info.pApplicationInfo = &app_info;
-
-	VkResult result = vkCreateInstance(&info, NULL, &vulkan_instance);
-	if (result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	vulkan_volkLoadInstance(vulkan_instance);
-
-	Vulkan_Instance *ptr = (Vulkan_Instance *)malloc(sizeof(Vulkan_Instance));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl = &instance_vtbl;
-
-	// data
-	ptr->instance = vulkan_instance;
-	ptr->heap_size = desc->heap_size;
-	ptr->max_heap_allocations = desc->max_heap_allocations;
-	ptr->max_heaps = desc->max_heaps;
-	ptr->flags = desc->flags;
-
-	*instance = (Opal_Instance)ptr;
-	return OPAL_SUCCESS;
-}
-
-Opal_Result vulkan_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
+static Opal_Result vulkan_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 	assert(device_count);
@@ -119,7 +72,7 @@ Opal_Result vulkan_instanceEnumerateDevices(Opal_Instance this, uint32_t *device
 	return opal_result;
 }
 
-Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
+static Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -199,7 +152,7 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHi
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
+static Opal_Result vulkan_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -260,7 +213,7 @@ Opal_Result vulkan_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_instanceDestroy(Opal_Instance this)
+static Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 
@@ -268,5 +221,58 @@ Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 	vkDestroyInstance(ptr->instance, NULL);
 
 	free(ptr);
+	return OPAL_SUCCESS;
+}
+
+/*
+ */
+static Opal_InstanceTable instance_vtbl =
+{
+	vulkan_instanceDestroy,
+	vulkan_instanceEnumerateDevices,
+	vulkan_instanceCreateDevice,
+	vulkan_instanceCreateDefaultDevice,
+};
+
+/*
+ */
+Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	vulkan_volkInitialize();
+
+	VkInstance vulkan_instance = VK_NULL_HANDLE;
+
+	VkApplicationInfo app_info = {0};
+	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	app_info.apiVersion = VK_API_VERSION_1_1;
+	app_info.applicationVersion = desc->application_version;
+	app_info.pApplicationName = desc->application_name;
+	app_info.engineVersion = desc->engine_version;
+	app_info.pEngineName = desc->engine_name;
+
+	VkInstanceCreateInfo info = {0};
+	info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	info.pApplicationInfo = &app_info;
+
+	VkResult result = vkCreateInstance(&info, NULL, &vulkan_instance);
+	if (result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	vulkan_volkLoadInstance(vulkan_instance);
+
+	Vulkan_Instance *ptr = (Vulkan_Instance *)malloc(sizeof(Vulkan_Instance));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl = &instance_vtbl;
+
+	// data
+	ptr->instance = vulkan_instance;
+	ptr->heap_size = desc->heap_size;
+	ptr->max_heap_allocations = desc->max_heap_allocations;
+	ptr->max_heaps = desc->max_heaps;
+	ptr->flags = desc->flags;
+
+	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
 }

@@ -1,18 +1,10 @@
 #include "webgpu_internal.h"
 
+#include <emscripten.h>
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-/*
- */
-static Opal_InstanceTable instance_vtbl =
-{
-	webgpu_instanceDestroy,
-	webgpu_instanceEnumerateDevices,
-	webgpu_instanceCreateDevice,
-	webgpu_instanceCreateDefaultDevice,
-};
 
 /*
  */
@@ -56,30 +48,7 @@ EM_ASYNC_JS(WGPUDevice, webgpu_requestDeviceSync, (WGPUAdapter adapterId),
 
 /*
  */
-Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
-{
-	assert(desc);
-	assert(instance);
-
-	WGPUInstance webgpu_instance = wgpuCreateInstance(NULL);
-	if (webgpu_instance == NULL)
-		return OPAL_WEBGPU_ERROR;
-
-	WebGPU_Instance *ptr = (WebGPU_Instance *)malloc(sizeof(WebGPU_Instance));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl = &instance_vtbl;
-
-	// data
-	ptr->instance = webgpu_instance;
-
-	*instance = (Opal_Instance)ptr;
-	return OPAL_SUCCESS;
-
-}
-
-Opal_Result webgpu_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
+static Opal_Result webgpu_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 
@@ -89,7 +58,7 @@ Opal_Result webgpu_instanceEnumerateDevices(Opal_Instance this, uint32_t *device
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result webgpu_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
+static Opal_Result webgpu_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 
@@ -131,7 +100,7 @@ Opal_Result webgpu_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHi
 	return OPAL_SUCCESS;
 }
 
-Opal_Result webgpu_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
+static Opal_Result webgpu_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 
@@ -141,7 +110,7 @@ Opal_Result webgpu_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result webgpu_instanceDestroy(Opal_Instance this)
+static Opal_Result webgpu_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 
@@ -149,5 +118,39 @@ Opal_Result webgpu_instanceDestroy(Opal_Instance this)
 	wgpuInstanceRelease(ptr->instance);
 
 	free(ptr);
+	return OPAL_SUCCESS;
+}
+
+/*
+ */
+static Opal_InstanceTable instance_vtbl =
+{
+	webgpu_instanceDestroy,
+	webgpu_instanceEnumerateDevices,
+	webgpu_instanceCreateDevice,
+	webgpu_instanceCreateDefaultDevice,
+};
+
+/*
+ */
+Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	WGPUInstance webgpu_instance = wgpuCreateInstance(NULL);
+	if (webgpu_instance == NULL)
+		return OPAL_WEBGPU_ERROR;
+
+	WebGPU_Instance *ptr = (WebGPU_Instance *)malloc(sizeof(WebGPU_Instance));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl = &instance_vtbl;
+
+	// data
+	ptr->instance = webgpu_instance;
+
+	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
 }

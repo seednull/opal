@@ -3,6 +3,338 @@
 
 /*
  */
+static Opal_Result directx12_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
+{
+	assert(this);
+	assert(info);
+
+	DirectX12_Device *ptr = (DirectX12_Device *)this;
+	return directx12_fillDeviceInfoWithDevice(ptr->adapter, ptr->device, info);
+}
+
+static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
+{
+	assert(this);
+	assert(queue);
+	assert(engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroy(Opal_Device this)
+{
+	assert(this);
+
+	DirectX12_Device *ptr = (DirectX12_Device *)this;
+	IDXGIAdapter1_Release(ptr->adapter);
+	ID3D12Device_Release(ptr->device);
+
+	free(ptr);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_TextureDesc *desc, Opal_Texture *texture)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateTextureView(Opal_Device this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_SamplerDesc *desc, Opal_Sampler *sampler)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateCommandBuffer(Opal_Device this, Opal_DeviceEngineType engine_type, Opal_CommandBuffer *command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateShader(Opal_Device this, const Opal_ShaderDesc *desc, Opal_Shader *shader)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateSwapChain(Opal_Device this, const void *handle, Opal_SwapChain *swap_chain)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyTexture(Opal_Device this, Opal_Texture texture)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroySampler(Opal_Device this, Opal_Sampler sampler)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyShader(Opal_Device this, Opal_Shader shader)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyBindsetLayout(Opal_Device this, Opal_BindsetLayout bindset_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyBindset(Opal_Device this, Opal_Bindset bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyPipelineLayout(Opal_Device this, Opal_PipelineLayout pipeline_layout)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyGraphicsPipeline(Opal_Device this, Opal_GraphicsPipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyMeshletPipeline(Opal_Device this, Opal_MeshletPipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyComputePipeline(Opal_Device this, Opal_ComputePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyRaytracePipeline(Opal_Device this, Opal_RaytracePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroySwapChain(Opal_Device this, Opal_SwapChain swap_chain)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceWaitIdle(Opal_Device this)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceBeginCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, uint32_t num_command_buffer, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceAcquire(Opal_Device this, Opal_SwapChain swap_chain, Opal_TextureView *texture_view)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_devicePresent(Opal_Device this, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetGraphicsPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetMeshletPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_MeshletPipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetComputePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetRaytracePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_RaytracePipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableView shader_table, uint32_t width, uint32_t height, uint32_t depth)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+/*
+ */
 static Opal_DeviceTable device_vtbl =
 {
 	directx12_deviceDestroy,
@@ -12,69 +344,66 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCreateBuffer,
 	directx12_deviceCreateTexture,
 	directx12_deviceCreateTextureView,
-	NULL, // PFN_opalCreateSampler createSampler
-	NULL, // PFN_opalCreateCommandBuffer createCommandBuffer
-	NULL, // PFN_opalCreateShader createShader
-	NULL, // PFN_opalCreateBindsetLayout createBindsetLayout
-	NULL, // PFN_opalCreateBindset createBindset
-	NULL, // PFN_opalCreatePipelineLayout createPipelineLayout
-	NULL, // PFN_opalCreateGraphicsPipeline createGraphicsPipeline
-	NULL, // PFN_opalCreateMeshletPipeline createMeshletPipeline
-	NULL, // PFN_opalCreateComputePipeline createComputePipeline
-	NULL, // PFN_opalCreateRaytracePipeline createRaytracePipeline
-	NULL, // PFN_opalCreateSwapChain createSwapChain
+	directx12_deviceCreateSampler,
+	directx12_deviceCreateCommandBuffer,
+	directx12_deviceCreateShader,
+	directx12_deviceCreateBindsetLayout,
+	directx12_deviceCreateBindset,
+	directx12_deviceCreatePipelineLayout,
+	directx12_deviceCreateGraphicsPipeline,
+	directx12_deviceCreateMeshletPipeline,
+	directx12_deviceCreateComputePipeline,
+	directx12_deviceCreateRaytracePipeline,
+	directx12_deviceCreateSwapChain,
 
 	directx12_deviceDestroyBuffer,
 	directx12_deviceDestroyTexture,
 	directx12_deviceDestroyTextureView,
-	NULL, // PFN_opalDestroySampler destroySampler
-	NULL, // PFN_opalDestroyCommandBuffer destroyCommandBuffer
-	NULL, // PFN_opalDestroyShader destroyShader
-	NULL, // PFN_opalDestroyBindsetLayout destroyBindsetLayout
-	NULL, // PFN_opalDestroyBindset destroyBindset
-	NULL, // PFN_opalDestroyPipelineLayout destroyPipelineLayout
-	NULL, // PFN_opalDestroyGraphicsPipeline destroyGraphicsPipeline
-	NULL, // PFN_opalDestroyMeshletPipeline destroyMeshletPipeline
-	NULL, // PFN_opalDestroyComputePipeline destroyComputePipeline
-	NULL, // PFN_opalDestroyRaytracePipeline destroyRaytracePipeline
-	NULL, // PFN_opalDestroySwapChain destroySwapChain
+	directx12_deviceDestroySampler,
+	directx12_deviceDestroyCommandBuffer,
+	directx12_deviceDestroyShader,
+	directx12_deviceDestroyBindsetLayout,
+	directx12_deviceDestroyBindset,
+	directx12_deviceDestroyPipelineLayout,
+	directx12_deviceDestroyGraphicsPipeline,
+	directx12_deviceDestroyMeshletPipeline,
+	directx12_deviceDestroyComputePipeline,
+	directx12_deviceDestroyRaytracePipeline,
+	directx12_deviceDestroySwapChain,
 
 	directx12_deviceMapBuffer,
 	directx12_deviceUnmapBuffer,
-	NULL, // PFN_opalDeviceWaitIdle deviceWaitIdle
+	directx12_deviceWaitIdle,
+	directx12_deviceUpdateBindset,
+	directx12_deviceBeginCommandBuffer,
+	directx12_deviceEndCommandBuffer,
+	directx12_deviceWaitCommandBuffers,
+	directx12_deviceSubmit,
+	directx12_deviceAcquire,
+	directx12_devicePresent,
 
-	NULL, // PFN_opalUpdateBindset updateBindset
-
-	NULL, // PFN_opalBeginCommandBuffer beginCommandBuffer
-	NULL, // PFN_opalEndCommandBuffer endCommandBuffer
-	NULL, // PFN_opalWaitCommandBuffers waitCommandBuffers
-
-	NULL, // PFN_opalSubmit submit
-	NULL, // PFN_opalAcquire acquire
-	NULL, // PFN_opalPresent present
-
-	NULL, // PFN_opalCmdBeginGraphicsPass cmdBeginGraphicsPass
-	NULL, // PFN_opalCmdEndGraphicsPass cmdEndGraphicsPass
-	NULL, // PFN_opalCmdSetGraphicsPipeline cmdSetGraphicsPipeline
-	NULL, // PFN_opalCmdSetMeshletPipeline cmdSetMeshletPipeline
-	NULL, // PFN_opalCmdSetComputePipeline cmdSetComputePipeline
-	NULL, // PFN_opalCmdSetRaytracePipeline cmdSetRaytracePipeline
-	NULL, // PFN_opalCmdSetBindsets cmdSetBindsets
-	NULL, // PFN_opalCmdSetVertexBuffers cmdSetVertexBuffers
-	NULL, // PFN_opalCmdSetIndexBuffer cmdSetIndexBuffer
-	NULL, // PFN_opalCmdDrawIndexedInstanced cmdDrawIndexedInstanced
-	NULL, // PFN_opalCmdMeshletDispatch cmdMeshletDispatch
-	NULL, // PFN_opalCmdComputeDispatch cmdComputeDispatch
-	NULL, // PFN_opalCmdRaytraceDispatch cmdRaytraceDispatch
-	NULL, // PFN_opalCmdCopyBufferToBuffer cmdCopyBufferToBuffer
-	NULL, // PFN_opalCmdCopyBufferToTexture cmdCopyBufferToTexture
-	NULL, // PFN_opalCmdCopyTextureToBuffer cmdCopyTextureToBuffer
-	NULL, // PFN_opalCmdBufferTransitionBarrier cmdBufferTransitionBarrier
-	NULL, // PFN_opalCmdBufferQueueGrabBarrier cmdBufferQueueGrabBarrier
-	NULL, // PFN_opalCmdBufferQueueReleaseBarrier cmdBufferQueueReleaseBarrier
-	NULL, // PFN_opalCmdTextureTransitionBarrier cmdTextureTransitionBarrier
-	NULL, // PFN_opalCmdTextureQueueGrabBarrier cmdTextureQueueGrabBarrier
-	NULL, // PFN_opalCmdTextureQueueReleaseBarrier cmdTextureQueueReleaseBarrier
+	directx12_deviceCmdBeginGraphicsPass,
+	directx12_deviceCmdEndGraphicsPass,
+	directx12_deviceCmdSetGraphicsPipeline,
+	directx12_deviceCmdSetMeshletPipeline,
+	directx12_deviceCmdSetComputePipeline,
+	directx12_deviceCmdSetRaytracePipeline,
+	directx12_deviceCmdSetBindsets,
+	directx12_deviceCmdSetVertexBuffers,
+	directx12_deviceCmdSetIndexBuffer,
+	directx12_deviceCmdDrawIndexedInstanced,
+	directx12_deviceCmdMeshletDispatch,
+	directx12_deviceCmdComputeDispatch,
+	directx12_deviceCmdRaytraceDispatch,
+	directx12_deviceCmdCopyBufferToBuffer,
+	directx12_deviceCmdCopyBufferToTexture,
+	directx12_deviceCmdCopyTextureToBuffer,
+	directx12_deviceCmdBufferTransitionBarrier,
+	directx12_deviceCmdBufferQueueGrabBarrier,
+	directx12_deviceCmdBufferQueueReleaseBarrier,
+	directx12_deviceCmdTextureTransitionBarrier,
+	directx12_deviceCmdTextureQueueGrabBarrier,
+	directx12_deviceCmdTextureQueueReleaseBarrier,
 };
 
 /*
@@ -94,84 +423,4 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	device_ptr->device = device;
 
 	return OPAL_SUCCESS;
-}
-
-/*
- */
-Opal_Result directx12_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
-{
-	assert(this);
-	assert(info);
-
-	DirectX12_Device *ptr = (DirectX12_Device *)this;
-	return directx12_fillDeviceInfoWithDevice(ptr->adapter, ptr->device, info);
-}
-
-Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
-{
-	assert(this);
-	assert(queue);
-	assert(engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-/*
- */
-Opal_Result directx12_deviceDestroy(Opal_Device this)
-{
-	assert(this);
-
-	DirectX12_Device *ptr = (DirectX12_Device *)this;
-	IDXGIAdapter1_Release(ptr->adapter);
-	ID3D12Device_Release(ptr->device);
-
-	free(ptr);
-	return OPAL_SUCCESS;
-}
-
-/*
- */
-Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_TextureDesc *desc, Opal_Texture *texture)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result directx12_deviceCreateTextureView(Opal_Device this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-/*
- */
-Opal_Result directx12_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-/*
- */
-Opal_Result directx12_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result directx12_deviceDestroyTexture(Opal_Device this, Opal_Texture texture)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result directx12_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view)
-{
-	return OPAL_NOT_SUPPORTED;
 }
