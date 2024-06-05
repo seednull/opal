@@ -2,61 +2,7 @@
 
 /*
  */
-static Metal_Device *opal_createDevice(id<MTLDevice> device)
-{
-	assert(device);
-
-	Metal_Device *ptr = (Metal_Device *)malloc(sizeof(Metal_Device));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl.getInfo = metal_deviceGetInfo;
-	ptr->vtbl.getQueue = metal_deviceGetQueue;
-	ptr->vtbl.destroy = metal_deviceDestroy;
-	ptr->vtbl.createBuffer = metal_deviceCreateBuffer;
-	ptr->vtbl.createTexture = metal_deviceCreateTexture;
-	ptr->vtbl.createTextureView = metal_deviceCreateTextureView;
-	ptr->vtbl.mapBuffer = metal_deviceMapBuffer;
-	ptr->vtbl.unmapBuffer = metal_deviceUnmapBuffer;
-	ptr->vtbl.destroyBuffer = metal_deviceDestroyBuffer;
-	ptr->vtbl.destroyTexture = metal_deviceDestroyTexture;
-	ptr->vtbl.destroyTextureView = metal_deviceDestroyTextureView;
-
-	// data
-	ptr->device = device;
-
-	return ptr;
-}
-
-/*
- */
-Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
-{
-	assert(desc);
-	assert(instance);
-
-	Metal_Instance *ptr = (Metal_Instance *)malloc(sizeof(Metal_Instance));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl.enumerateDevices = metal_instanceEnumerateDevices;
-	ptr->vtbl.createDefaultDevice = metal_instanceCreateDefaultDevice;
-	ptr->vtbl.createDevice = metal_instanceCreateDevice;
-	ptr->vtbl.destroy = metal_instanceDestroy;
-
-	// info
-	ptr->application_name = strdup(desc->application_name);
-	ptr->application_version = desc->application_version;
-	ptr->engine_name = strdup(desc->engine_name);
-	ptr->engine_version = desc->engine_version;
-
-	*instance = (Opal_Instance)ptr;
-	return OPAL_SUCCESS;
-}
-
-/*
- */
-Opal_Result metal_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
+static Opal_Result metal_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 	assert(device_count);
@@ -86,7 +32,7 @@ Opal_Result metal_instanceEnumerateDevices(Instance *this, uint32_t *device_coun
 	return OPAL_SUCCESS;
 }
 
-Opal_Result metal_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device)
+static Opal_Result metal_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -119,11 +65,22 @@ Opal_Result metal_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hi
 	}
 	[metal_devices release];
 
-	*device = (Opal_Device)opal_createDevice(best_metal_device);
+	Metal_Instance *instance_ptr = (Metal_Instance *)this;
+	Metal_Device *device_ptr = (Metal_Device *)malloc(sizeof(Metal_Device));
+	assert(device_ptr);
+
+	Opal_Result result = metal_deviceInitialize(device_ptr, instance_ptr, best_metal_device);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
 	return OPAL_SUCCESS;
 }
 
-Opal_Result metal_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
+static Opal_Result metal_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -141,11 +98,22 @@ Opal_Result metal_instanceCreateDevice(Instance *this, uint32_t index, Opal_Devi
 	id<MTLDevice> metal_device = metal_devices[index];
 	[metal_devices release];
 
-	*device = (Opal_Device)opal_createDevice(metal_device);
+	Metal_Instance *instance_ptr = (Metal_Instance *)this;
+	Metal_Device *device_ptr = (Metal_Device *)malloc(sizeof(Metal_Device));
+	assert(device_ptr);
+
+	Opal_Result result = metal_deviceInitialize(device_ptr, instance_ptr, metal_device);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
 	return OPAL_SUCCESS;
 }
 
-Opal_Result metal_instanceDestroy(Instance *this)
+static Opal_Result metal_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 
@@ -154,5 +122,39 @@ Opal_Result metal_instanceDestroy(Instance *this)
 	free(ptr->application_name);
 	free(ptr->engine_name);
 
+	free(ptr);
+	return OPAL_SUCCESS;
+}
+
+/*
+ */
+static Opal_InstanceTable instance_vtbl =
+{
+	metal_instanceDestroy,
+	metal_instanceEnumerateDevices,
+	metal_instanceCreateDevice,
+	metal_instanceCreateDefaultDevice,
+};
+
+/*
+ */
+Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+{
+	assert(desc);
+	assert(instance);
+
+	Metal_Instance *ptr = (Metal_Instance *)malloc(sizeof(Metal_Instance));
+	assert(ptr);
+
+	// vtable
+	ptr->vtbl = &instance_vtbl;
+
+	// info
+	ptr->application_name = strdup(desc->application_name);
+	ptr->application_version = desc->application_version;
+	ptr->engine_name = strdup(desc->engine_name);
+	ptr->engine_version = desc->engine_version;
+
+	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
 }

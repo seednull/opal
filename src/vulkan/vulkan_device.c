@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <stdlib.h>
 
-
 /*
  */
 static Opal_Result vulkan_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
