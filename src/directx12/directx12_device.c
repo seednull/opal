@@ -183,11 +183,6 @@ static Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buf
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceWaitIdle(Opal_Device this)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result directx12_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -204,6 +199,11 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 }
 
 static Opal_Result directx12_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceWaitIdle(Opal_Device this)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -373,11 +373,11 @@ static Opal_DeviceTable device_vtbl =
 
 	directx12_deviceMapBuffer,
 	directx12_deviceUnmapBuffer,
-	directx12_deviceWaitIdle,
 	directx12_deviceUpdateBindset,
 	directx12_deviceBeginCommandBuffer,
 	directx12_deviceEndCommandBuffer,
 	directx12_deviceWaitCommandBuffers,
+	directx12_deviceWaitIdle,
 	directx12_deviceSubmit,
 	directx12_deviceAcquire,
 	directx12_devicePresent,

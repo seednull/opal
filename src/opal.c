@@ -75,8 +75,6 @@ Opal_Result opalDestroyInstance(Opal_Instance instance)
 	return ptr->vtbl->destroyInstance(instance);
 }
 
-/*
- */
 Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	if (instance == OPAL_NULL_HANDLE)
@@ -89,8 +87,6 @@ Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count,
 	return ptr->vtbl->enumerateDevices(instance, device_count, infos);
 }
 
-/*
- */
 Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device)
 {
 	if (instance == OPAL_NULL_HANDLE)
@@ -115,6 +111,8 @@ Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint
 	return ptr->vtbl->createDefaultDevice(instance, hint, device);
 }
 
+/*
+ */
 Opal_Result opalDestroyDevice(Opal_Device device)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -127,8 +125,6 @@ Opal_Result opalDestroyDevice(Opal_Device device)
 	return ptr->vtbl->destroyDevice(device);
 }
 
-/*
- */
 Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -519,20 +515,6 @@ Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer)
 	return ptr->vtbl->unmapBuffer(device, buffer);
 }
 
-Opal_Result opalDeviceWaitIdle(Opal_Device device)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->deviceWaitIdle);
-
-	return ptr->vtbl->deviceWaitIdle(device);
-}
-
-/*
- */
 Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -545,8 +527,6 @@ Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t
 	return ptr->vtbl->updateBindset(device, bindset, num_bindings, bindings);
 }
 
-/*
- */
 Opal_Result opalBeginCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -581,6 +561,18 @@ Opal_Result opalWaitCommandBuffers(Opal_Device device, uint32_t num_wait_command
 	assert(ptr->vtbl->waitCommandBuffers);
 
 	return ptr->vtbl->waitCommandBuffers(device, num_wait_command_buffers, wait_command_buffers);
+}
+
+Opal_Result opalWaitIdle(Opal_Device device)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->waitIdle);
+
+	return ptr->vtbl->waitIdle(device);
 }
 
 Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)

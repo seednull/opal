@@ -186,11 +186,6 @@ static Opal_Result webgpu_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceWaitIdle(Opal_Device this)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result webgpu_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -207,6 +202,11 @@ static Opal_Result webgpu_deviceEndCommandBuffer(Opal_Device this, Opal_CommandB
 }
 
 static Opal_Result webgpu_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result webgpu_deviceWaitIdle(Opal_Device this)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -376,11 +376,11 @@ static Opal_DeviceTable device_vtbl =
 
 	webgpu_deviceMapBuffer,
 	webgpu_deviceUnmapBuffer,
-	webgpu_deviceWaitIdle,
 	webgpu_deviceUpdateBindset,
 	webgpu_deviceBeginCommandBuffer,
 	webgpu_deviceEndCommandBuffer,
 	webgpu_deviceWaitCommandBuffers,
+	webgpu_deviceWaitIdle,
 	webgpu_deviceSubmit,
 	webgpu_deviceAcquire,
 	webgpu_devicePresent,

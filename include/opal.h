@@ -854,11 +854,10 @@ typedef struct Opal_RaytracePipelineDesc_t
 
 // Function pointers
 typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
-
 typedef Opal_Result (*PFN_opalEnumerateDevices)(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
-
 typedef Opal_Result (*PFN_opalCreateDevice)(Opal_Instance instance, uint32_t index, Opal_Device *device);
 typedef Opal_Result (*PFN_opalCreateDefaultDevice)(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
+
 typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
 typedef Opal_Result (*PFN_opalGetDeviceQueue)(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
@@ -895,14 +894,11 @@ typedef Opal_Result (*PFN_opalDestroySwapChain)(Opal_Device device, Opal_SwapCha
 
 typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
 typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
-typedef Opal_Result (*PFN_opalDeviceWaitIdle)(Opal_Device device);
-
 typedef Opal_Result (*PFN_opalUpdateBindset)(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
-
 typedef Opal_Result (*PFN_opalBeginCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalEndCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalWaitCommandBuffers)(Opal_Device device, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
-
+typedef Opal_Result (*PFN_opalWaitIdle)(Opal_Device device);
 typedef Opal_Result (*PFN_opalSubmit)(Opal_Device device, Opal_Queue queue, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 typedef Opal_Result (*PFN_opalAcquire)(Opal_Device device, Opal_SwapChain swap_chain, Opal_TextureView *texture_view);
 typedef Opal_Result (*PFN_opalPresent)(Opal_Device device, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
@@ -976,14 +972,11 @@ typedef struct Opal_DeviceTable_t
 
 	PFN_opalMapBuffer mapBuffer;
 	PFN_opalUnmapBuffer unmapBuffer;
-	PFN_opalDeviceWaitIdle deviceWaitIdle;
-
 	PFN_opalUpdateBindset updateBindset;
-
 	PFN_opalBeginCommandBuffer beginCommandBuffer;
 	PFN_opalEndCommandBuffer endCommandBuffer;
 	PFN_opalWaitCommandBuffers waitCommandBuffers;
-
+	PFN_opalWaitIdle waitIdle;
 	PFN_opalSubmit submit;
 	PFN_opalAcquire acquire;
 	PFN_opalPresent present;
@@ -1060,14 +1053,11 @@ OPAL_APIENTRY Opal_Result opalDestroySwapChain(Opal_Device device, Opal_SwapChai
 
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
 OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
-OPAL_APIENTRY Opal_Result opalDeviceWaitIdle(Opal_Device device);
-
 OPAL_APIENTRY Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
-
 OPAL_APIENTRY Opal_Result opalBeginCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalEndCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalWaitCommandBuffers(Opal_Device device, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
-
+OPAL_APIENTRY Opal_Result opalWaitIdle(Opal_Device device);
 OPAL_APIENTRY Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, uint32_t num_command_buffer, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
 OPAL_APIENTRY Opal_Result opalAcquire(Opal_Device device, Opal_SwapChain swap_chain, Opal_TextureView *texture_view);
 OPAL_APIENTRY Opal_Result opalPresent(Opal_Device device, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);

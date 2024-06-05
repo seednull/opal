@@ -552,11 +552,6 @@ static Opal_Result vulkan_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer
 	return vulkan_allocatorUnmapMemory(allocator, device_ptr->device, buffer_ptr->allocation);
 }
 
-static Opal_Result vulkan_deviceWaitIdle(Opal_Device this)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -573,6 +568,11 @@ static Opal_Result vulkan_deviceEndCommandBuffer(Opal_Device this, Opal_CommandB
 }
 
 static Opal_Result vulkan_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceWaitIdle(Opal_Device this)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -742,11 +742,11 @@ static Opal_DeviceTable device_vtbl =
 
 	vulkan_deviceMapBuffer,
 	vulkan_deviceUnmapBuffer,
-	vulkan_deviceWaitIdle,
 	vulkan_deviceUpdateBindset,
 	vulkan_deviceBeginCommandBuffer,
 	vulkan_deviceEndCommandBuffer,
 	vulkan_deviceWaitCommandBuffers,
+	vulkan_deviceWaitIdle,
 	vulkan_deviceSubmit,
 	vulkan_deviceAcquire,
 	vulkan_devicePresent,

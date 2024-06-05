@@ -186,11 +186,6 @@ static Opal_Result null_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceWaitIdle(Opal_Device this)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result null_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -207,6 +202,11 @@ static Opal_Result null_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBuf
 }
 
 static Opal_Result null_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceWaitIdle(Opal_Device this)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -376,11 +376,11 @@ static Opal_DeviceTable device_vtbl =
 
 	null_deviceMapBuffer,
 	null_deviceUnmapBuffer,
-	null_deviceWaitIdle,
 	null_deviceUpdateBindset,
 	null_deviceBeginCommandBuffer,
 	null_deviceEndCommandBuffer,
 	null_deviceWaitCommandBuffers,
+	null_deviceWaitIdle,
 	null_deviceSubmit,
 	null_deviceAcquire,
 	null_devicePresent,

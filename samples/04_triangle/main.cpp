@@ -232,7 +232,7 @@ void Application::init()
 
 void Application::shutdown()
 {
-	Opal_Result result = opalDeviceWaitIdle(device);
+	Opal_Result result = opalWaitIdle(device);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyBuffer(device, triangle_buffer);
