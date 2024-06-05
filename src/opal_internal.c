@@ -1,5 +1,7 @@
 #include "opal_internal.h"
 
+#include <assert.h>
+
 static uint32_t device_type_default_scores[] =
 {
 	1000,

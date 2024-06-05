@@ -12,7 +12,7 @@ project(${TARGET} CXX)
 # ==================================================================================================
 file(GLOB SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
-	${OPAL_DIR_SRC}/common/*.c
+	${OPAL_DIR_SRC}/common/pool.c
 )
 
 file(GLOB HEADERS
@@ -35,7 +35,7 @@ set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
 # ==================================================================================================
 # Includes
 # ==================================================================================================
-target_include_directories(${TARGET} PUBLIC ${OPAL_API_DIR})
+target_include_directories(${TARGET} PUBLIC ${OPAL_DIR_API})
 target_include_directories(${TARGET} PUBLIC ${OPAL_DIR_SRC}/common)
 
 # ==================================================================================================
@@ -45,7 +45,7 @@ target_include_directories(${TARGET} PUBLIC ${OPAL_DIR_SRC}/common)
 # ==================================================================================================
 # Libraries
 # ==================================================================================================
-target_link_libraries(${TARGET} PUBLIC opal gtest)
+target_link_libraries(${TARGET} PUBLIC gtest)
 
 # ==================================================================================================
 # Custom commands

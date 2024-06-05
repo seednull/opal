@@ -7,24 +7,24 @@
 
 /*
  */
-OPAL_INLINE Opal_PoolHandle opal_poolHandlePack(uint32_t index, uint8_t generation)
+static OPAL_INLINE Opal_PoolHandle opal_poolHandlePack(uint32_t index, uint8_t generation)
 {
 	return (Opal_PoolHandle)((index << 8) | generation);
 }
 
-OPAL_INLINE uint32_t opal_poolHandleGetIndex(Opal_PoolHandle handle)
+static OPAL_INLINE uint32_t opal_poolHandleGetIndex(Opal_PoolHandle handle)
 {
 	return (uint32_t)(handle >> 8);
 }
 
-OPAL_INLINE uint8_t opal_poolHandleGetGeneration(Opal_PoolHandle handle)
+static OPAL_INLINE uint8_t opal_poolHandleGetGeneration(Opal_PoolHandle handle)
 {
 	return (uint8_t)(handle & 0xFF);
 }
 
 /*
  */
-OPAL_INLINE uint32_t opal_poolGrabIndex(Opal_Pool *pool)
+static OPAL_INLINE uint32_t opal_poolGrabIndex(Opal_Pool *pool)
 {
 	assert(pool);
 	assert(pool->num_free_indices > 0);
@@ -40,7 +40,7 @@ OPAL_INLINE uint32_t opal_poolGrabIndex(Opal_Pool *pool)
 	return index;
 }
 
-OPAL_INLINE void opal_poolReleaseIndex(Opal_Pool *pool, uint32_t index)
+static OPAL_INLINE void opal_poolReleaseIndex(Opal_Pool *pool, uint32_t index)
 {
 	assert(pool);
 	assert(pool->num_free_indices < pool->capacity);
@@ -55,7 +55,7 @@ OPAL_INLINE void opal_poolReleaseIndex(Opal_Pool *pool, uint32_t index)
 	pool->masks[mask_index] |= 1 << mask_bit;
 }
 
-OPAL_INLINE uint32_t opal_poolIsIndexFree(const Opal_Pool *pool, uint32_t index)
+static OPAL_INLINE uint32_t opal_poolIsIndexFree(const Opal_Pool *pool, uint32_t index)
 {
 	assert(pool);
 	assert(index < pool->capacity);
@@ -69,7 +69,7 @@ OPAL_INLINE uint32_t opal_poolIsIndexFree(const Opal_Pool *pool, uint32_t index)
 	return free_mask & element_mask;
 }
 
-OPAL_INLINE uint32_t opal_poolGetNumMasks(const Opal_Pool *pool)
+static OPAL_INLINE uint32_t opal_poolGetNumMasks(const Opal_Pool *pool)
 {
 	assert(pool);
 

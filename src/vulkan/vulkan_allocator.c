@@ -1,6 +1,9 @@
 #include "vulkan_internal.h"
 #include "common/intrinsics.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 /*
  */
 static OPAL_INLINE uint16_t vulkan_granularityPagePack(uint32_t resource_type, uint32_t usage_count)

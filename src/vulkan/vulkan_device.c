@@ -1,5 +1,84 @@
 #include "vulkan_internal.h"
 
+#include <assert.h>
+#include <stdlib.h>
+
+/*
+ */
+static Opal_DeviceTable device_vtbl =
+{
+	vulkan_deviceDestroy,
+	vulkan_deviceGetInfo,
+	vulkan_deviceGetQueue,
+
+	vulkan_deviceCreateBuffer,
+	vulkan_deviceCreateTexture,
+	vulkan_deviceCreateTextureView,
+	NULL, // PFN_opalCreateSampler createSampler
+	NULL, // PFN_opalCreateCommandBuffer createCommandBuffer
+	NULL, // PFN_opalCreateShader createShader
+	NULL, // PFN_opalCreateBindsetLayout createBindsetLayout
+	NULL, // PFN_opalCreateBindset createBindset
+	NULL, // PFN_opalCreatePipelineLayout createPipelineLayout
+	NULL, // PFN_opalCreateGraphicsPipeline createGraphicsPipeline
+	NULL, // PFN_opalCreateMeshletPipeline createMeshletPipeline
+	NULL, // PFN_opalCreateComputePipeline createComputePipeline
+	NULL, // PFN_opalCreateRaytracePipeline createRaytracePipeline
+	NULL, // PFN_opalCreateSwapChain createSwapChain
+
+	vulkan_deviceDestroyBuffer,
+	vulkan_deviceDestroyTexture,
+	vulkan_deviceDestroyTextureView,
+	NULL, // PFN_opalDestroySampler destroySampler
+	NULL, // PFN_opalDestroyCommandBuffer destroyCommandBuffer
+	NULL, // PFN_opalDestroyShader destroyShader
+	NULL, // PFN_opalDestroyBindsetLayout destroyBindsetLayout
+	NULL, // PFN_opalDestroyBindset destroyBindset
+	NULL, // PFN_opalDestroyPipelineLayout destroyPipelineLayout
+	NULL, // PFN_opalDestroyGraphicsPipeline destroyGraphicsPipeline
+	NULL, // PFN_opalDestroyMeshletPipeline destroyMeshletPipeline
+	NULL, // PFN_opalDestroyComputePipeline destroyComputePipeline
+	NULL, // PFN_opalDestroyRaytracePipeline destroyRaytracePipeline
+	NULL, // PFN_opalDestroySwapChain destroySwapChain
+
+	vulkan_deviceMapBuffer,
+	vulkan_deviceUnmapBuffer,
+	NULL, // PFN_opalDeviceWaitIdle deviceWaitIdle
+
+	NULL, // PFN_opalUpdateBindset updateBindset
+
+	NULL, // PFN_opalBeginCommandBuffer beginCommandBuffer
+	NULL, // PFN_opalEndCommandBuffer endCommandBuffer
+	NULL, // PFN_opalWaitCommandBuffers waitCommandBuffers
+
+	NULL, // PFN_opalSubmit submit
+	NULL, // PFN_opalAcquire acquire
+	NULL, // PFN_opalPresent present
+
+	NULL, // PFN_opalCmdBeginGraphicsPass cmdBeginGraphicsPass
+	NULL, // PFN_opalCmdEndGraphicsPass cmdEndGraphicsPass
+	NULL, // PFN_opalCmdSetGraphicsPipeline cmdSetGraphicsPipeline
+	NULL, // PFN_opalCmdSetMeshletPipeline cmdSetMeshletPipeline
+	NULL, // PFN_opalCmdSetComputePipeline cmdSetComputePipeline
+	NULL, // PFN_opalCmdSetRaytracePipeline cmdSetRaytracePipeline
+	NULL, // PFN_opalCmdSetBindsets cmdSetBindsets
+	NULL, // PFN_opalCmdSetVertexBuffers cmdSetVertexBuffers
+	NULL, // PFN_opalCmdSetIndexBuffer cmdSetIndexBuffer
+	NULL, // PFN_opalCmdDrawIndexedInstanced cmdDrawIndexedInstanced
+	NULL, // PFN_opalCmdMeshletDispatch cmdMeshletDispatch
+	NULL, // PFN_opalCmdComputeDispatch cmdComputeDispatch
+	NULL, // PFN_opalCmdRaytraceDispatch cmdRaytraceDispatch
+	NULL, // PFN_opalCmdCopyBufferToBuffer cmdCopyBufferToBuffer
+	NULL, // PFN_opalCmdCopyBufferToTexture cmdCopyBufferToTexture
+	NULL, // PFN_opalCmdCopyTextureToBuffer cmdCopyTextureToBuffer
+	NULL, // PFN_opalCmdBufferTransitionBarrier cmdBufferTransitionBarrier
+	NULL, // PFN_opalCmdBufferQueueGrabBarrier cmdBufferQueueGrabBarrier
+	NULL, // PFN_opalCmdBufferQueueReleaseBarrier cmdBufferQueueReleaseBarrier
+	NULL, // PFN_opalCmdTextureTransitionBarrier cmdTextureTransitionBarrier
+	NULL, // PFN_opalCmdTextureQueueGrabBarrier cmdTextureQueueGrabBarrier
+	NULL, // PFN_opalCmdTextureQueueReleaseBarrier cmdTextureQueueReleaseBarrier
+};
+
 /*
  */
 Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device)
@@ -10,17 +89,7 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	assert(device != VK_NULL_HANDLE);
 
 	// vtable
-	device_ptr->vtbl.getInfo = vulkan_deviceGetInfo;
-	device_ptr->vtbl.getQueue = vulkan_deviceGetQueue;
-	device_ptr->vtbl.destroy = vulkan_deviceDestroy;
-	device_ptr->vtbl.createBuffer = vulkan_deviceCreateBuffer;
-	device_ptr->vtbl.createTexture = vulkan_deviceCreateTexture;
-	device_ptr->vtbl.createTextureView = vulkan_deviceCreateTextureView;
-	device_ptr->vtbl.mapBuffer = vulkan_deviceMapBuffer;
-	device_ptr->vtbl.unmapBuffer = vulkan_deviceUnmapBuffer;
-	device_ptr->vtbl.destroyBuffer = vulkan_deviceDestroyBuffer;
-	device_ptr->vtbl.destroyTexture = vulkan_deviceDestroyTexture;
-	device_ptr->vtbl.destroyTextureView = vulkan_deviceDestroyTextureView;
+	device_ptr->vtbl = &device_vtbl;
 
 	// data
 	device_ptr->physical_device = physical_device;
@@ -114,11 +183,10 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 
 /*
  */
-Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation)
+Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation)
 {
-	assert(this);
+	assert(device_ptr);
 
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	Vulkan_Allocator *allocator = &device_ptr->allocator;
 	VkDevice vulkan_device = device_ptr->device;
 	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
@@ -177,7 +245,7 @@ Opal_Result vulkan_deviceAllocateMemory(Device *this, const Vulkan_AllocationDes
 
 /*
  */
-Opal_Result vulkan_deviceGetInfo(Device *this, Opal_DeviceInfo *info)
+Opal_Result vulkan_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 {
 	assert(this);
 	assert(info);
@@ -186,7 +254,7 @@ Opal_Result vulkan_deviceGetInfo(Device *this, Opal_DeviceInfo *info)
 	return vulkan_helperFillDeviceInfo(ptr->physical_device, info);
 }
 
-Opal_Result vulkan_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
+Opal_Result vulkan_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	assert(this);
 	assert(queue);
@@ -205,7 +273,7 @@ Opal_Result vulkan_deviceGetQueue(Device *this, Opal_DeviceEngineType engine_typ
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_deviceDestroy(Device *this)
+Opal_Result vulkan_deviceDestroy(Opal_Device this)
 {
 	assert(this);
 
@@ -232,12 +300,14 @@ Opal_Result vulkan_deviceDestroy(Device *this)
 	opal_poolShutdown(&ptr->images);
 
 	vkDestroyDevice(ptr->device, NULL);
+
+	free(ptr);
 	return OPAL_SUCCESS;
 }
 
 /*
  */
-Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
+Opal_Result vulkan_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	assert(this);
 	assert(desc);
@@ -331,7 +401,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 		allocation_desc.prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
 		allocation_desc.requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
 
-		Opal_Result opal_result = vulkan_deviceAllocateMemory(this, &allocation_desc, &allocation);
+		Opal_Result opal_result = vulkan_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
 		if (opal_result != OPAL_SUCCESS)
 		{
 			vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
@@ -362,7 +432,7 @@ Opal_Result vulkan_deviceCreateBuffer(Device *this, const Opal_BufferDesc *desc,
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *desc, Opal_Texture *texture)
+Opal_Result vulkan_deviceCreateTexture(Opal_Device this, const Opal_TextureDesc *desc, Opal_Texture *texture)
 {
 	assert(this);
 	assert(desc);
@@ -441,7 +511,7 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 		allocation_desc.prefers_dedicated = dedicated_requirements.prefersDedicatedAllocation;
 		allocation_desc.requires_dedicated = dedicated_requirements.requiresDedicatedAllocation;
 
-		Opal_Result opal_result = vulkan_deviceAllocateMemory(this, &allocation_desc, &allocation);
+		Opal_Result opal_result = vulkan_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
 		if (opal_result != OPAL_SUCCESS)
 		{
 			vkDestroyImage(vulkan_device, vulkan_image, NULL);
@@ -471,14 +541,14 @@ Opal_Result vulkan_deviceCreateTexture(Device *this, const Opal_TextureDesc *des
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_deviceCreateTextureView(Device *this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
+Opal_Result vulkan_deviceCreateTextureView(Opal_Device this, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 /*
  */
-Opal_Result vulkan_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
+Opal_Result vulkan_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr)
 {
 	assert(this);
 	assert(buffer != OPAL_NULL_HANDLE);
@@ -518,7 +588,7 @@ Opal_Result vulkan_deviceMapBuffer(Device *this, Opal_Buffer buffer, void **ptr)
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
+Opal_Result vulkan_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
 {
 	assert(this);
 	assert(buffer != OPAL_NULL_HANDLE);
@@ -549,7 +619,7 @@ Opal_Result vulkan_deviceUnmapBuffer(Device *this, Opal_Buffer buffer)
 
 /*
  */
-Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
+Opal_Result vulkan_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
 {
 	assert(this);
 	assert(buffer != OPAL_NULL_HANDLE);
@@ -583,7 +653,7 @@ Opal_Result vulkan_deviceDestroyBuffer(Device *this, Opal_Buffer buffer)
 	return result;
 }
 
-Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture)
+Opal_Result vulkan_deviceDestroyTexture(Opal_Device this, Opal_Texture texture)
 {
 	assert(this);
 	assert(texture != OPAL_NULL_HANDLE);
@@ -613,7 +683,7 @@ Opal_Result vulkan_deviceDestroyTexture(Device *this, Opal_Texture texture)
 	return result;
 }
 
-Opal_Result vulkan_deviceDestroyTextureView(Device *this, Opal_TextureView texture_view)
+Opal_Result vulkan_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view)
 {
 	return OPAL_NOT_SUPPORTED;
 }

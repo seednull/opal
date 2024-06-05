@@ -1,5 +1,19 @@
 #include "webgpu_internal.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*
+ */
+static Opal_InstanceTable instance_vtbl =
+{
+	webgpu_instanceDestroy,
+	webgpu_instanceEnumerateDevices,
+	webgpu_instanceCreateDevice,
+	webgpu_instanceCreateDefaultDevice,
+};
+
 /*
  */
 EM_ASYNC_JS(WGPUAdapter, webgpu_requestAdapterSync, (WGPUInstance instanceId, int powerPreference, int forceFallback),
@@ -42,36 +56,6 @@ EM_ASYNC_JS(WGPUDevice, webgpu_requestDeviceSync, (WGPUAdapter adapterId),
 
 /*
  */
-static WebGpu_Device *opal_createDevice(WGPUAdapter adapter, WGPUDevice device)
-{
-	assert(adapter);
-	assert(device);
-
-	WebGpu_Device *ptr = (WebGpu_Device *)malloc(sizeof(WebGpu_Device));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl.getInfo = webgpu_deviceGetInfo;
-	ptr->vtbl.getQueue = webgpu_deviceGetQueue;
-	ptr->vtbl.destroy = webgpu_deviceDestroy;
-	ptr->vtbl.createBuffer = webgpu_deviceCreateBuffer;
-	ptr->vtbl.createTexture = webgpu_deviceCreateTexture;
-	ptr->vtbl.createTextureView = webgpu_deviceCreateTextureView;
-	ptr->vtbl.mapBuffer = webgpu_deviceMapBuffer;
-	ptr->vtbl.unmapBuffer = webgpu_deviceUnmapBuffer;
-	ptr->vtbl.destroyBuffer = webgpu_deviceDestroyBuffer;
-	ptr->vtbl.destroyTexture = webgpu_deviceDestroyTexture;
-	ptr->vtbl.destroyTextureView = webgpu_deviceDestroyTextureView;
-
-	// data
-	ptr->adapter = adapter;
-	ptr->device = device;
-
-	return ptr;
-}
-
-/*
- */
 Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
@@ -81,14 +65,11 @@ Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	if (webgpu_instance == NULL)
 		return OPAL_WEBGPU_ERROR;
 
-	WebGpu_Instance *ptr = (WebGpu_Instance *)malloc(sizeof(WebGpu_Instance));
+	WebGPU_Instance *ptr = (WebGPU_Instance *)malloc(sizeof(WebGPU_Instance));
 	assert(ptr);
 
 	// vtable
-	ptr->vtbl.enumerateDevices = webgpu_instanceEnumerateDevices;
-	ptr->vtbl.createDefaultDevice = webgpu_instanceCreateDefaultDevice;
-	ptr->vtbl.createDevice = webgpu_instanceCreateDevice;
-	ptr->vtbl.destroy = webgpu_instanceDestroy;
+	ptr->vtbl = &instance_vtbl;
 
 	// data
 	ptr->instance = webgpu_instance;
@@ -98,17 +79,21 @@ Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 
 }
 
-Opal_Result webgpu_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
+Opal_Result webgpu_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
+	assert(this);
+
 	// Note: in theory, it's possible to implement this by quering adapers using diffent wgpu power preference values
 	//       but for browser use case we usually want a single GPU with requested
-	//       power preference value, so it's better to prohibit this function for WGPU API.
+	//       power preference value, so it's better to prohibit this function for WebGPU API.
 	return OPAL_NOT_SUPPORTED;
 }
 
-Opal_Result webgpu_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device)
+Opal_Result webgpu_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
-	WebGpu_Instance *instance_ptr = (WebGpu_Instance *)this;
+	assert(this);
+
+	WebGPU_Instance *instance_ptr = (WebGPU_Instance *)this;
 	WGPUInstance instance = instance_ptr->instance;
 
 	WGPUPowerPreference preference = WGPUPowerPreference_Undefined;
@@ -132,24 +117,37 @@ Opal_Result webgpu_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 		return OPAL_WEBGPU_ERROR;
 	}
 
-	*device = (Opal_Device)opal_createDevice(webgpu_adapter, webgpu_device);
+	WebGPU_Device *device_ptr = (WebGPU_Device *)malloc(sizeof(WebGPU_Device));
+	assert(device_ptr);
+
+	Opal_Result result = webgpu_deviceInitialize(device_ptr, instance_ptr, webgpu_adapter, webgpu_device);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
 	return OPAL_SUCCESS;
 }
 
-Opal_Result webgpu_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
-{
-	// Note: in theory, it's possible to implement this by quering adapers using diffent wgpu power preference values
-	//       but for browser use case we usually want a single GPU with requested
-	//       power preference value, so it's better to prohibit this function for WGPU API.
-	return OPAL_NOT_SUPPORTED;
-}
-
-Opal_Result webgpu_instanceDestroy(Instance *this)
+Opal_Result webgpu_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 
-	WebGpu_Instance *ptr = (WebGpu_Instance *)this;
+	// Note: in theory, it's possible to implement this by quering adapers using diffent wgpu power preference values
+	//       but for browser use case we usually want a single GPU with requested
+	//       power preference value, so it's better to prohibit this function for WebGPU API.
+	return OPAL_NOT_SUPPORTED;
+}
+
+Opal_Result webgpu_instanceDestroy(Opal_Instance this)
+{
+	assert(this);
+
+	WebGPU_Instance *ptr = (WebGPU_Instance *)this;
 	wgpuInstanceRelease(ptr->instance);
 
+	free(ptr);
 	return OPAL_SUCCESS;
 }

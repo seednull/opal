@@ -1,5 +1,8 @@
 #include "webgpu_internal.h"
 
+#include <assert.h>
+#include <string.h>
+
 /*
  */
 Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
@@ -27,7 +30,7 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 		default: info->device_type = OPAL_DEVICE_TYPE_UNKNOWN; break;
 	}
 
-	info->compute_shader = 1;
+	info->compute_pipeline = 1;
 	info->texture_compression_etc2 = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionETC2) != 0;
 	info->texture_compression_astc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionASTC) != 0;
 	info->texture_compression_bc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionBC) != 0;

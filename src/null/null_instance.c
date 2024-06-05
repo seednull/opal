@@ -1,46 +1,89 @@
 #include "null_internal.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
 /*
  */
-static void null_fillDefaultDeviceInfo(Opal_DeviceInfo *info)
+static Opal_Result null_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
-	static const char *device_name = "Null Device";
+	assert(this);
+	assert(device_count);
 
-	assert(info);
+	*device_count = 1;
 
-	memset(info, 0, sizeof(Opal_DeviceInfo));
-	memcpy(info->name, device_name, sizeof(char) * 12);
+	if (infos)
+		null_fillDeviceInfo(&infos[0]);
 
-	info->device_type = OPAL_DEVICE_TYPE_UNKNOWN;
-	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
-	info->max_buffer_alignment = 256;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result null_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
+{
+	assert(this);
+	assert(device);
+
+	Null_Instance *instance_ptr = (Null_Instance *)this;
+	Null_Device *device_ptr = (Null_Device *)malloc(sizeof(Null_Device));
+	assert(device_ptr);
+
+	Opal_Result result = null_deviceInitialize(device_ptr, instance_ptr);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result null_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
+{
+	assert(this);
+	assert(device);
+
+	if (index != 0)
+		return OPAL_INVALID_DEVICE_INDEX;
+
+	Null_Instance *instance_ptr = (Null_Instance *)this;
+	Null_Device *device_ptr = (Null_Device *)malloc(sizeof(Null_Device));
+	assert(device_ptr);
+
+	Opal_Result result = null_deviceInitialize(device_ptr, instance_ptr);
+	if (result != OPAL_SUCCESS)
+	{
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
+		return result;
+	}
+
+	*device = (Opal_Device)device_ptr;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result null_instanceDestroy(Opal_Instance this)
+{
+	assert(this);
+
+	Null_Instance *ptr = (Null_Instance *)this;
+
+	free(ptr->application_name);
+	free(ptr->engine_name);
+
+	free(ptr);
+	return OPAL_SUCCESS;
 }
 
 /*
  */
-static Null_Device *null_createDefaultDevice()
+static Opal_InstanceTable instance_vtbl =
 {
-	Null_Device *ptr = (Null_Device *)malloc(sizeof(Null_Device));
-	assert(ptr);
-
-	// vtable
-	ptr->vtbl.getInfo = null_deviceGetInfo;
-	ptr->vtbl.getQueue = null_deviceGetQueue;
-	ptr->vtbl.destroy = null_deviceDestroy;
-	ptr->vtbl.createBuffer = null_deviceCreateBuffer;
-	ptr->vtbl.createTexture = null_deviceCreateTexture;
-	ptr->vtbl.createTextureView = null_deviceCreateTextureView;
-	ptr->vtbl.mapBuffer = null_deviceMapBuffer;
-	ptr->vtbl.unmapBuffer = null_deviceUnmapBuffer;
-	ptr->vtbl.destroyBuffer = null_deviceDestroyBuffer;
-	ptr->vtbl.destroyTexture = null_deviceDestroyTexture;
-	ptr->vtbl.destroyTextureView = null_deviceDestroyTextureView;
-
-	// data
-	null_fillDefaultDeviceInfo(&ptr->info);
-
-	return ptr;
-}
+	null_instanceDestroy,
+	null_instanceEnumerateDevices,
+	null_instanceCreateDevice,
+	null_instanceCreateDefaultDevice,
+};
 
 /*
  */
@@ -53,10 +96,7 @@ Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *in
 	assert(ptr);
 
 	// vtable
-	ptr->vtbl.enumerateDevices = null_instanceEnumerateDevices;
-	ptr->vtbl.createDefaultDevice = null_instanceCreateDefaultDevice;
-	ptr->vtbl.createDevice = null_instanceCreateDevice;
-	ptr->vtbl.destroy = null_instanceDestroy;
+	ptr->vtbl = &instance_vtbl;
 
 	// info
 	ptr->application_name = strdup(desc->application_name);
@@ -65,53 +105,5 @@ Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *in
 	ptr->engine_version = desc->engine_version;
 
 	*instance = (Opal_Instance)ptr;
-	return OPAL_SUCCESS;
-}
-
-/*
- */
-Opal_Result null_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
-{
-	assert(this);
-	assert(device_count);
-
-	*device_count = 1;
-
-	if (infos)
-		null_fillDefaultDeviceInfo(&infos[0]);
-
-	return OPAL_SUCCESS;
-}
-
-Opal_Result null_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device)
-{
-	assert(this);
-	assert(device);
-
-	*device = (Opal_Device)null_createDefaultDevice();
-	return OPAL_SUCCESS;
-}
-
-Opal_Result null_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
-{
-	assert(this);
-	assert(device);
-
-	if (index != 0)
-		return OPAL_INVALID_DEVICE_INDEX;
-
-	*device = (Opal_Device)null_createDefaultDevice();
-	return OPAL_SUCCESS;
-}
-
-Opal_Result null_instanceDestroy(Instance *this)
-{
-	assert(this);
-
-	Null_Instance *ptr = (Null_Instance *)this;
-
-	free(ptr->application_name);
-	free(ptr->engine_name);
-
 	return OPAL_SUCCESS;
 }

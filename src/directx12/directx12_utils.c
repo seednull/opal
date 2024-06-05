@@ -1,5 +1,8 @@
 #include "directx12_internal.h"
 
+#include <assert.h>
+#include <string.h>
+
 /*
  */
 Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, Opal_DeviceInfo *info)

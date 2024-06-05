@@ -1,6 +1,9 @@
 #include "vulkan_internal.h"
 #include "common/intrinsics.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 /*
  */
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc)

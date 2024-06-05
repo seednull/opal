@@ -1,5 +1,17 @@
 #include "vulkan_internal.h"
 
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+static Opal_InstanceTable instance_vtbl =
+{
+	vulkan_instanceDestroy,
+	vulkan_instanceEnumerateDevices,
+	vulkan_instanceCreateDevice,
+	vulkan_instanceCreateDefaultDevice,
+};
+
 static Opal_Result vulkan_volkInitialize()
 {
 	static int once = 0;
@@ -56,10 +68,7 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	assert(ptr);
 
 	// vtable
-	ptr->vtbl.enumerateDevices = vulkan_instanceEnumerateDevices;
-	ptr->vtbl.createDefaultDevice = vulkan_instanceCreateDefaultDevice;
-	ptr->vtbl.createDevice = vulkan_instanceCreateDevice;
-	ptr->vtbl.destroy = vulkan_instanceDestroy;
+	ptr->vtbl = &instance_vtbl;
 
 	// data
 	ptr->instance = vulkan_instance;
@@ -72,7 +81,7 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_instanceEnumerateDevices(Instance *this, uint32_t *device_count, Opal_DeviceInfo *infos)
+Opal_Result vulkan_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
 	assert(device_count);
@@ -110,7 +119,7 @@ Opal_Result vulkan_instanceEnumerateDevices(Instance *this, uint32_t *device_cou
 	return opal_result;
 }
 
-Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint hint, Opal_Device *device)
+Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -182,8 +191,7 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
 	if (result != OPAL_SUCCESS)
 	{
-		device_ptr->vtbl.destroy((Device *)device_ptr);
-		free(device_ptr);
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
 		return result;
 	}
 
@@ -191,7 +199,7 @@ Opal_Result vulkan_instanceCreateDefaultDevice(Instance *this, Opal_DeviceHint h
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Device *device)
+Opal_Result vulkan_instanceCreateDevice(Opal_Instance this, uint32_t index, Opal_Device *device)
 {
 	assert(this);
 	assert(device);
@@ -244,8 +252,7 @@ Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
 	if (result != OPAL_SUCCESS)
 	{
-		device_ptr->vtbl.destroy((Device *)device_ptr);
-		free(device_ptr);
+		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
 		return result;
 	}
 
@@ -253,12 +260,13 @@ Opal_Result vulkan_instanceCreateDevice(Instance *this, uint32_t index, Opal_Dev
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_instanceDestroy(Instance *this)
+Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 
 	Vulkan_Instance *ptr = (Vulkan_Instance *)this;
 	vkDestroyInstance(ptr->instance, NULL);
 
+	free(ptr);
 	return OPAL_SUCCESS;
 }

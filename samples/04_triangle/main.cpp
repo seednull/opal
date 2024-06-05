@@ -123,22 +123,22 @@ void Application::init()
 	result = opalCreateCommandBuffer(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalBeginCommandBuffer(staging_command_buffer);
+	result = opalBeginCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferView staging_buffer_view = { staging_buffer, 0 };
 	Opal_BufferView triangle_buffer_view = { triangle_buffer, 0 };
 
-	result = opalCmdCopyBufferToBuffer(staging_command_buffer, staging_buffer_view, triangle_buffer_view, sizeof(TriangleData));
+	result = opalCmdCopyBufferToBuffer(device, staging_command_buffer, staging_buffer_view, triangle_buffer_view, sizeof(TriangleData));
 	assert(result == OPAL_SUCCESS);
 
-	result = opalEndCommandBuffer(staging_command_buffer);
+	result = opalEndCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmit(queue, 1, &staging_command_buffer, 0, nullptr);
+	result = opalSubmit(device, queue, 1, &staging_command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitCommandBuffers(1, &staging_command_buffer);
+	result = opalWaitCommandBuffers(device, 1, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandBuffer(device, staging_command_buffer);
@@ -281,13 +281,13 @@ void Application::render(Opal_SwapChain swap_chain)
 	Opal_TextureView swap_chain_texture_view = OPAL_NULL_HANDLE;
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
-	Opal_Result result = opalAcquire(swap_chain, &swap_chain_texture_view);
+	Opal_Result result = opalAcquire(device, swap_chain, &swap_chain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitCommandBuffers(1, &command_buffer);
+	result = opalWaitCommandBuffers(device, 1, &command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalBeginCommandBuffer(command_buffer);
+	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_FramebufferAttachment attachments =
@@ -298,40 +298,40 @@ void Application::render(Opal_SwapChain swap_chain)
 		{1.0f, 0.0f, 0.0f, 1.0f}
 	};
 
-	result = opalCmdTextureTransitionBarrier(command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
+	result = opalCmdTextureTransitionBarrier(device, command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBeginGraphicsPass(command_buffer, 1, &attachments);
+	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetGraphicsPipeline(command_buffer, pipeline);
+	result = opalCmdSetGraphicsPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetBindsets(command_buffer, 1, &bindset);
+	result = opalCmdSetBindsets(device, command_buffer, 1, &bindset);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferView vertex_buffer = {triangle_buffer, 0};
 	Opal_BufferView index_buffer = {triangle_buffer, offsetof(TriangleData, indices)};
 
-	result = opalCmdSetVertexBuffers(command_buffer, 1, &vertex_buffer);
+	result = opalCmdSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetIndexBuffer(command_buffer, index_buffer);
+	result = opalCmdSetIndexBuffer(device, command_buffer, index_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdDrawIndexedInstanced(command_buffer, 3, 0, 1, 0);
+	result = opalCmdDrawIndexedInstanced(device, command_buffer, 3, 0, 1, 0);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndGraphicsPass(command_buffer);
+	result = opalCmdEndGraphicsPass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
+	result = opalCmdTextureTransitionBarrier(device, command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalEndCommandBuffer(command_buffer);
+	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmit(queue, 1, &command_buffer, 0, nullptr);
+	result = opalSubmit(device, queue, 1, &command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 }
 
@@ -341,7 +341,7 @@ void Application::present(Opal_SwapChain swap_chain)
 
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
-	Opal_Result result = opalPresent(swap_chain, 1, &command_buffer);
+	Opal_Result result = opalPresent(device, swap_chain, 1, &command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
@@ -440,6 +440,13 @@ void mainloop()
 	app.shutdown();
 
 	destroyWindow(handle);
+}
+
+#else
+
+void mainloop()
+{
+
 }
 
 #endif
