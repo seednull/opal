@@ -239,6 +239,227 @@ VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
 	return result;
 }
 
+VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode)
+{
+	static VkFilter vk_filters[] =
+	{
+		VK_FILTER_NEAREST,
+		VK_FILTER_LINEAR,
+	};
+
+	return vk_filters[mode];
+}
+
+VkSamplerMipmapMode vulkan_helperToSamplerMipmapMode(Opal_SamplerFilterMode mode)
+{
+	static VkSamplerMipmapMode vk_sampler_mipmap_modes[] =
+	{
+		VK_SAMPLER_MIPMAP_MODE_NEAREST,
+		VK_SAMPLER_MIPMAP_MODE_LINEAR,
+	};
+
+	return vk_sampler_mipmap_modes[mode];
+}
+
+VkSamplerAddressMode vulkan_helperToSamplerAddressMode(Opal_SamplerAddressMode mode)
+{
+	static VkSamplerAddressMode vk_sampler_address_modes[] =
+	{
+		VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+	};
+
+	return vk_sampler_address_modes[mode];
+}
+
+VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op)
+{
+	static VkCompareOp vk_compare_ops[] =
+	{
+		VK_COMPARE_OP_NEVER,
+		VK_COMPARE_OP_LESS,
+		VK_COMPARE_OP_EQUAL,
+		VK_COMPARE_OP_LESS_OR_EQUAL,
+		VK_COMPARE_OP_GREATER,
+		VK_COMPARE_OP_NOT_EQUAL,
+		VK_COMPARE_OP_GREATER_OR_EQUAL,
+		VK_COMPARE_OP_ALWAYS,
+	};
+
+	return vk_compare_ops[op];
+}
+
+VkDescriptorType vulkan_helperToDescriptorType(Opal_BindingType type)
+{
+	static VkDescriptorType vk_descriptor_types[] =
+	{
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+	};
+
+	return vk_descriptor_types[type];
+}
+
+VkShaderStageFlags vulkan_helperToShaderStageFlags(Opal_ShaderStage stage)
+{
+	VkShaderStageFlags result = 0;
+	
+	if (stage & OPAL_SHADER_STAGE_VERTEX)
+		result |= VK_SHADER_STAGE_VERTEX_BIT;
+
+	if (stage & OPAL_SHADER_STAGE_TESSELLATION_CONTROL)
+		result |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+
+	if (stage & OPAL_SHADER_STAGE_TESSELLATION_EVALUATION)
+		result |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+
+	if (stage & OPAL_SHADER_STAGE_GEOMETRY)
+		result |= VK_SHADER_STAGE_GEOMETRY_BIT;
+
+	if (stage & OPAL_SHADER_STAGE_FRAGMENT)
+		result |= VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	if (stage & OPAL_SHADER_STAGE_COMPUTE)
+		result |= VK_SHADER_STAGE_COMPUTE_BIT;
+
+	if (stage & OPAL_SHADER_STAGE_TASK)
+		result |= VK_SHADER_STAGE_TASK_BIT_EXT;
+
+	if (stage & OPAL_SHADER_STAGE_MESH)
+		result |= VK_SHADER_STAGE_MESH_BIT_EXT;
+
+	if (stage & OPAL_SHADER_STAGE_RAYGEN)
+		result |= VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+
+	if (stage & OPAL_SHADER_STAGE_ANY_HIT)
+		result |= VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+
+	if (stage & OPAL_SHADER_STAGE_CLOSEST_HIT)
+		result |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+	if (stage & OPAL_SHADER_STAGE_MISS)
+		result |= VK_SHADER_STAGE_MISS_BIT_KHR;
+
+	if (stage & OPAL_SHADER_STAGE_INTERSECTION)
+		result |= VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+
+	return result;
+}
+
+VkVertexInputRate vulkan_helperToVertexInputRate(Opal_VertexInputRate rate)
+{
+	static VkVertexInputRate vk_vertex_input_rates[] =
+	{
+		VK_VERTEX_INPUT_RATE_VERTEX,
+		VK_VERTEX_INPUT_RATE_INSTANCE,
+	};
+
+	return vk_vertex_input_rates[rate];
+}
+
+VkPrimitiveTopology vulkan_helperToPrimitiveTopology(Opal_PrimitiveType type)
+{
+	static VkPrimitiveTopology vk_primitive_topologies[] =
+	{
+		VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+		VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+		VK_PRIMITIVE_TOPOLOGY_PATCH_LIST,
+		VK_PRIMITIVE_TOPOLOGY_PATCH_LIST,
+	};
+
+	return vk_primitive_topologies[type];
+}
+
+uint32_t vulkan_helperToPatchControlPoints(Opal_PrimitiveType type)
+{
+	static uint32_t vk_patch_control_points[] =
+	{
+		0,
+		0,
+		0,
+		3,
+		4,
+	};
+
+	return vk_patch_control_points[type];
+}
+
+VkCullModeFlags vulkan_helperToCullMode(Opal_CullMode mode)
+{
+	static VkCullModeFlags vk_cull_mode_flags[] =
+	{
+		VK_CULL_MODE_NONE,
+		VK_CULL_MODE_FRONT_BIT,
+		VK_CULL_MODE_BACK_BIT,
+		VK_CULL_MODE_FRONT_AND_BACK,
+	};
+
+	return vk_cull_mode_flags[mode];
+}
+
+VkFrontFace vulkan_helperToFrontFace(Opal_FrontFace face)
+{
+	static VkFrontFace vk_front_faces[] =
+	{
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		VK_FRONT_FACE_CLOCKWISE,
+	};
+
+	return vk_front_faces[face];
+}
+
+VkStencilOp vulkan_helperToStencilOp(Opal_StencilOp op)
+{
+	static VkStencilOp vk_stencil_ops[] =
+	{
+		VK_STENCIL_OP_KEEP,
+		VK_STENCIL_OP_ZERO,
+		VK_STENCIL_OP_REPLACE,
+		VK_STENCIL_OP_INVERT,
+		VK_STENCIL_OP_INCREMENT_AND_CLAMP,
+		VK_STENCIL_OP_DECREMENT_AND_CLAMP,
+		VK_STENCIL_OP_INCREMENT_AND_WRAP,
+		VK_STENCIL_OP_DECREMENT_AND_WRAP,
+	};
+
+	return vk_stencil_ops[op];
+}
+
+VkBlendFactor vulkan_helperToBlendFactor(Opal_BlendFactor factor)
+{
+	static VkBlendFactor vk_blend_factors[] =
+	{
+		VK_BLEND_FACTOR_ZERO,
+		VK_BLEND_FACTOR_ONE,
+		VK_BLEND_FACTOR_SRC_COLOR,
+		VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
+		VK_BLEND_FACTOR_DST_COLOR,
+		VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+		VK_BLEND_FACTOR_SRC_ALPHA,
+		VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+		VK_BLEND_FACTOR_DST_ALPHA,
+		VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,
+	};
+
+	return vk_blend_factors[factor];
+}
+
+VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op)
+{
+	static VkBlendOp vk_blend_ops[] =
+	{
+		VK_BLEND_OP_ADD,
+		VK_BLEND_OP_SUBTRACT,
+		VK_BLEND_OP_REVERSE_SUBTRACT,
+		VK_BLEND_OP_MIN,
+		VK_BLEND_OP_MAX,
+	};
+
+	return vk_blend_ops[op];
+}
+
 Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info)
 {
 	assert(info);

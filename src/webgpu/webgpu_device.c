@@ -71,7 +71,7 @@ static Opal_Result webgpu_deviceCreateBindsetLayout(Opal_Device this, uint32_t n
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceCreateBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result webgpu_deviceCreateBindsetPool(Opal_Device this, Opal_BindsetLayout bindset_layout, uint32_t max_bindings, Opal_BindsetPool *bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -141,7 +141,7 @@ static Opal_Result webgpu_deviceDestroyBindsetLayout(Opal_Device this, Opal_Bind
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceDestroyBindset(Opal_Device this, Opal_Bindset bindset)
+static Opal_Result webgpu_deviceDestroyBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -172,6 +172,16 @@ static Opal_Result webgpu_deviceDestroyRaytracePipeline(Opal_Device this, Opal_R
 }
 
 static Opal_Result webgpu_deviceDestroySwapChain(Opal_Device this, Opal_SwapChain swap_chain)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result webgpu_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result webgpu_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -351,7 +361,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCreateCommandBuffer,
 	webgpu_deviceCreateShader,
 	webgpu_deviceCreateBindsetLayout,
-	webgpu_deviceCreateBindset,
+	webgpu_deviceCreateBindsetPool,
 	webgpu_deviceCreatePipelineLayout,
 	webgpu_deviceCreateGraphicsPipeline,
 	webgpu_deviceCreateMeshletPipeline,
@@ -366,7 +376,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceDestroyCommandBuffer,
 	webgpu_deviceDestroyShader,
 	webgpu_deviceDestroyBindsetLayout,
-	webgpu_deviceDestroyBindset,
+	webgpu_deviceDestroyBindsetPool,
 	webgpu_deviceDestroyPipelineLayout,
 	webgpu_deviceDestroyGraphicsPipeline,
 	webgpu_deviceDestroyMeshletPipeline,
@@ -374,6 +384,8 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceDestroyRaytracePipeline,
 	webgpu_deviceDestroySwapChain,
 
+	webgpu_deviceAllocateBindset,
+	webgpu_deviceFreeBindset,
 	webgpu_deviceMapBuffer,
 	webgpu_deviceUnmapBuffer,
 	webgpu_deviceUpdateBindset,

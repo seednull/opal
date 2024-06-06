@@ -170,7 +170,7 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	// bindings
-	Opal_BindsetLayoutBinding bindset_layout_binding = { 0, OPAL_BINDING_TYPE_BUFFER, OPAL_SHADER_STAGE_ALL_GRAPHICS };
+	Opal_BindsetLayoutBinding bindset_layout_binding = { 0, OPAL_BINDING_TYPE_UNIFORM_BUFFER, OPAL_SHADER_STAGE_ALL_GRAPHICS };
 
 	result = opalCreateBindsetLayout(device, 1, &bindset_layout_binding, &bindset_layout);
 	assert(result == OPAL_SUCCESS);
@@ -202,8 +202,6 @@ void Application::init()
 		OPAL_VERTEX_INPUT_RATE_VERTEX
 	};
 
-	Opal_BlendState blend_state = {};
-
 	Opal_GraphicsPipelineDesc pipeline_desc = {};
 	pipeline_desc.pipeline_layout = pipeline_layout;
 
@@ -218,8 +216,8 @@ void Application::init()
 	pipeline_desc.front_face = OPAL_FRONT_FACE_COUNTER_CLOCKWISE;
 	pipeline_desc.rasterization_samples = OPAL_SAMPLES_1;
 
-	pipeline_desc.num_blend_states = 1;
-	pipeline_desc.blend_states = &blend_state;
+	pipeline_desc.num_color_attachments = 1;
+	pipeline_desc.color_attachment_formats[0] = OPAL_FORMAT_BGRA8_UNORM;
 
 	result = opalCreateGraphicsPipeline(device, &pipeline_desc, &pipeline);
 	assert(result == OPAL_SUCCESS);

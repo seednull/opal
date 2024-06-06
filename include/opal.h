@@ -541,8 +541,8 @@ typedef enum Opal_ShaderStage_t
 
 typedef enum Opal_BindingType_t
 {
-	OPAL_BINDING_TYPE_BUFFER = 0,
-	OPAL_BINDING_TYPE_TEXTURE,
+	OPAL_BINDING_TYPE_UNIFORM_BUFFER = 0,
+	OPAL_BINDING_TYPE_COMBINED_TEXTURE_SAMPLER,
 	// TODO: more types
 
 	OPAL_BINDING_TYPE_ENUM_MAX,
@@ -733,8 +733,12 @@ typedef struct Opal_BindsetBinding_t
 	uint32_t binding;
 	union
 	{
-		Opal_TextureView texture_view;
 		Opal_BufferView buffer;
+		struct
+		{
+			Opal_TextureView texture_view;
+			Opal_Sampler sampler;
+		};
 		// TODO: add more types
 	};
 } Opal_BindsetBinding;

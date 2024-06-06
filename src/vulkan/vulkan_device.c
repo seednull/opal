@@ -53,7 +53,10 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 
 	// TODO: proper cleanup for all previously created buffers & images
 	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+	{
+		vkDestroyCommandPool(ptr->device, ptr->command_pools[i], NULL);
 		free(ptr->queue_handles[i]);
+	}
 
 	opal_poolShutdown(&ptr->swap_chains);
 	opal_poolShutdown(&ptr->pipelines);
@@ -361,12 +364,12 @@ static Opal_Result vulkan_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 
 	VkSamplerCreateInfo sampler_info = {0};
 	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	sampler_info.magFilter = vulkan_helperToMagFilter(desc->mag_filter);
-	sampler_info.minFilter = vulkan_helperToMinFilter(desc->min_filter);
-	sampler_info.mipmapMode = vulkan_helperToMipmapMode(desc->mip_filter);
-	sampler_info.addressModeU = vulkan_helperToAddressMode(desc->address_mode_u);
-	sampler_info.addressModeV = vulkan_helperToAddressMode(desc->address_mode_v);
-	sampler_info.addressModeW = vulkan_helperToAddressMode(desc->address_mode_w);
+	sampler_info.magFilter = vulkan_helperToFilter(desc->mag_filter);
+	sampler_info.minFilter = vulkan_helperToFilter(desc->min_filter);
+	sampler_info.mipmapMode = vulkan_helperToSamplerMipmapMode(desc->mip_filter);
+	sampler_info.addressModeU = vulkan_helperToSamplerAddressMode(desc->address_mode_u);
+	sampler_info.addressModeV = vulkan_helperToSamplerAddressMode(desc->address_mode_v);
+	sampler_info.addressModeW = vulkan_helperToSamplerAddressMode(desc->address_mode_w);
 	sampler_info.anisotropyEnable = desc->max_anisotropy > 0;
 	sampler_info.maxAnisotropy = (float)desc->max_anisotropy;
 	sampler_info.compareEnable = desc->compare_op != OPAL_COMPARE_OP_NEVER;
@@ -463,7 +466,7 @@ static Opal_Result vulkan_deviceCreateBindsetLayout(Opal_Device this, uint32_t n
 		vulkan_bindings[i].descriptorCount = 1;
 		vulkan_bindings[i].descriptorType = vulkan_helperToDescriptorType(bindings[i].type);
 		vulkan_bindings[i].pImmutableSamplers = NULL;
-		vulkan_bindings[i].stageFlags = vulkan_helperToStageFlags(bindings[i].visibility);
+		vulkan_bindings[i].stageFlags = vulkan_helperToShaderStageFlags(bindings[i].visibility);
 	}
 
 	set_layout_info.pBindings = vulkan_bindings;
@@ -658,7 +661,7 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 		vertex_streams[i].binding = i;
 		vertex_streams[i].stride = vertex_stream->stride;
-		vertex_streams[i].inputRate = vulkan_helperToInputRate(vertex_stream->rate);
+		vertex_streams[i].inputRate = vulkan_helperToVertexInputRate(vertex_stream->rate);
 	}
 
 	vertex_input.vertexBindingDescriptionCount = desc->num_vertex_streams;

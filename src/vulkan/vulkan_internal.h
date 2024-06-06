@@ -213,6 +213,21 @@ VkFormat vulkan_helperToFormat(Opal_Format format);
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
+VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode);
+VkSamplerMipmapMode vulkan_helperToSamplerMipmapMode(Opal_SamplerFilterMode mode);
+VkSamplerAddressMode vulkan_helperToSamplerAddressMode(Opal_SamplerAddressMode mode);
+VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op);
+VkDescriptorType vulkan_helperToDescriptorType(Opal_BindingType type);
+VkShaderStageFlags vulkan_helperToShaderStageFlags(Opal_ShaderStage stage);
+VkVertexInputRate vulkan_helperToVertexInputRate(Opal_VertexInputRate rate);
+VkPrimitiveTopology vulkan_helperToPrimitiveTopology(Opal_PrimitiveType type);
+uint32_t vulkan_helperToPatchControlPoints(Opal_PrimitiveType type);
+VkCullModeFlags vulkan_helperToCullMode(Opal_CullMode mode);
+VkFrontFace vulkan_helperToFrontFace(Opal_FrontFace face);
+VkStencilOp vulkan_helperToStencilOp(Opal_StencilOp op);
+VkBlendFactor vulkan_helperToBlendFactor(Opal_BlendFactor factor);
+VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op);
+
 Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info);
 Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 

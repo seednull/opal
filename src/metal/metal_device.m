@@ -65,7 +65,7 @@ static Opal_Result metal_deviceCreateBindsetLayout(Opal_Device this, uint32_t nu
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result metal_deviceCreateBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result metal_deviceCreateBindsetPool(Opal_Device this, Opal_BindsetLayout bindset_layout, uint32_t max_bindsets, Opal_BindsetPool *bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -135,7 +135,7 @@ static Opal_Result metal_deviceDestroyBindsetLayout(Opal_Device this, Opal_Binds
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result metal_deviceDestroyBindset(Opal_Device this, Opal_Bindset bindset)
+static Opal_Result metal_deviceDestroyBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -166,6 +166,16 @@ static Opal_Result metal_deviceDestroyRaytracePipeline(Opal_Device this, Opal_Ra
 }
 
 static Opal_Result metal_deviceDestroySwapChain(Opal_Device this, Opal_SwapChain swap_chain)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result metal_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result metal_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -345,7 +355,7 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCreateCommandBuffer,
 	metal_deviceCreateShader,
 	metal_deviceCreateBindsetLayout,
-	metal_deviceCreateBindset,
+	metal_deviceCreateBindsetPool,
 	metal_deviceCreatePipelineLayout,
 	metal_deviceCreateGraphicsPipeline,
 	metal_deviceCreateMeshletPipeline,
@@ -360,7 +370,7 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceDestroyCommandBuffer,
 	metal_deviceDestroyShader,
 	metal_deviceDestroyBindsetLayout,
-	metal_deviceDestroyBindset,
+	metal_deviceDestroyBindsetPool,
 	metal_deviceDestroyPipelineLayout,
 	metal_deviceDestroyGraphicsPipeline,
 	metal_deviceDestroyMeshletPipeline,
@@ -368,6 +378,8 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceDestroyRaytracePipeline,
 	metal_deviceDestroySwapChain,
 
+	metal_deviceAllocateBindset,
+	metal_deviceFreeBindset,
 	metal_deviceMapBuffer,
 	metal_deviceUnmapBuffer,
 	metal_deviceUpdateBindset,

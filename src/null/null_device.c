@@ -176,6 +176,16 @@ static Opal_Result null_deviceDestroySwapChain(Opal_Device this, Opal_SwapChain 
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -374,8 +384,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyRaytracePipeline,
 	null_deviceDestroySwapChain,
 
-	NULL, // null_deviceAllocateBindset
-	NULL, // null_deviceFreeBindset
+	null_deviceAllocateBindset,
+	null_deviceFreeBindset,
 	null_deviceMapBuffer,
 	null_deviceUnmapBuffer,
 	null_deviceUpdateBindset,
