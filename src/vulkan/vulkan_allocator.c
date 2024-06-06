@@ -204,14 +204,14 @@ static Opal_Result vulkan_allocatorFreeHeapAlloc(Vulkan_Allocator *allocator, ui
 	return opal_heapFree(&heap->heap, heap_allocation);
 }
 
-static Opal_Result vulkan_allocatorBlockAlloc(Vulkan_Allocator *allocator, VkDevice device, VkPhysicalDevice physical_device, uint32_t memory_type, uint32_t heap_id, VkDeviceSize size, Opal_PoolHandle *handle)
+static Opal_Result vulkan_allocatorBlockAlloc(Vulkan_Device *device, uint32_t memory_type, uint32_t heap_id, VkDeviceSize size, Opal_PoolHandle *handle)
 {
-	assert(allocator);
-	assert(handle);
-	assert(device != VK_NULL_HANDLE);
-	assert(physical_device != VK_NULL_HANDLE);
+	assert(device);
+
+	Vulkan_Allocator *allocator = &device->allocator;
 	assert(memory_type < VK_MAX_MEMORY_TYPES);
 	assert(size > 0);
+	assert(handle);
 
 	VkPhysicalDeviceMemoryProperties2 memory_properties = {0};
 	VkPhysicalDeviceMemoryBudgetPropertiesEXT memory_budgets = {0};
@@ -220,7 +220,7 @@ static Opal_Result vulkan_allocatorBlockAlloc(Vulkan_Allocator *allocator, VkDev
 
 	memory_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
 	memory_properties.pNext = &memory_budgets;
-	vkGetPhysicalDeviceMemoryProperties2(physical_device, &memory_properties);
+	vkGetPhysicalDeviceMemoryProperties2(device->physical_device, &memory_properties);
 
 	uint32_t heap_index = memory_properties.memoryProperties.memoryTypes[memory_type].heapIndex;
 
@@ -240,7 +240,7 @@ static Opal_Result vulkan_allocatorBlockAlloc(Vulkan_Allocator *allocator, VkDev
 	info.memoryTypeIndex = memory_type;
 	info.allocationSize = block.size;
 
-	VkResult result = vkAllocateMemory(device, &info, NULL, &block.memory);
+	VkResult result = device->vk.vkAllocateMemory(device->device, &info, NULL, &block.memory);
 	if (result != VK_SUCCESS)
 		return OPAL_NO_MEMORY;
 
@@ -250,10 +250,11 @@ static Opal_Result vulkan_allocatorBlockAlloc(Vulkan_Allocator *allocator, VkDev
 
 /*
  */
-Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity)
+Opal_Result vulkan_allocatorInitialize(Vulkan_Device *device, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity)
 {
-	assert(allocator);
+	assert(device);
 
+	Vulkan_Allocator *allocator = &device->allocator;
 	memset(allocator, 0, sizeof(Vulkan_Allocator));
 
 	allocator->heaps = (Vulkan_MemoryHeap *)malloc(sizeof(Vulkan_MemoryHeap) * max_heaps);
@@ -272,9 +273,11 @@ Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t hea
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device)
+Opal_Result vulkan_allocatorShutdown(Vulkan_Device *device)
 {
-	assert(allocator);
+	assert(device);
+
+	Vulkan_Allocator *allocator = &device->allocator;
 	assert(allocator->heaps);
 
 	for (uint32_t i = 0; i < allocator->num_heaps; ++i)
@@ -294,21 +297,22 @@ Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice devic
 
 /*
  */
-Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkPhysicalDevice physical_device, const Vulkan_AllocationDesc *desc, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation)
+Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Device *device, const Vulkan_AllocationDesc *desc, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation)
 {
-	assert(allocator);
+	assert(device);
 	assert(desc);
-	assert(device != VK_NULL_HANDLE);
 	assert(desc->size > 0);
 	assert(memory_type < VK_MAX_MEMORY_TYPES);
 	assert(allocation);
+
+	Vulkan_Allocator *allocator = &device->allocator;
 
 	// create dedicated block
 	if (dedicated)
 	{
 		Opal_PoolHandle handle = OPAL_POOL_HANDLE_NULL;
 
-		Opal_Result opal_result = vulkan_allocatorBlockAlloc(allocator, device, physical_device, memory_type, OPAL_VULKAN_HEAP_NULL, desc->size, &handle);
+		Opal_Result opal_result = vulkan_allocatorBlockAlloc(device, memory_type, OPAL_VULKAN_HEAP_NULL, desc->size, &handle);
 		if (opal_result != OPAL_SUCCESS)
 			return opal_result;
 
@@ -371,7 +375,7 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 
 		heap_id = allocator->num_heaps;
 
-		Opal_Result opal_result = vulkan_allocatorBlockAlloc(allocator, device, physical_device, memory_type, heap_id, allocator->heap_size, &block_handle);
+		Opal_Result opal_result = vulkan_allocatorBlockAlloc(device, memory_type, heap_id, allocator->heap_size, &block_handle);
 		if (opal_result != OPAL_SUCCESS)
 			return opal_result;
 
@@ -415,9 +419,11 @@ Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr)
+Opal_Result vulkan_allocatorMapMemory(Vulkan_Device *device, Vulkan_Allocation allocation, void **ptr)
 {
-	assert(allocator);
+	assert(device);
+
+	Vulkan_Allocator *allocator = &device->allocator;
 	assert(allocation.block != OPAL_POOL_HANDLE_NULL);
 
 	Vulkan_MemoryBlock *block = opal_poolGetElement(&allocator->blocks, allocation.block);
@@ -425,7 +431,7 @@ Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice devi
 
 	if (block->map_count == 0)
 	{
-		VkResult result = vkMapMemory(device, block->memory, 0, block->size, 0, &block->mapped_ptr);
+		VkResult result = device->vk.vkMapMemory(device->device, block->memory, 0, block->size, 0, &block->mapped_ptr);
 		if (result != VK_SUCCESS)
 			return OPAL_VULKAN_ERROR;
 	}
@@ -436,9 +442,11 @@ Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice devi
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation)
+Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Device *device, Vulkan_Allocation allocation)
 {
-	assert(allocator);
+	assert(device);
+
+	Vulkan_Allocator *allocator = &device->allocator;
 	assert(allocation.block != OPAL_POOL_HANDLE_NULL);
 
 	Vulkan_MemoryBlock *block = opal_poolGetElement(&allocator->blocks, allocation.block);
@@ -449,16 +457,18 @@ Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice de
 	block->map_count--;
 	if (block->map_count == 0)
 	{
-		vkUnmapMemory(device, block->memory);
+		device->vk.vkUnmapMemory(device->device, block->memory);
 		block->mapped_ptr = NULL;
 	}
 
 	return OPAL_SUCCESS;
 }
 
-Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation)
+Opal_Result vulkan_allocatorFreeMemory(Vulkan_Device *device, Vulkan_Allocation allocation)
 {
-	assert(allocator);
+	assert(device);
+
+	Vulkan_Allocator *allocator = &device->allocator;
 	assert(allocation.block != OPAL_POOL_HANDLE_NULL);
 
 	Vulkan_MemoryBlock *block = opal_poolGetElement(&allocator->blocks, allocation.block);
@@ -470,6 +480,6 @@ Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice dev
 		return vulkan_allocatorFreeHeapAlloc(allocator, block->heap, allocation.heap_metadata, allocation.offset);
 	}
 
-	vkFreeMemory(device, block->memory, NULL);
+	device->vk.vkFreeMemory(device->device, block->memory, NULL);
 	return opal_poolRemoveElement(&allocator->blocks, allocation.block);
 }

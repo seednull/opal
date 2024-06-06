@@ -31,7 +31,40 @@ VkImageType vulkan_helperToImageType(Opal_TextureType type)
 	return vk_image_types[type];
 }
 
-VkFormat vulkan_helperToImageFormat(Opal_Format format)
+VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type)
+{
+	static VkImageViewType vk_image_view_types[] =
+	{
+		VK_IMAGE_VIEW_TYPE_1D,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+		VK_IMAGE_VIEW_TYPE_CUBE,
+		VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
+		VK_IMAGE_VIEW_TYPE_3D,
+	};
+
+	return vk_image_view_types[type];
+}
+
+VkImageAspectFlags vulkan_helperToAspectMask(Opal_Format format)
+{
+	if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
+		return VK_IMAGE_ASPECT_COLOR_BIT;
+
+	if (format >= OPAL_FORMAT_DEPTHSTENCIL_BEGIN && format <= OPAL_FORMAT_DEPTHSTENCIL_END)
+	{
+		VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+		if (format >= OPAL_FORMAT_D16_UNORM_S8_UINT)
+			aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		return aspect_flags;
+	}
+
+	return 0;
+}
+
+VkFormat vulkan_helperToFormat(Opal_Format format)
 {
 	static VkFormat vk_formats[] =
 	{
@@ -132,7 +165,7 @@ VkFormat vulkan_helperToImageFormat(Opal_Format format)
 	return vk_formats[format];
 }
 
-VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_Samples samples)
+VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples)
 {
 	static VkSampleCountFlagBits vk_sample_count_bits[] =
 	{

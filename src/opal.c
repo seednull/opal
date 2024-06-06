@@ -235,16 +235,16 @@ Opal_Result opalCreateBindsetLayout(Opal_Device device, uint32_t num_bindings, c
 	return ptr->vtbl->createBindsetLayout(device, num_bindings, bindings, bindset_layout);
 }
 
-Opal_Result opalCreateBindset(Opal_Device device, Opal_BindsetLayout bindset_layout, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+Opal_Result opalCreateBindsetPool(Opal_Device device, Opal_BindsetLayout bindset_layout, uint32_t max_bindsets, Opal_BindsetPool *bindset_pool)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->createBindset);
+	assert(ptr->vtbl->createBindsetPool);
 
-	return ptr->vtbl->createBindset(device, bindset_layout, num_bindings, bindings, bindset);
+	return ptr->vtbl->createBindsetPool(device, bindset_layout, max_bindsets, bindset_pool);
 }
 
 Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
@@ -405,16 +405,16 @@ Opal_Result opalDestroyBindsetLayout(Opal_Device device, Opal_BindsetLayout bind
 	return ptr->vtbl->destroyBindsetLayout(device, bindset_layout);
 }
 
-Opal_Result opalDestroyBindset(Opal_Device device, Opal_Bindset bindset)
+Opal_Result opalDestroyBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyBindset);
+	assert(ptr->vtbl->destroyBindsetPool);
 
-	return ptr->vtbl->destroyBindset(device, bindset);
+	return ptr->vtbl->destroyBindsetPool(device, bindset_pool);
 }
 
 Opal_Result opalDestroyPipelineLayout(Opal_Device device, Opal_PipelineLayout pipeline_layout)
@@ -491,6 +491,30 @@ Opal_Result opalDestroySwapChain(Opal_Device device, Opal_SwapChain swap_chain)
 
 /*
  */
+Opal_Result opalAllocateBindset(Opal_Device device, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->allocateBindset);
+
+	return ptr->vtbl->allocateBindset(device, bindset_pool, num_bindings, bindings, bindset);
+}
+
+Opal_Result opalFreeBindset(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->freeBindset);
+
+	return ptr->vtbl->freeBindset(device, bindset_pool, bindset);
+}
+
 Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **mapped_ptr)
 {
 	if (device == OPAL_NULL_HANDLE)

@@ -13,6 +13,8 @@
 
 #define OPAL_VULKAN_HEAP_NULL 0xFFFFFFFF
 
+typedef struct VolkDeviceTable VolkDeviceTable;
+
 typedef enum Vulkan_ResourceType_t
 {
 	VULKAN_RESOURCE_TYPE_LINEAR = 1,
@@ -94,13 +96,27 @@ typedef struct Vulkan_Instance_t
 typedef struct Vulkan_Device_t
 {
 	Opal_DeviceTable *vtbl;
+	VolkDeviceTable vk;
 	VkPhysicalDevice physical_device;
 	VkDevice device;
 	Vulkan_DeviceEnginesInfo device_engines_info;
 	Opal_PoolHandle *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
+	VkCommandPool command_pools[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
+
 	Opal_Pool queues;
 	Opal_Pool buffers;
 	Opal_Pool images;
+	Opal_Pool image_views;
+	Opal_Pool samplers;
+	Opal_Pool command_buffers;
+	Opal_Pool shaders;
+	Opal_Pool bindset_layouts;
+	Opal_Pool bindset_pools;
+	Opal_Pool bindsets;
+	Opal_Pool pipeline_layouts;
+	Opal_Pool pipelines;
+	Opal_Pool swap_chains;
+
 #ifdef OPAL_HAS_VMA
 	uint32_t use_vma;
 	VmaAllocator vma_allocator;
@@ -127,11 +143,64 @@ typedef struct Vulkan_Buffer_t
 typedef struct Vulkan_Image_t
 {
 	VkImage image;
+	Opal_Format format;
 #ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
 #endif
 	Vulkan_Allocation allocation;
 } Vulkan_Image;
+
+typedef struct Vulkan_ImageView_t
+{
+	VkImageView image_view;
+} Vulkan_ImageView;
+
+typedef struct Vulkan_Sampler_t
+{
+	VkSampler sampler;
+} Vulkan_Sampler;
+
+typedef struct Vulkan_CommandBuffer_t
+{
+	VkCommandBuffer command_buffer;
+} Vulkan_CommandBuffer;
+
+typedef struct Vulkan_Shader_t
+{
+	VkShaderModule shader;
+} Vulkan_Shader;
+
+typedef struct Vulkan_BindsetLayout_t
+{
+	VkDescriptorSetLayout layout;
+	VkDescriptorSetLayoutBinding *layout_bindings;
+	uint32_t num_layout_bindings;
+} Vulkan_BindsetLayout;
+
+typedef struct Vulkan_BindsetPool_t
+{
+	VkDescriptorPool pool;
+} Vulkan_BindsetPool;
+
+typedef struct Vulkan_Bindset_t
+{
+	VkDescriptorSet bindset;
+} Vulkan_Bindset;
+
+typedef struct Vulkan_PipelineLayout_t
+{
+	VkPipelineLayout layout;
+} Vulkan_PipelineLayout;
+
+typedef struct Vulkan_Pipeline_t
+{
+	VkPipeline pipeline;
+} Vulkan_Pipeline;
+
+typedef struct Vulkan_SwapChain_t
+{
+	VkSwapchainKHR swap_chain;
+} Vulkan_SwapChain;
 
 Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device);
 Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
@@ -140,16 +209,16 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
-VkFormat vulkan_helperToImageFormat(Opal_Format format);
-VkSampleCountFlagBits vulkan_helperToImageSamples(Opal_Samples samples);
+VkFormat vulkan_helperToFormat(Opal_Format format);
+VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
 Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info);
 Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 
-Opal_Result vulkan_allocatorInitialize(Vulkan_Allocator *allocator, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
-Opal_Result vulkan_allocatorShutdown(Vulkan_Allocator *allocator, VkDevice device);
-Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Allocator *allocator, VkDevice device, VkPhysicalDevice physical_device, const Vulkan_AllocationDesc *desc, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
-Opal_Result vulkan_allocatorMapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation, void **ptr);
-Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
-Opal_Result vulkan_allocatorFreeMemory(Vulkan_Allocator *allocator, VkDevice device, Vulkan_Allocation allocation);
+Opal_Result vulkan_allocatorInitialize(Vulkan_Device *device, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
+Opal_Result vulkan_allocatorShutdown(Vulkan_Device *device);
+Opal_Result vulkan_allocatorAllocateMemory(Vulkan_Device *device, const Vulkan_AllocationDesc *desc, uint32_t memory_type, uint32_t dedicated, Vulkan_Allocation *allocation);
+Opal_Result vulkan_allocatorMapMemory(Vulkan_Device *device, Vulkan_Allocation allocation, void **ptr);
+Opal_Result vulkan_allocatorUnmapMemory(Vulkan_Device *device, Vulkan_Allocation allocation);
+Opal_Result vulkan_allocatorFreeMemory(Vulkan_Device *device, Vulkan_Allocation allocation);
