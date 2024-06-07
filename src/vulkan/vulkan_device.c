@@ -72,6 +72,8 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 	opal_poolShutdown(&ptr->buffers);
 	opal_poolShutdown(&ptr->queues);
 
+	opal_bumpShutdown(&ptr->bump);
+
 	vkDestroyDevice(ptr->device, NULL);
 
 	free(ptr);
@@ -538,7 +540,10 @@ static Opal_Result vulkan_deviceCreateBindsetPool(Opal_Device this, Opal_Bindset
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.maxSets = max_bindsets;
 
-	VkDescriptorPoolSize *vulkan_pool_sizes = (VkDescriptorPoolSize *)malloc(sizeof(VkDescriptorPoolSize) * num_layout_bindings);
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorPoolSize) * num_layout_bindings);
+
+	VkDescriptorPoolSize *vulkan_pool_sizes = (VkDescriptorPoolSize *)device_ptr->bump.data;
 	for (uint32_t i = 0; i < num_layout_bindings; ++i)
 	{
 		vulkan_pool_sizes[i].descriptorCount = vulkan_layout_bindings[i].descriptorCount;
@@ -549,8 +554,6 @@ static Opal_Result vulkan_deviceCreateBindsetPool(Opal_Device this, Opal_Bindset
 	pool_info.pPoolSizes = vulkan_pool_sizes;
 
 	VkResult vulkan_result = device_ptr->vk.vkCreateDescriptorPool(vulkan_device, &pool_info, NULL, &vulkan_pool);
-	free(vulkan_pool_sizes);
-
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
@@ -575,7 +578,10 @@ static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t 
 	if (num_bindset_layouts > 0)
 	{
 		assert(bindset_layouts);
-		set_layouts = (VkDescriptorSetLayout *)malloc(sizeof(VkDescriptorSetLayout) * num_bindset_layouts);
+
+		opal_bumpReset(&device_ptr->bump);
+		opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorSetLayout) * num_bindset_layouts);
+		set_layouts = (VkDescriptorSetLayout *)device_ptr->bump.data;
 
 		for (uint32_t i = 0; i < num_bindset_layouts; ++i)
 		{
@@ -595,7 +601,6 @@ static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t 
 	pipeline_layout_info.pSetLayouts = set_layouts;
 
 	VkResult vulkan_result = device_ptr->vk.vkCreatePipelineLayout(vulkan_device, &pipeline_layout_info, NULL, &vulkan_pipeline_layout);
-	free(set_layouts);
 
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
@@ -673,8 +678,12 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
 		num_vertex_attributes += desc->vertex_streams[i].num_vertex_attributes;
 
-	VkVertexInputBindingDescription *vertex_streams = (VkVertexInputBindingDescription *)malloc(sizeof(VkVertexInputBindingDescription) * desc->num_vertex_streams);
-	VkVertexInputAttributeDescription *vertex_attributes = (VkVertexInputAttributeDescription *)malloc(sizeof(VkVertexInputAttributeDescription) * num_vertex_attributes);
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t vertex_streams_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkVertexInputBindingDescription) * desc->num_vertex_streams);
+	uint32_t vertex_attributes_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkVertexInputAttributeDescription) * num_vertex_attributes);
+
+	VkVertexInputBindingDescription *vertex_streams = (VkVertexInputBindingDescription *)(device_ptr->bump.data + vertex_streams_offset);
+	VkVertexInputAttributeDescription *vertex_attributes = (VkVertexInputAttributeDescription *)(device_ptr->bump.data + vertex_attributes_offset);
 
 	uint32_t num_attributes = 0;
 	for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
@@ -810,10 +819,6 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	pipeline_info.pNext = &dynamic_rendering_info;
 
 	VkResult vulkan_result = device_ptr->vk.vkCreateGraphicsPipelines(vulkan_device, vulkan_pipeline_cache, 1, &pipeline_info, NULL, &vulkan_pipeline);
-
-	// error handling & result
-	free(vertex_streams);
-	free(vertex_attributes);
 
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
@@ -956,12 +961,14 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 		return OPAL_VULKAN_ERROR;
 	}
 
-	VkPresentModeKHR *present_modes = (VkPresentModeKHR *)malloc(sizeof(VkPresentModeKHR) * num_present_modes);
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * num_present_modes);
+
+	VkPresentModeKHR *present_modes = (VkPresentModeKHR *)device_ptr->bump.data;
 	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, NULL);
 	if (vulkan_result != VK_SUCCESS)
 	{
 		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
-		free(present_modes);
 		return OPAL_VULKAN_ERROR;
 	}
 
@@ -976,8 +983,6 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 			break;
 		}
 	}
-
-	free(present_modes);
 
 	if (found_present_mode == VK_FALSE)
 	{
@@ -994,12 +999,14 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 		return OPAL_VULKAN_ERROR;
 	}
 
-	VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * num_surface_formats);
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * num_surface_formats);
+
+	VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)device_ptr->bump.data;
 	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, surface_formats);
 	if (vulkan_result != VK_SUCCESS)
 	{
 		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
-		free(surface_formats);
 		return OPAL_VULKAN_ERROR;
 	}
 
@@ -1015,8 +1022,6 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 			break;
 		}
 	}
-
-	free(surface_formats);
 
 	if (found_format == VK_FALSE)
 	{
@@ -1045,11 +1050,13 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	}
 
 	// images
-	VkImage *vulkan_images = (VkImage *)malloc(sizeof(VkImage) * num_images);
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkImage) * num_images);
+
+	VkImage *vulkan_images = (VkImage *)device_ptr->bump.data;
 	device_ptr->vk.vkGetSwapchainImagesKHR(vulkan_device, vulkan_swapchain, &num_images, vulkan_images);
 	if (vulkan_result != VK_SUCCESS)
 	{
-		free(vulkan_images);
 		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
 		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
@@ -1104,8 +1111,6 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 
 		texture_views[i] = (Opal_TextureView)opal_poolAddElement(&device_ptr->image_views, &result);
 	}
-
-	free(vulkan_images);
 
 	if (success != VK_TRUE)
 	{
@@ -1619,9 +1624,14 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 			return OPAL_INVALID_BINDING_INDEX;
 	}
 
-	VkWriteDescriptorSet *vulkan_descriptor_writes = (VkWriteDescriptorSet *)malloc(sizeof(VkWriteDescriptorSet) * num_bindings);
-	VkDescriptorImageInfo *vulkan_image_writes = (VkDescriptorImageInfo *)malloc(sizeof(VkDescriptorImageInfo) * num_images);
-	VkDescriptorBufferInfo *vulkan_buffer_writes = (VkDescriptorBufferInfo *)malloc(sizeof(VkDescriptorBufferInfo) * num_buffers);
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t descriptors_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkWriteDescriptorSet) * num_bindings);
+	uint32_t images_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorImageInfo) * num_images);
+	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_buffers);
+
+	VkWriteDescriptorSet *vulkan_descriptor_writes = (VkWriteDescriptorSet *)(device_ptr->bump.data + descriptors_offset);
+	VkDescriptorImageInfo *vulkan_image_writes = (VkDescriptorImageInfo *)(device_ptr->bump.data + images_offset);
+	VkDescriptorBufferInfo *vulkan_buffer_writes = (VkDescriptorBufferInfo *)(device_ptr->bump.data + buffer_offset);
 
 	uint32_t current_image = 0;
 	uint32_t current_buffer = 0;
@@ -1684,10 +1694,6 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 
 	device_ptr->vk.vkUpdateDescriptorSets(vulkan_device, num_bindings, vulkan_descriptor_writes, 0, NULL);
 
-	free(vulkan_image_writes);
-	free(vulkan_buffer_writes);
-	free(vulkan_descriptor_writes);
-
 	return OPAL_SUCCESS;
 }
 
@@ -1746,7 +1752,10 @@ static Opal_Result vulkan_deviceWaitCommandBuffers(Opal_Device this, uint32_t nu
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
 
-	VkFence *vulkan_fences = (VkFence *)malloc(sizeof(VkFence) * num_wait_command_buffers);
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkFence) * num_wait_command_buffers);
+
+	VkFence *vulkan_fences = (VkFence *)device_ptr->bump.data;
 	for (uint32_t i = 0; i < num_wait_command_buffers; ++i)
 	{
 		Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, wait_command_buffers[i]);
@@ -1756,8 +1765,6 @@ static Opal_Result vulkan_deviceWaitCommandBuffers(Opal_Device this, uint32_t nu
 	}
 
 	VkResult result = device_ptr->vk.vkWaitForFences(vulkan_device, num_wait_command_buffers, vulkan_fences, VK_TRUE, timeout_milliseconds * 1000000);
-	free(vulkan_fences);
-
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
@@ -1790,9 +1797,26 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, uint3
 	Vulkan_Queue *queue_ptr = (Vulkan_Queue *)opal_poolGetElement(&device_ptr->queues, queue);
 	assert(queue_ptr);
 
-	VkSemaphore *signal_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_command_buffers);
-	VkFence *signal_fences = (VkFence *)malloc(sizeof(VkFence) * num_command_buffers);
-	VkCommandBuffer *submit_command_buffers = (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * num_command_buffers);
+	opal_bumpReset(&device_ptr->bump);
+	VkSemaphore *wait_semaphores = NULL;
+	VkPipelineStageFlags *wait_masks = NULL;
+
+	if (num_wait_command_buffers > 0)
+	{
+		uint32_t wait_semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkSemaphore) * num_wait_command_buffers);
+		uint32_t wait_command_buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkPipelineStageFlags) * num_wait_command_buffers);
+
+		wait_semaphores = (VkSemaphore *)(device_ptr->bump.data + wait_semaphores_offset);
+		wait_masks = (VkPipelineStageFlags *)(device_ptr->bump.data + wait_command_buffers_offset);
+	}
+
+	uint32_t semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkSemaphore) * num_command_buffers);
+	uint32_t fences_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkFence) * num_command_buffers);
+	uint32_t command_buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkCommandBuffer) * num_command_buffers);
+
+	VkSemaphore *signal_semaphores = (VkSemaphore *)(device_ptr->bump.data + semaphores_offset);
+	VkFence *signal_fences = (VkFence *)(device_ptr->bump.data + fences_offset);
+	VkCommandBuffer *submit_command_buffers = (VkCommandBuffer *)(device_ptr->bump.data + command_buffers_offset);
 
 	for (uint32_t i = 0; i < num_command_buffers; ++i)
 	{
@@ -1804,31 +1828,13 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, uint3
 		submit_command_buffers[i] = command_buffer_ptr->command_buffer;
 	}
 
-	VkResult result = device_ptr->vk.vkResetFences(vulkan_device, num_command_buffers, signal_fences);
-	if (result != VK_SUCCESS)
+	for (uint32_t i = 0; i < num_wait_command_buffers; ++i)
 	{
-		free(signal_semaphores);
-		free(signal_fences);
-		free(submit_command_buffers);
-		return OPAL_VULKAN_ERROR;
-	}
+		Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, wait_command_buffers[i]);
+		assert(command_buffer_ptr);
 
-	VkSemaphore *wait_semaphores = NULL;
-	VkPipelineStageFlags *wait_masks = NULL;
-
-	if (num_wait_command_buffers > 0)
-	{
-		wait_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_wait_command_buffers);
-		wait_masks = (VkPipelineStageFlags *)malloc(sizeof(VkPipelineStageFlags) * num_wait_command_buffers);
-
-		for (uint32_t i = 0; i < num_wait_command_buffers; ++i)
-		{
-			Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, wait_command_buffers[i]);
-			assert(command_buffer_ptr);
-
-			wait_semaphores[i] = command_buffer_ptr->semaphore;
-			wait_masks[i] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-		}
+		wait_semaphores[i] = command_buffer_ptr->semaphore;
+		wait_masks[i] = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 	}
 
 	VkSubmitInfo submit_info = {0};
@@ -1841,18 +1847,11 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, uint3
 	submit_info.signalSemaphoreCount = num_command_buffers;
 	submit_info.pSignalSemaphores = signal_semaphores;
 
+	VkResult result = device_ptr->vk.vkResetFences(vulkan_device, num_command_buffers, signal_fences);
+	if (result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
 	result = device_ptr->vk.vkQueueSubmit(queue_ptr->queue, 1, &submit_info, VK_NULL_HANDLE);
-
-	free(signal_semaphores);
-	free(signal_fences);
-	free(submit_command_buffers);
-
-	if (num_wait_command_buffers)
-	{
-		free(wait_semaphores);
-		free(wait_masks);
-	}
-
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
@@ -2129,6 +2128,9 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 		Opal_Result result = vulkan_allocatorInitialize(device_ptr, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps, buffer_image_granularity);
 		assert(result == OPAL_SUCCESS);
 	}
+
+	// bump
+	opal_bumpInitialize(&device_ptr->bump, 256);
 
 	// pools
 	opal_poolInitialize(&device_ptr->queues, sizeof(Vulkan_Queue), 32);

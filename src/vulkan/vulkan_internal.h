@@ -8,6 +8,7 @@
 #include "vk_mem_alloc.h"
 #endif
 
+#include "common/bump.h"
 #include "common/heap.h"
 #include "common/pool.h"
 
@@ -103,7 +104,7 @@ typedef struct Vulkan_Device_t
 	Vulkan_DeviceEnginesInfo device_engines_info;
 	Opal_PoolHandle *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	VkCommandPool command_pools[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
-
+	Opal_Bump bump;
 	Opal_Pool queues;
 	Opal_Pool buffers;
 	Opal_Pool images;
