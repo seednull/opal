@@ -1804,10 +1804,10 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, uint3
 	if (num_wait_command_buffers > 0)
 	{
 		uint32_t wait_semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkSemaphore) * num_wait_command_buffers);
-		uint32_t wait_command_buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkPipelineStageFlags) * num_wait_command_buffers);
+		uint32_t wait_masks_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkPipelineStageFlags) * num_wait_command_buffers);
 
 		wait_semaphores = (VkSemaphore *)(device_ptr->bump.data + wait_semaphores_offset);
-		wait_masks = (VkPipelineStageFlags *)(device_ptr->bump.data + wait_command_buffers_offset);
+		wait_masks = (VkPipelineStageFlags *)(device_ptr->bump.data + wait_masks_offset);
 	}
 
 	uint32_t semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkSemaphore) * num_command_buffers);
