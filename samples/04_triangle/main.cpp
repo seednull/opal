@@ -15,8 +15,8 @@ public:
 	void init();
 	void shutdown();
 	void update(float dt);
-	void render(Opal_SwapChain swap_chain);
-	void present(Opal_SwapChain swap_chain);
+	void render(Opal_Swapchain swapchain);
+	void present(Opal_Swapchain swapchain);
 
 	OPAL_INLINE Opal_Device getDevice() const { return device; }
 
@@ -31,6 +31,7 @@ private:
 	enum
 	{
 		IN_FLIGHT_FRAMES = 2,
+		WAIT_TIMEOUT_MS = 1000,
 	};
 
 	Opal_Instance instance {OPAL_NULL_HANDLE};
@@ -139,7 +140,7 @@ void Application::init()
 	result = opalSubmit(device, queue, 1, &staging_command_buffer, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitCommandBuffers(device, 1, &staging_command_buffer);
+	result = opalWaitCommandBuffers(device, 1, &staging_command_buffer, WAIT_TIMEOUT_MS);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandBuffer(device, staging_command_buffer);
@@ -279,17 +280,17 @@ void Application::update(float dt)
 
 }
 
-void Application::render(Opal_SwapChain swap_chain)
+void Application::render(Opal_Swapchain swapchain)
 {
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
-	Opal_TextureView swap_chain_texture_view = OPAL_NULL_HANDLE;
+	Opal_TextureView swapchain_texture_view = OPAL_NULL_HANDLE;
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
-	Opal_Result result = opalAcquire(device, swap_chain, &swap_chain_texture_view);
+	Opal_Result result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitCommandBuffers(device, 1, &command_buffer);
+	result = opalWaitCommandBuffers(device, 1, &command_buffer, WAIT_TIMEOUT_MS);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalBeginCommandBuffer(device, command_buffer);
@@ -297,13 +298,13 @@ void Application::render(Opal_SwapChain swap_chain)
 
 	Opal_FramebufferAttachment attachments =
 	{
-		swap_chain_texture_view,
+		swapchain_texture_view,
 		OPAL_LOAD_OP_CLEAR,
 		OPAL_STORE_OP_STORE,
 		{1.0f, 0.0f, 0.0f, 1.0f}
 	};
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
+	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments);
@@ -330,7 +331,7 @@ void Application::render(Opal_SwapChain swap_chain)
 	result = opalCmdEndGraphicsPass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swap_chain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
+	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
@@ -340,13 +341,13 @@ void Application::render(Opal_SwapChain swap_chain)
 	assert(result == OPAL_SUCCESS);
 }
 
-void Application::present(Opal_SwapChain swap_chain)
+void Application::present(Opal_Swapchain swapchain)
 {
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
 
-	Opal_Result result = opalPresent(device, swap_chain, 1, &command_buffer);
+	Opal_Result result = opalPresent(device, swapchain, 1, &command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
@@ -411,8 +412,16 @@ void mainloop()
 	HWND handle = createWindow(title);
 	ShowWindow(handle, SW_SHOW);
 
-	Opal_SwapChain swap_chain = OPAL_NULL_HANDLE;
-	Opal_Result result = opalCreateSwapChain(app.getDevice(), handle, &swap_chain);
+	Opal_SwapchainDesc swapchain_desc =
+	{
+		OPAL_PRESENT_MODE_MAILBOX,
+		OPAL_FORMAT_BGRA8_UNORM,
+		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
+		handle
+	};
+
+	Opal_Swapchain swapchain = OPAL_NULL_HANDLE;
+	Opal_Result result = opalCreateSwapchain(app.getDevice(), &swapchain_desc, &swapchain);
 	assert(result == OPAL_SUCCESS);
 	
 	MSG msg = {};
@@ -434,14 +443,14 @@ void mainloop()
 		}
 
 		app.update(dt);
-		app.render(swap_chain);
-		app.present(swap_chain);
+		app.render(swapchain);
+		app.present(swapchain);
 
 		QueryPerformanceCounter(&end_time);
 		dt = static_cast<float>((end_time.QuadPart - begin_time.QuadPart) * denominator);
 	}
 
-	opalDestroySwapChain(app.getDevice(), swap_chain);
+	opalDestroySwapchain(app.getDevice(), swapchain);
 	app.shutdown();
 
 	destroyWindow(handle);
