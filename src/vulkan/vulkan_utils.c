@@ -46,6 +46,38 @@ VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type)
 	return vk_image_view_types[type];
 }
 
+VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type)
+{
+	static VkImageLayout vk_image_layouts[] =
+	{
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+	};
+
+	return vk_image_layouts[type];
+}
+
+VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode)
+{
+	static VkImageViewType vk_present_modes[] =
+	{
+		VK_PRESENT_MODE_IMMEDIATE_KHR,
+		VK_PRESENT_MODE_FIFO_KHR,
+		VK_PRESENT_MODE_MAILBOX_KHR,
+	};
+
+	return vk_present_modes[mode];
+}
+
 VkImageAspectFlags vulkan_helperToAspectMask(Opal_Format format)
 {
 	if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
@@ -207,6 +239,17 @@ VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_F
 	}
 
 	return result;
+}
+
+VkImageLayout vulkan_helperToInitialImageLayout(Opal_TextureUsageFlags flags, Opal_Format format)
+{
+	if (flags & OPAL_TEXTURE_USAGE_SHADER_SAMPLED)
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	if (flags & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
+		return VK_IMAGE_LAYOUT_GENERAL;
+
+	return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 /*

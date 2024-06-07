@@ -83,9 +83,17 @@ endif()
 
 if (OPAL_HAS_VULKAN)
 	file(GLOB VULKAN_SOURCES
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.c
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_allocator.c
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_device.c
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_instance.c
+		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_utils.c
 		${OPAL_DIR_THIRDPARTY}/volk/include/volk.c
 	)
+
+	if (WIN32)
+		list(APPEND VULKAN_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_platform_win32.c)
+		list(APPEND OPAL_PLATFORM_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+	endif()
 
 	if (OPAL_BUILD_WITH_VMA)
 		list(APPEND VULKAN_SOURCES ${OPAL_DIR_THIRDPARTY}/vma/include/vk_mem_alloc.cpp)

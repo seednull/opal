@@ -98,7 +98,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCreateSwapChain(Opal_Device this, const void *handle, Opal_SwapChain *swap_chain)
+static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -168,7 +168,7 @@ static Opal_Result directx12_deviceDestroyRaytracePipeline(Opal_Device this, Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceDestroySwapChain(Opal_Device this, Opal_SwapChain swap_chain)
+static Opal_Result directx12_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -208,7 +208,7 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result directx12_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers, uint64_t timeout_milliseconds)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -223,12 +223,12 @@ static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, ui
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceAcquire(Opal_Device this, Opal_SwapChain swap_chain, Opal_TextureView *texture_view)
+static Opal_Result directx12_deviceAcquire(Opal_Device this, Opal_Swapchain swapchain, Opal_TextureView *texture_view)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_devicePresent(Opal_Device this, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -364,7 +364,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCreateMeshletPipeline,
 	directx12_deviceCreateComputePipeline,
 	directx12_deviceCreateRaytracePipeline,
-	directx12_deviceCreateSwapChain,
+	directx12_deviceCreateSwapchain,
 
 	directx12_deviceDestroyBuffer,
 	directx12_deviceDestroyTexture,
@@ -379,7 +379,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroyMeshletPipeline,
 	directx12_deviceDestroyComputePipeline,
 	directx12_deviceDestroyRaytracePipeline,
-	directx12_deviceDestroySwapChain,
+	directx12_deviceDestroySwapchain,
 
 	directx12_deviceAllocateBindset,
 	directx12_deviceFreeBindset,

@@ -97,6 +97,7 @@ typedef struct Vulkan_Device_t
 {
 	Opal_DeviceTable *vtbl;
 	VolkDeviceTable vk;
+	VkInstance instance;
 	VkPhysicalDevice physical_device;
 	VkDevice device;
 	Vulkan_DeviceEnginesInfo device_engines_info;
@@ -115,7 +116,7 @@ typedef struct Vulkan_Device_t
 	Opal_Pool bindsets;
 	Opal_Pool pipeline_layouts;
 	Opal_Pool pipelines;
-	Opal_Pool swap_chains;
+	Opal_Pool swapchains;
 
 #ifdef OPAL_HAS_VMA
 	uint32_t use_vma;
@@ -163,6 +164,9 @@ typedef struct Vulkan_Sampler_t
 typedef struct Vulkan_CommandBuffer_t
 {
 	VkCommandBuffer command_buffer;
+	VkFence fence;
+	VkSemaphore semaphore;
+	Opal_DeviceEngineType type;
 } Vulkan_CommandBuffer;
 
 typedef struct Vulkan_Shader_t
@@ -180,11 +184,13 @@ typedef struct Vulkan_BindsetLayout_t
 typedef struct Vulkan_BindsetPool_t
 {
 	VkDescriptorPool pool;
+	Opal_BindsetLayout bindset_layout;
 } Vulkan_BindsetPool;
 
 typedef struct Vulkan_Bindset_t
 {
-	VkDescriptorSet bindset;
+	VkDescriptorSet set;
+	Opal_BindsetLayout bindset_layout;
 } Vulkan_Bindset;
 
 typedef struct Vulkan_PipelineLayout_t
@@ -197,18 +203,26 @@ typedef struct Vulkan_Pipeline_t
 	VkPipeline pipeline;
 } Vulkan_Pipeline;
 
-typedef struct Vulkan_SwapChain_t
+typedef struct Vulkan_Swapchain_t
 {
-	VkSwapchainKHR swap_chain;
-} Vulkan_SwapChain;
+	VkSurfaceKHR surface;
+	VkSwapchainKHR swapchain;
+	Opal_TextureView *texture_views;
+	VkSemaphore *semaphores;
+	uint32_t num_images;
+} Vulkan_Swapchain;
 
 Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device);
 Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
 
 Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info, VkDevice *device);
 Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
+
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
+VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type);
+VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type);
+VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
 VkFormat vulkan_helperToFormat(Opal_Format format);
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
@@ -227,6 +241,8 @@ VkFrontFace vulkan_helperToFrontFace(Opal_FrontFace face);
 VkStencilOp vulkan_helperToStencilOp(Opal_StencilOp op);
 VkBlendFactor vulkan_helperToBlendFactor(Opal_BlendFactor factor);
 VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op);
+
+Opal_Result vulkan_platformCreateSurface(VkInstance instance, void *handle, VkSurfaceKHR *surface);
 
 Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info);
 Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);

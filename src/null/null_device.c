@@ -101,7 +101,7 @@ static Opal_Result null_deviceCreateRaytracePipeline(Opal_Device this, const Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateSwapChain(Opal_Device this, const void *handle, Opal_SwapChain *swap_chain)
+static Opal_Result null_deviceCreateSwapchain(Opal_Device this, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -171,7 +171,7 @@ static Opal_Result null_deviceDestroyRaytracePipeline(Opal_Device this, Opal_Ray
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroySwapChain(Opal_Device this, Opal_SwapChain swap_chain)
+static Opal_Result null_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -211,7 +211,7 @@ static Opal_Result null_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBuf
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result null_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers, uint64_t timeout_milliseconds)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -226,12 +226,12 @@ static Opal_Result null_deviceSubmit(Opal_Device this, Opal_Queue queue, uint32_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAcquire(Opal_Device this, Opal_SwapChain swap_chain, Opal_TextureView *texture_view)
+static Opal_Result null_deviceAcquire(Opal_Device this, Opal_Swapchain swapchain, Opal_TextureView *texture_view)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_devicePresent(Opal_Device this, Opal_SwapChain swap_chain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result null_devicePresent(Opal_Device this, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -367,7 +367,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateMeshletPipeline,
 	null_deviceCreateComputePipeline,
 	null_deviceCreateRaytracePipeline,
-	null_deviceCreateSwapChain,
+	null_deviceCreateSwapchain,
 
 	null_deviceDestroyBuffer,
 	null_deviceDestroyTexture,
@@ -382,7 +382,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyMeshletPipeline,
 	null_deviceDestroyComputePipeline,
 	null_deviceDestroyRaytracePipeline,
-	null_deviceDestroySwapChain,
+	null_deviceDestroySwapchain,
 
 	null_deviceAllocateBindset,
 	null_deviceFreeBindset,
