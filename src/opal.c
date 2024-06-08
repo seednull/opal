@@ -575,16 +575,16 @@ Opal_Result opalEndCommandBuffer(Opal_Device device, Opal_CommandBuffer command_
 	return ptr->vtbl->endCommandBuffer(device, command_buffer);
 }
 
-Opal_Result opalWaitCommandBuffers(Opal_Device device, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers, uint64_t timeout_milliseconds)
+Opal_Result opalWaitQueue(Opal_Device device, Opal_Queue queue, uint64_t timeout_milliseconds)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->waitCommandBuffers);
+	assert(ptr->vtbl->waitQueue);
 
-	return ptr->vtbl->waitCommandBuffers(device, num_wait_command_buffers, wait_command_buffers, timeout_milliseconds);
+	return ptr->vtbl->waitQueue(device, queue, timeout_milliseconds);
 }
 
 Opal_Result opalWaitIdle(Opal_Device device)
@@ -599,7 +599,7 @@ Opal_Result opalWaitIdle(Opal_Device device)
 	return ptr->vtbl->waitIdle(device);
 }
 
-Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, uint32_t num_command_buffers, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, const Opal_SubmitDesc *desc)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -608,7 +608,7 @@ Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, uint32_t num_comman
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->submit);
 
-	return ptr->vtbl->submit(device, queue, num_command_buffers, command_buffers, num_wait_command_buffers, wait_command_buffers);
+	return ptr->vtbl->submit(device, queue, desc);
 }
 
 Opal_Result opalAcquire(Opal_Device device, Opal_Swapchain swapchain, Opal_TextureView *texture_view)
@@ -637,7 +637,7 @@ Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain, uint32_t n
 
 /*
  */
-Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments)
+Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -646,7 +646,7 @@ Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer comm
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginGraphicsPass);
 
-	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, num_attachments, attachments);
+	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, num_color_attachments, color_attachments, depthstencil_attachment);
 }
 
 Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer)
@@ -733,7 +733,7 @@ Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer comma
 	return ptr->vtbl->cmdSetVertexBuffers(device, command_buffer, num_vertex_buffers, vertex_buffers);
 }
 
-Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer)
+Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -742,7 +742,31 @@ Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdSetIndexBuffer);
 
-	return ptr->vtbl->cmdSetIndexBuffer(device, command_buffer, index_buffer);
+	return ptr->vtbl->cmdSetIndexBuffer(device, command_buffer, index_buffer, index_format);
+}
+
+Opal_Result opalCmdSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdSetViewport);
+
+	return ptr->vtbl->cmdSetViewport(device, command_buffer, viewport);
+}
+
+Opal_Result opalCmdSetScissor(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdSetScissor);
+
+	return ptr->vtbl->cmdSetScissor(device, command_buffer, x, y, width, height);
 }
 
 Opal_Result opalCmdDrawIndexedInstanced(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)

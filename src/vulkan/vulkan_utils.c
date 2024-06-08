@@ -197,6 +197,17 @@ VkFormat vulkan_helperToFormat(Opal_Format format)
 	return vk_formats[format];
 }
 
+VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format)
+{
+	static VkIndexType vk_index_types[] =
+	{
+		VK_INDEX_TYPE_UINT16,
+		VK_INDEX_TYPE_UINT32,
+	};
+
+	return vk_index_types[format];
+}
+
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples)
 {
 	static VkSampleCountFlagBits vk_sample_count_bits[] =
@@ -503,6 +514,254 @@ VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op)
 	return vk_blend_ops[op];
 }
 
+VkAttachmentLoadOp vulkan_helperToLoadOp(Opal_LoadOp op)
+{
+	static VkAttachmentLoadOp vk_load_ops[] =
+	{
+		VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		VK_ATTACHMENT_LOAD_OP_CLEAR,
+		VK_ATTACHMENT_LOAD_OP_LOAD,
+	};
+
+	return vk_load_ops[op];
+}
+
+VkAttachmentStoreOp vulkan_helperToStoreOp(Opal_StoreOp op)
+{
+	static VkAttachmentStoreOp vk_store_ops[] =
+	{
+		VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		VK_ATTACHMENT_STORE_OP_STORE,
+	};
+
+	return vk_store_ops[op];
+}
+
+VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state)
+{
+	VkPipelineStageFlags all_compute = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+		| VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR
+		| VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT
+		| VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+
+	VkPipelineStageFlags all_non_fragment = all_compute
+		| VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+		| VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT
+		| VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT
+		| VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+
+	VkPipelineStageFlags result = 0;
+
+	if (state & OPAL_RESOURCE_STATE_GENERAL)
+		result |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
+		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_INDEX_BUFFER)
+		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
+		result |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
+		result |= all_compute;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
+		result |= all_non_fragment;
+
+	if (state & OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE)
+		result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_DEST)
+		result |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_SOURCE)
+		result |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
+		result |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+	if (state & OPAL_RESOURCE_STATE_PRESENT)
+		result |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+	return result;
+}
+
+VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state)
+{
+	VkPipelineStageFlags all_compute = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+		| VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR
+		| VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT
+		| VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+
+	VkPipelineStageFlags all_non_fragment = all_compute
+		| VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+		| VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT
+		| VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT
+		| VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+
+	VkPipelineStageFlags result = 0;
+
+	if (state & OPAL_RESOURCE_STATE_GENERAL)
+		result |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
+		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_INDEX_BUFFER)
+		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
+		result |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
+		result |= all_compute;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
+		result |= all_non_fragment;
+
+	if (state & OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE)
+		result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_DEST)
+		result |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_SOURCE)
+		result |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
+		result |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+	if (state & OPAL_RESOURCE_STATE_PRESENT)
+		result |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+	return result;
+}
+
+VkAccessFlags vulkan_helperToFlushAccessMask(Opal_ResourceState state)
+{
+	VkAccessFlags result = VK_ACCESS_NONE;
+
+	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
+		result |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // depthstencil attachments?
+
+	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
+		result |= VK_ACCESS_SHADER_WRITE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+		result |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
+		result |= VK_ACCESS_SHADER_WRITE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE)
+		result |= VK_ACCESS_SHADER_WRITE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_DEST)
+		result |= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_SOURCE)
+		result |= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
+		result |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+
+	return result;
+}
+
+VkAccessFlags vulkan_helperToInvalidateAccessMask(Opal_ResourceState state)
+{
+	VkAccessFlags result = VK_ACCESS_NONE;
+
+	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
+		result |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_INDEX_BUFFER)
+		result |= VK_ACCESS_INDEX_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
+		result |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT; // depthstencil attachments?
+
+	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
+		result |= VK_ACCESS_SHADER_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+		result |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
+		result |= VK_ACCESS_SHADER_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE)
+		result |= VK_ACCESS_SHADER_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_DEST)
+		result |= VK_ACCESS_TRANSFER_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_SOURCE)
+		result |= VK_ACCESS_TRANSFER_READ_BIT;
+
+	if (state & OPAL_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
+		result |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+
+	return result;
+}
+
+VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkImageAspectFlags aspect)
+{
+	if (state & OPAL_RESOURCE_STATE_GENERAL)
+		return VK_IMAGE_LAYOUT_GENERAL;
+
+	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
+	{
+		if (aspect & VK_IMAGE_ASPECT_COLOR_BIT)
+			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		
+		if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+
+	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
+		return VK_IMAGE_LAYOUT_GENERAL;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	if (state & OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE)
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_DEST)
+		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+	if (state & OPAL_RESOURCE_STATE_COPY_SOURCE)
+		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+	if (state & OPAL_RESOURCE_STATE_PRESENT)
+		return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	return VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
 Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info)
 {
 	assert(info);
@@ -605,45 +864,98 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	assert(info);
 	assert(device);
 
-	// get physical device extensions
-	uint32_t extension_count = 0;
-	VkResult result = vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
-	if (result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	VkExtensionProperties *extensions = (VkExtensionProperties *)malloc(sizeof(VkExtensionProperties) * extension_count);
-	const char **extension_names = (const char **)malloc(sizeof(const char *) * extension_count);
-
-	result = vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, extensions);
-
-	if (result != VK_SUCCESS)
-	{
-		free(extensions);
-		free(extension_names);
-		return OPAL_VULKAN_ERROR;
-	}
-
-	for (uint32_t i = 0; i < extension_count; ++i)
-		extension_names[i] = extensions[i].extensionName;
-
 	// get physical device features
 	VkPhysicalDeviceFeatures2 features = {0};
 	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
+	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features = {0};
+	dynamic_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {0};
 	acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
+	VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features = {0};
+	buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+		
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {0};
 	raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
 
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_features = {0};
 	mesh_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 
-	mesh_features.pNext = &acceleration_structure_features;
+	features.pNext = &dynamic_rendering_features;
+	dynamic_rendering_features.pNext = &acceleration_structure_features;
+	acceleration_structure_features.pNext = &buffer_device_address_features;
+	buffer_device_address_features.pNext = &raytracing_features;
 	raytracing_features.pNext = &mesh_features;
-	features.pNext = &raytracing_features;
 
 	vkGetPhysicalDeviceFeatures2(physical_device, &features);
+
+	// fill required extensions
+	const char *extensions[16];
+	uint32_t num_extensions = 0;
+
+	extensions[num_extensions++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+
+	typedef struct VkParavozikKHR_t
+	{
+		VkStructureType type;
+		void *next;
+	} VkParavozikKHR;
+
+	features.pNext = NULL;
+	dynamic_rendering_features.pNext = NULL;
+	acceleration_structure_features.pNext = NULL;
+	buffer_device_address_features.pNext = NULL;
+	raytracing_features.pNext = NULL;
+
+	VkParavozikKHR *paravozik = (VkParavozikKHR *)&features;
+
+	if (dynamic_rendering_features.dynamicRendering == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME;
+
+		paravozik->next = &dynamic_rendering_features;
+		paravozik = (VkParavozikKHR *)&dynamic_rendering_features;
+	}
+
+	if (acceleration_structure_features.accelerationStructure == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
+
+		paravozik->next = &acceleration_structure_features;
+		paravozik = (VkParavozikKHR *)&acceleration_structure_features;
+	}
+
+	if (buffer_device_address_features.bufferDeviceAddress == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME;
+
+		paravozik->next = &buffer_device_address_features;
+		paravozik = (VkParavozikKHR *)&buffer_device_address_features;
+	}
+
+	if (raytracing_features.rayTracingPipeline == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_KHR_SPIRV_1_4_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME;
+
+		paravozik->next = &raytracing_features;
+		paravozik = (VkParavozikKHR *)&raytracing_features;
+	}
+
+	if (mesh_features.meshShader == VK_TRUE && mesh_features.taskShader == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_EXT_MESH_SHADER_EXTENSION_NAME;
+
+		paravozik->next = &mesh_features;
+		paravozik = (VkParavozikKHR *)&mesh_features;
+	}
 
 	// get physical device queues
 	vulkan_helperFillDeviceEnginesInfo(physical_device, info);
@@ -677,15 +989,13 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkDeviceCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	create_info.pNext = &features;
-	create_info.enabledExtensionCount = extension_count;
-	create_info.ppEnabledExtensionNames = extension_names;
+	create_info.enabledExtensionCount = num_extensions;
+	create_info.ppEnabledExtensionNames = extensions;
 	create_info.queueCreateInfoCount = OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX;
 	create_info.pQueueCreateInfos = queue_infos;
 
-	result = vkCreateDevice(physical_device, &create_info, NULL, device);
+	VkResult result = vkCreateDevice(physical_device, &create_info, NULL, device);
 
-	free(extensions);
-	free(extension_names);
 	free(queue_priorities);
 
 	if (result != VK_SUCCESS)

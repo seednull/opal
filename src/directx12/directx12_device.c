@@ -208,7 +208,7 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers, uint64_t timeout_milliseconds)
+static Opal_Result directx12_deviceWaitQueue(Opal_Device this, Opal_Queue queue, uint64_t timeout_milliseconds)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -218,7 +218,7 @@ static Opal_Result directx12_deviceWaitIdle(Opal_Device this)
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, uint32_t num_command_buffer, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, const Opal_SubmitDesc *desc)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -233,7 +233,7 @@ static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swap
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments)
+static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -273,7 +273,17 @@ static Opal_Result directx12_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Co
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer)
+static Opal_Result directx12_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetViewport(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -388,7 +398,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceUpdateBindset,
 	directx12_deviceBeginCommandBuffer,
 	directx12_deviceEndCommandBuffer,
-	directx12_deviceWaitCommandBuffers,
+	directx12_deviceWaitQueue,
 	directx12_deviceWaitIdle,
 	directx12_deviceSubmit,
 	directx12_deviceAcquire,
@@ -403,6 +413,8 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdSetBindsets,
 	directx12_deviceCmdSetVertexBuffers,
 	directx12_deviceCmdSetIndexBuffer,
+	directx12_deviceCmdSetViewport,
+	directx12_deviceCmdSetScissor,
 	directx12_deviceCmdDrawIndexedInstanced,
 	directx12_deviceCmdMeshletDispatch,
 	directx12_deviceCmdComputeDispatch,

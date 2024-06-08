@@ -5,6 +5,11 @@
 
 /*
  */
+const char *vulkan_platformGetSurfaceExtension()
+{
+	return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+}
+
 Opal_Result vulkan_platformCreateSurface(VkInstance instance, void *handle, VkSurfaceKHR *surface)
 {
 	VkWin32SurfaceCreateInfoKHR surface_info = {0};

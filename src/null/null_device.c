@@ -211,7 +211,7 @@ static Opal_Result null_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBuf
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceWaitCommandBuffers(Opal_Device this, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers, uint64_t timeout_milliseconds)
+static Opal_Result null_deviceWaitQueue(Opal_Device this, Opal_Queue queue, uint64_t timeout_milliseconds)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -221,7 +221,7 @@ static Opal_Result null_deviceWaitIdle(Opal_Device this)
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceSubmit(Opal_Device this, Opal_Queue queue, uint32_t num_command_buffer, const Opal_CommandBuffer *command_buffers, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result null_deviceSubmit(Opal_Device this, Opal_Queue queue, const Opal_SubmitDesc *desc)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -236,7 +236,7 @@ static Opal_Result null_devicePresent(Opal_Device this, Opal_Swapchain swapchain
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_attachments, const Opal_FramebufferAttachment *attachments)
+static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -276,7 +276,17 @@ static Opal_Result null_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer)
+static Opal_Result null_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdSetViewport(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -391,7 +401,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceUpdateBindset,
 	null_deviceBeginCommandBuffer,
 	null_deviceEndCommandBuffer,
-	null_deviceWaitCommandBuffers,
+	null_deviceWaitQueue,
 	null_deviceWaitIdle,
 	null_deviceSubmit,
 	null_deviceAcquire,
@@ -406,6 +416,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdSetBindsets,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,
+	null_deviceCmdSetViewport,
+	null_deviceCmdSetScissor,
 	null_deviceCmdDrawIndexedInstanced,
 	null_deviceCmdMeshletDispatch,
 	null_deviceCmdComputeDispatch,

@@ -238,6 +238,8 @@ static Opal_InstanceTable instance_vtbl =
  */
 Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
+	static const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
+
 	vulkan_volkInitialize();
 
 	VkInstance vulkan_instance = VK_NULL_HANDLE;
@@ -253,6 +255,21 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	VkInstanceCreateInfo info = {0};
 	info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	info.pApplicationInfo = &app_info;
+
+	const char *extensions[16];
+	uint32_t num_extensions = 0;
+
+	extensions[num_extensions++] = VK_KHR_SURFACE_EXTENSION_NAME;
+	extensions[num_extensions++] = vulkan_platformGetSurfaceExtension();
+
+	info.enabledExtensionCount = num_extensions;
+	info.ppEnabledExtensionNames = extensions;
+
+	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_VULKAN_VALIDATION_LAYERS)
+	{
+		info.enabledLayerCount = 1;
+		info.ppEnabledLayerNames = &validation_layer_name;
+	}
 
 	VkResult result = vkCreateInstance(&info, NULL, &vulkan_instance);
 	if (result != VK_SUCCESS)

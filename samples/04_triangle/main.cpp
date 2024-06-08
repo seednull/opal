@@ -7,6 +7,34 @@
 #include <cassert>
 #include <iostream>
 
+bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
+{
+	assert(name);
+	assert(device);
+	assert(shader);
+
+	FILE *f = fopen(name, "rb");
+	if (f == nullptr)
+		return false;
+
+	fseek(f, 0, SEEK_END);
+	size_t size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	uint8_t *data = new uint8_t[size];
+	fread(data, sizeof(uint8_t), size, f);
+
+	Opal_ShaderDesc desc =
+	{
+		OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
+		data,
+		size,
+	};
+
+	Opal_Result result = opalCreateShader(device, &desc, shader);
+	return result == OPAL_SUCCESS;
+}
+
 /*
  */
 class Application
@@ -21,28 +49,31 @@ public:
 	OPAL_INLINE Opal_Device getDevice() const { return device; }
 
 private:
+	struct Vertex
+	{
+		float position[4];
+		float color[4];
+	};
+
 	struct TriangleData
 	{
-		float coordinates[12];
+		Vertex vertices[3];
 		uint32_t indices[4];
 	};
 
-private:
 	enum
 	{
 		IN_FLIGHT_FRAMES = 2,
 		WAIT_TIMEOUT_MS = 1000,
 	};
 
+private:
 	Opal_Instance instance {OPAL_NULL_HANDLE};
 	Opal_Device device {OPAL_NULL_HANDLE};
 	Opal_Queue queue {OPAL_NULL_HANDLE};
 	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
 	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
 	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
-	Opal_BindsetLayout bindset_layout {OPAL_NULL_HANDLE};
-	Opal_BindsetPool bindset_pool {OPAL_NULL_HANDLE};
-	Opal_Bindset bindset {OPAL_NULL_HANDLE};
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
 	Opal_GraphicsPipeline pipeline {OPAL_NULL_HANDLE};
 	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
@@ -64,6 +95,7 @@ void Application::init()
 		OPAL_DEFAULT_HEAP_SIZE,
 		OPAL_DEFAULT_HEAP_ALLOCATIONS,
 		OPAL_DEFAULT_HEAPS,
+		OPAL_INSTANCE_CREATION_FLAGS_USE_VULKAN_VALIDATION_LAYERS,
 	};
 
 	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
@@ -107,9 +139,12 @@ void Application::init()
 	TriangleData triangle_data =
 	{
 		// vertices
-		-1.0f, 0.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 0.0f, 0.0f,
-		 0.0f, 1.0f, 0.0f, 0.0f,
+		{
+			// position                  color
+			 -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+			  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+			  0.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+		},
 
 		// indices
 		0, 1, 2,
@@ -137,10 +172,17 @@ void Application::init()
 	result = opalEndCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmit(device, queue, 1, &staging_command_buffer, 0, nullptr);
+	Opal_SubmitDesc submit =
+	{
+		1, &staging_command_buffer,
+		0, nullptr,
+		0, nullptr,
+	};
+
+	result = opalSubmit(device, queue, &submit);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitCommandBuffers(device, 1, &staging_command_buffer, WAIT_TIMEOUT_MS);
+	result = opalWaitQueue(device, queue, WAIT_TIMEOUT_MS);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandBuffer(device, staging_command_buffer);
@@ -150,56 +192,26 @@ void Application::init()
 	assert(result == OPAL_SUCCESS);
 
 	// shaders
-	Opal_ShaderDesc vertex_shader_desc =
-	{
-		OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
-		nullptr, // TODO:
-		0, // TODO:
-	};
+	bool loaded = loadShader("samples/04_triangle/shaders/vulkan/main.vert.spv", device, &vertex_shader);
+	assert(loaded == true);
 
-	Opal_ShaderDesc fragment_shader_desc =
-	{
-		OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
-		nullptr, // TODO:
-		0, // TODO:
-	};
-
-	result = opalCreateShader(device, &vertex_shader_desc, &vertex_shader);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalCreateShader(device, &fragment_shader_desc, &fragment_shader);
-	assert(result == OPAL_SUCCESS);
-
-	// bindings
-	Opal_BindsetLayoutBinding bindset_layout_binding = { 0, OPAL_BINDING_TYPE_UNIFORM_BUFFER, OPAL_SHADER_STAGE_ALL_GRAPHICS };
-
-	result = opalCreateBindsetLayout(device, 1, &bindset_layout_binding, &bindset_layout);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalCreateBindsetPool(device, bindset_layout, 32, &bindset_pool);
-	assert(result == OPAL_SUCCESS);
-
-	Opal_BindsetBinding bindset_binding = {};
-	bindset_binding.binding = 0;
-	bindset_binding.buffer = {triangle_buffer, 0};
-
-	result = opalAllocateBindset(device, bindset_pool, 1, &bindset_binding, &bindset);
-	assert(result == OPAL_SUCCESS);
+	loaded = loadShader("samples/04_triangle/shaders/vulkan/main.frag.spv", device, &fragment_shader);
+	assert(loaded == true);
 
 	// pipeline
-	result = opalCreatePipelineLayout(device, 1, &bindset_layout, &pipeline_layout);
+	result = opalCreatePipelineLayout(device, 0, nullptr, &pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_VertexAttribute vertex_attribute =
+	Opal_VertexAttribute vertex_attributes[] =
 	{
-		OPAL_FORMAT_RGBA32_SFLOAT,
-		0,
+		{ OPAL_FORMAT_RGBA32_SFLOAT, offsetof(Vertex, position) },
+		{ OPAL_FORMAT_RGBA32_SFLOAT, offsetof(Vertex, color) },
 	};
 
 	Opal_VertexStream vertex_stream =
 	{
-		sizeof(float) * 4,
-		1, &vertex_attribute,
+		sizeof(Vertex),
+		2, vertex_attributes,
 		OPAL_VERTEX_INPUT_RATE_VERTEX
 	};
 
@@ -213,7 +225,7 @@ void Application::init()
 	pipeline_desc.vertex_streams = &vertex_stream;
 	pipeline_desc.primitive_type = OPAL_PRIMITIVE_TYPE_TRIANGLE;
 
-	pipeline_desc.cull_mode = OPAL_CULL_MODE_BACK;
+	pipeline_desc.cull_mode = OPAL_CULL_MODE_NONE;
 	pipeline_desc.front_face = OPAL_FRONT_FACE_COUNTER_CLOCKWISE;
 	pipeline_desc.rasterization_samples = OPAL_SAMPLES_1;
 
@@ -238,9 +250,6 @@ void Application::shutdown()
 	Opal_Result result = opalWaitIdle(device);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalFreeBindset(device, bindset_pool, bindset);
-	assert(result == OPAL_SUCCESS);
-
 	result = opalDestroyBuffer(device, triangle_buffer);
 	assert(result == OPAL_SUCCESS);
 
@@ -248,12 +257,6 @@ void Application::shutdown()
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyShader(device, fragment_shader);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalDestroyBindsetLayout(device, bindset_layout);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalDestroyBindsetPool(device, bindset_pool);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyPipelineLayout(device, pipeline_layout);
@@ -290,7 +293,7 @@ void Application::render(Opal_Swapchain swapchain)
 	Opal_Result result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitCommandBuffers(device, 1, &command_buffer, WAIT_TIMEOUT_MS);
+	result = opalWaitQueue(device, queue, WAIT_TIMEOUT_MS);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalBeginCommandBuffer(device, command_buffer);
@@ -299,21 +302,19 @@ void Application::render(Opal_Swapchain swapchain)
 	Opal_FramebufferAttachment attachments =
 	{
 		swapchain_texture_view,
+		OPAL_NULL_HANDLE,
 		OPAL_LOAD_OP_CLEAR,
 		OPAL_STORE_OP_STORE,
-		{1.0f, 0.0f, 0.0f, 1.0f}
+		{0.4f, 0.4f, 0.4f, 1.0f}
 	};
 
 	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments);
+	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdSetGraphicsPipeline(device, command_buffer, pipeline);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalCmdSetBindsets(device, command_buffer, 1, &bindset);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferView vertex_buffer = {triangle_buffer, 0};
@@ -322,7 +323,20 @@ void Application::render(Opal_Swapchain swapchain)
 	result = opalCmdSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetIndexBuffer(device, command_buffer, index_buffer);
+	result = opalCmdSetIndexBuffer(device, command_buffer, index_buffer, OPAL_INDEX_FORMAT_UINT32);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_Viewport viewport =
+	{
+		0, 0,
+		800, 600,
+		0.0f, 1.0f,
+	};
+
+	result = opalCmdSetViewport(device, command_buffer, viewport);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdSetScissor(device, command_buffer, 0, 0, 800, 600);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdDrawIndexedInstanced(device, command_buffer, 3, 0, 1, 0);
@@ -337,7 +351,14 @@ void Application::render(Opal_Swapchain swapchain)
 	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalSubmit(device, queue, 1, &command_buffer, 0, nullptr);
+	Opal_SubmitDesc submit =
+	{
+		1, &command_buffer,
+		0, nullptr,
+		1, &swapchain,
+	};
+
+	result = opalSubmit(device, queue, &submit);
 	assert(result == OPAL_SUCCESS);
 }
 
@@ -352,6 +373,8 @@ void Application::present(Opal_Swapchain swapchain)
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
 }
+
+
 
 #ifdef OPAL_PLATFORM_WINDOWS
 
@@ -376,15 +399,20 @@ HWND createWindow(const char *title)
 	assert(title);
 	int size = static_cast<int>(strlen(title));
 
-	wchar_t titlew[4096];
+	wchar_t titlew[4096] = {};
 	MultiByteToWideChar(CP_UTF8, 0, title, size, titlew, 4096);
+
+	RECT rect = {0, 0, 800, 600};
+	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	HWND handle = CreateWindowExW(
 		0,
 		wc.lpszClassName,
 		titlew,
 		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		rect.right - rect.left,
+		rect.bottom - rect.top,
 		NULL,
 		NULL,
 		instance,
