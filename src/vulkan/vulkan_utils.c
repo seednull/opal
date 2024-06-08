@@ -550,10 +550,7 @@ VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state)
 		| VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT
 		| VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
 
-	VkPipelineStageFlags result = 0;
-
-	if (state & OPAL_RESOURCE_STATE_GENERAL)
-		result |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	VkPipelineStageFlags result = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
 		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
@@ -607,10 +604,7 @@ VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state)
 		| VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT
 		| VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
 
-	VkPipelineStageFlags result = 0;
-
-	if (state & OPAL_RESOURCE_STATE_GENERAL)
-		result |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	VkPipelineStageFlags result = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
 		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
@@ -721,9 +715,6 @@ VkAccessFlags vulkan_helperToInvalidateAccessMask(Opal_ResourceState state)
 
 VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkImageAspectFlags aspect)
 {
-	if (state & OPAL_RESOURCE_STATE_GENERAL)
-		return VK_IMAGE_LAYOUT_GENERAL;
-
 	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
 	{
 		if (aspect & VK_IMAGE_ASPECT_COLOR_BIT)

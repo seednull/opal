@@ -308,7 +308,7 @@ void Application::render(Opal_Swapchain swapchain)
 		{0.4f, 0.4f, 0.4f, 1.0f}
 	};
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_PRESENT, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
+	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_GENERAL, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
