@@ -32,6 +32,8 @@ bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 	};
 
 	Opal_Result result = opalCreateShader(device, &desc, shader);
+	free(data);
+
 	return result == OPAL_SUCCESS;
 }
 
