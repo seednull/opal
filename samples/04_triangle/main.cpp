@@ -23,6 +23,7 @@ bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 
 	uint8_t *data = new uint8_t[size];
 	fread(data, sizeof(uint8_t), size, f);
+	fclose(f);
 
 	Opal_ShaderDesc desc =
 	{
