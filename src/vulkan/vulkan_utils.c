@@ -944,6 +944,9 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	{
 		extensions[num_extensions++] = VK_EXT_MESH_SHADER_EXTENSION_NAME;
 
+		mesh_features.multiviewMeshShader = VK_FALSE;
+		mesh_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+
 		paravozik->next = &mesh_features;
 		paravozik = (VkParavozikKHR *)&mesh_features;
 	}
