@@ -1635,32 +1635,9 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 	Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, bindset_ptr->bindset_layout);
 	assert(bindset_layout_ptr);
 
-	uint32_t num_images = 0;
-	uint32_t num_buffers = 0;
 	for (uint32_t i = 0; i < num_bindings; ++i)
 	{
 		uint32_t binding = bindings[i].binding;
-		VkDescriptorType type = bindset_layout_ptr->layout_bindings[binding].descriptorType;
-
-		switch (type)
-		{
-			case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-			case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-			case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-			{
-				num_images++;
-			}
-			break;
-
-			case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-			case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-			{
-				num_buffers++;
-			}
-			break;
-		}
 
 		if (binding >= bindset_layout_ptr->num_layout_bindings)
 			return OPAL_INVALID_BINDING_INDEX;
@@ -1668,8 +1645,8 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t descriptors_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkWriteDescriptorSet) * num_bindings);
-	uint32_t images_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorImageInfo) * num_images);
-	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_buffers);
+	uint32_t images_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorImageInfo) * num_bindings);
+	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_bindings);
 
 	VkWriteDescriptorSet *vulkan_descriptor_writes = (VkWriteDescriptorSet *)(device_ptr->bump.data + descriptors_offset);
 	VkDescriptorImageInfo *vulkan_image_writes = (VkDescriptorImageInfo *)(device_ptr->bump.data + images_offset);
@@ -1828,6 +1805,10 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, const
 	assert(queue_ptr);
 
 	opal_bumpReset(&device_ptr->bump);
+
+	uint32_t semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkSemaphore) * desc->num_command_buffers);
+	uint32_t command_buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkCommandBuffer) * desc->num_command_buffers);
+
 	VkSemaphore *wait_semaphores = NULL;
 	VkPipelineStageFlags *wait_masks = NULL;
 
@@ -1863,9 +1844,6 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, const
 			current_wait_object++;
 		}
 	}
-
-	uint32_t semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkSemaphore) * desc->num_command_buffers);
-	uint32_t command_buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkCommandBuffer) * desc->num_command_buffers);
 
 	VkSemaphore *signal_semaphores = (VkSemaphore *)(device_ptr->bump.data + semaphores_offset);
 	VkCommandBuffer *submit_command_buffers = (VkCommandBuffer *)(device_ptr->bump.data + command_buffers_offset);
@@ -1998,9 +1976,11 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 	opal_bumpReset(&device_ptr->bump);
 
+	uint32_t color_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo) * num_color_attachments);
+	uint32_t depthstencil_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo));
+
 	if (num_color_attachments > 0)
 	{
-		uint32_t color_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo) * num_color_attachments);
 		vulkan_color_attachments = (VkRenderingAttachmentInfo *)(device_ptr->bump.data + color_offset);
 		memset(vulkan_color_attachments, 0, sizeof(VkRenderingAttachmentInfo) * num_color_attachments);
 
@@ -2038,7 +2018,6 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 	if (depthstencil_attachment)
 	{
-		uint32_t depthstencil_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo));
 		vulkan_depthstencil_attachment = (VkRenderingAttachmentInfo *)(device_ptr->bump.data + depthstencil_offset);
 		memset(vulkan_depthstencil_attachment, 0, sizeof(VkRenderingAttachmentInfo));
 
