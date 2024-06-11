@@ -44,6 +44,7 @@ extern "C" {
 
 // Opaque handles
 OPAL_DEFINE_HANDLE(Opal_Instance);
+OPAL_DEFINE_HANDLE(Opal_Surface);
 OPAL_DEFINE_HANDLE(Opal_Device);
 OPAL_DEFINE_HANDLE(Opal_Queue);
 OPAL_DEFINE_HANDLE(Opal_Buffer);
@@ -888,7 +889,7 @@ typedef struct Opal_SwapchainDesc_t
 	Opal_PresentMode mode;
 	Opal_Format format;
 	Opal_TextureUsageFlags usage;
-	void *handle;
+	Opal_Surface surface;
 } Opal_SwapchainDesc;
 
 typedef struct Opal_SubmitDesc_t
@@ -904,12 +905,15 @@ typedef struct Opal_SubmitDesc_t
 } Opal_SubmitDesc;
 
 // Function pointers
-typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
 typedef Opal_Result (*PFN_opalEnumerateDevices)(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
+
+typedef Opal_Result (*PFN_opalCreateSurface)(Opal_Instance instance, void *handle, Opal_Surface *surface);
 typedef Opal_Result (*PFN_opalCreateDevice)(Opal_Instance instance, uint32_t index, Opal_Device *device);
 typedef Opal_Result (*PFN_opalCreateDefaultDevice)(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
 
-typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
+typedef Opal_Result (*PFN_opalDestroySurface)(Opal_Instance instance, Opal_Surface surface);
+typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
+
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
 typedef Opal_Result (*PFN_opalGetDeviceQueue)(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 
@@ -942,6 +946,7 @@ typedef Opal_Result (*PFN_opalDestroyMeshletPipeline)(Opal_Device device, Opal_M
 typedef Opal_Result (*PFN_opalDestroyComputePipeline)(Opal_Device device, Opal_ComputePipeline pipeline);
 typedef Opal_Result (*PFN_opalDestroyRaytracePipeline)(Opal_Device device, Opal_RaytracePipeline pipeline);
 typedef Opal_Result (*PFN_opalDestroySwapchain)(Opal_Device device, Opal_Swapchain swapchain);
+typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
 
 typedef Opal_Result (*PFN_opalAllocateBindset)(Opal_Device device, Opal_BindsetPool pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset);
 typedef Opal_Result (*PFN_opalFreeBindset)(Opal_Device device, Opal_BindsetPool pool, Opal_Bindset bindset);
@@ -983,15 +988,18 @@ typedef Opal_Result (*PFN_opalCmdTextureQueueReleaseBarrier)(Opal_Device device,
 
 typedef struct Opal_InstanceTable_t
 {
-	PFN_opalDestroyInstance destroyInstance;
 	PFN_opalEnumerateDevices enumerateDevices;
+
+	PFN_opalCreateSurface createSurface;
 	PFN_opalCreateDevice createDevice;
 	PFN_opalCreateDefaultDevice createDefaultDevice;
+
+	PFN_opalDestroySurface destroySurface;
+	PFN_opalDestroyInstance destroyInstance;
 } Opal_InstanceTable;
 
 typedef struct Opal_DeviceTable_t
 {
-	PFN_opalDestroyDevice destroyDevice;
 	PFN_opalGetDeviceInfo getDeviceInfo;
 	PFN_opalGetDeviceQueue getDeviceQueue;
 
@@ -1024,6 +1032,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalDestroyComputePipeline destroyComputePipeline;
 	PFN_opalDestroyRaytracePipeline destroyRaytracePipeline;
 	PFN_opalDestroySwapchain destroySwapchain;
+	PFN_opalDestroyDevice destroyDevice;
 
 	PFN_opalAllocateBindset allocateBindset;
 	PFN_opalFreeBindset freeBindset;
@@ -1070,13 +1079,15 @@ OPAL_APIENTRY Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDe
 OPAL_APIENTRY Opal_Result opalGetInstanceTable(Opal_Instance instance, Opal_InstanceTable *instance_table);
 OPAL_APIENTRY Opal_Result opalGetDeviceTable(Opal_Device device, Opal_DeviceTable *device_table);
 
-OPAL_APIENTRY Opal_Result opalDestroyInstance(Opal_Instance instance);
-
 OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
 
+OPAL_APIENTRY Opal_Result opalCreateSurface(Opal_Instance instance, void *handle, Opal_Surface *surface);
 OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device);
 OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
-OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
+
+OPAL_APIENTRY Opal_Result opalDestroyInstance(Opal_Instance instance);
+OPAL_APIENTRY Opal_Result opalDestroySurface(Opal_Instance instance, Opal_Surface surface);
+
 OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);
 OPAL_APIENTRY Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 
@@ -1109,6 +1120,7 @@ OPAL_APIENTRY Opal_Result opalDestroyMeshletPipeline(Opal_Device device, Opal_Me
 OPAL_APIENTRY Opal_Result opalDestroyComputePipeline(Opal_Device device, Opal_ComputePipeline pipeline);
 OPAL_APIENTRY Opal_Result opalDestroyRaytracePipeline(Opal_Device device, Opal_RaytracePipeline pipeline);
 OPAL_APIENTRY Opal_Result opalDestroySwapchain(Opal_Device device, Opal_Swapchain swapchain);
+OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
 
 OPAL_APIENTRY Opal_Result opalAllocateBindset(Opal_Device device, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset);
 OPAL_APIENTRY Opal_Result opalFreeBindset(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);

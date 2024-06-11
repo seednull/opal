@@ -92,13 +92,14 @@ typedef struct Vulkan_Instance_t
 	uint32_t max_heaps;
 	uint32_t flags;
 	VkInstance instance;
+	Opal_Pool surfaces;
 } Vulkan_Instance;
 
 typedef struct Vulkan_Device_t
 {
 	Opal_DeviceTable *vtbl;
+	Vulkan_Instance *instance;
 	VolkDeviceTable vk;
-	VkInstance instance;
 	VkPhysicalDevice physical_device;
 	VkDevice device;
 	Vulkan_DeviceEnginesInfo device_engines_info;
@@ -216,9 +217,13 @@ typedef struct Vulkan_Pipeline_t
 	VkPipeline pipeline;
 } Vulkan_Pipeline;
 
-typedef struct Vulkan_Swapchain_t
+typedef struct Vulkan_Surface_t
 {
 	VkSurfaceKHR surface;
+} Vulkan_Surface;
+
+typedef struct Vulkan_Swapchain_t
+{
 	VkSwapchainKHR swapchain;
 	Opal_Queue present_queue;
 	Opal_TextureView *texture_views;

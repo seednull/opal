@@ -26,16 +26,6 @@ static Opal_Result null_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType e
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroy(Opal_Device this)
-{
-	assert(this);
-
-	Null_Device *ptr = (Null_Device *)this;
-
-	free(ptr);
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result null_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -174,6 +164,16 @@ static Opal_Result null_deviceDestroyRaytracePipeline(Opal_Device this, Opal_Ray
 static Opal_Result null_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroy(Opal_Device this)
+{
+	assert(this);
+
+	Null_Device *ptr = (Null_Device *)this;
+
+	free(ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result null_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
@@ -360,7 +360,6 @@ static Opal_Result null_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Op
  */
 static Opal_DeviceTable device_vtbl =
 {
-	null_deviceDestroy,
 	null_deviceGetInfo,
 	null_deviceGetQueue,
 
@@ -393,6 +392,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyComputePipeline,
 	null_deviceDestroyRaytracePipeline,
 	null_deviceDestroySwapchain,
+	null_deviceDestroy,
 
 	null_deviceAllocateBindset,
 	null_deviceFreeBindset,

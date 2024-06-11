@@ -43,13 +43,12 @@ bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 class Application
 {
 public:
-	void init();
+	void init(void *handle);
 	void shutdown();
 	void update(float dt);
-	void render(Opal_Swapchain swapchain);
-	void present(Opal_Swapchain swapchain);
-
-	OPAL_INLINE Opal_Device getDevice() const { return device; }
+	void resize();
+	void render();
+	void present();
 
 private:
 	struct Vertex
@@ -72,6 +71,8 @@ private:
 
 private:
 	Opal_Instance instance {OPAL_NULL_HANDLE};
+	Opal_Surface surface {OPAL_NULL_HANDLE};
+	Opal_Swapchain swapchain {OPAL_NULL_HANDLE};
 	Opal_Device device {OPAL_NULL_HANDLE};
 	Opal_Queue queue {OPAL_NULL_HANDLE};
 	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
@@ -86,9 +87,9 @@ private:
 
 /*
  */
-void Application::init()
+void Application::init(void *handle)
 {
-	// instance & device
+	// instance & surface
 	Opal_InstanceDesc instance_desc =
 	{
 		"04_triangle",
@@ -104,10 +105,25 @@ void Application::init()
 	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
+	result = opalCreateSurface(instance, handle, &surface);
+	assert(result == OPAL_SUCCESS);
+
+	// device & swapchain
 	result = opalCreateDefaultDevice(instance, OPAL_DEVICE_HINT_DEFAULT, &device);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalGetDeviceQueue(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, 0, &queue);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_SwapchainDesc swapchain_desc =
+	{
+		OPAL_PRESENT_MODE_MAILBOX,
+		OPAL_FORMAT_BGRA8_UNORM,
+		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
+		surface
+	};
+
+	result = opalCreateSwapchain(device, &swapchain_desc, &swapchain);
 	assert(result == OPAL_SUCCESS);
 
 	// buffers
@@ -274,7 +290,13 @@ void Application::shutdown()
 		assert(result == OPAL_SUCCESS);
 	}
 
+	result = opalDestroySwapchain(device, swapchain);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalDestroyDevice(device);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroySurface(instance, surface);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyInstance(instance);
@@ -286,7 +308,30 @@ void Application::update(float dt)
 
 }
 
-void Application::render(Opal_Swapchain swapchain)
+void Application::resize()
+{
+	if (device == OPAL_NULL_HANDLE)
+		return;
+
+	Opal_Result result = opalWaitIdle(device);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroySwapchain(device, swapchain);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_SwapchainDesc swapchain_desc =
+	{
+		OPAL_PRESENT_MODE_MAILBOX,
+		OPAL_FORMAT_BGRA8_UNORM,
+		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
+		surface
+	};
+
+	result = opalCreateSwapchain(device, &swapchain_desc, &swapchain);
+	assert(result == OPAL_SUCCESS);
+}
+
+void Application::render()
 {
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
@@ -365,7 +410,7 @@ void Application::render(Opal_Swapchain swapchain)
 	assert(result == OPAL_SUCCESS);
 }
 
-void Application::present(Opal_Swapchain swapchain)
+void Application::present()
 {
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
@@ -377,27 +422,45 @@ void Application::present(Opal_Swapchain swapchain)
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
 }
 
-
-
 #ifdef OPAL_PLATFORM_WINDOWS
 
 /*
  */
 LRESULT CALLBACK windowProc(HWND handle, UINT message, WPARAM w_param, LPARAM l_param)
 {
-	return DefWindowProcW(handle, message, w_param, l_param);
+	Application *app = reinterpret_cast<Application *>(GetWindowLongPtrW(handle, GWLP_USERDATA));
+
+	switch (message)
+	{
+		case WM_SIZE:
+			if (app)
+				app->resize();
+			break;
+
+		case WM_CLOSE:
+			PostQuitMessage(0);
+			break;
+
+		default:
+			return DefWindowProcW(handle, message, w_param, l_param);
+	}
+
+	return 0;
 }
 
 HWND createWindow(const char *title)
 {
 	HINSTANCE instance = GetModuleHandle(nullptr);
-	WNDCLASSW wc = {};
+	WNDCLASSEXW wc = {};
 
+	wc.cbSize = sizeof(WNDCLASSEXW);
+	wc.style = CS_HREDRAW | CS_VREDRAW;
 	wc.lpfnWndProc = windowProc;
 	wc.hInstance = instance;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.lpszClassName = L"Opal Window";
 
-	RegisterClassW(&wc);
+	RegisterClassExW(&wc);
 
 	assert(title);
 	int size = static_cast<int>(strlen(title));
@@ -435,26 +498,16 @@ void mainloop()
 {
 	const char *title = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
 
-	bool running = true;
-
 	Application app;
-	app.init();
 
 	HWND handle = createWindow(title);
+
+	SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&app));
 	ShowWindow(handle, SW_SHOW);
+	UpdateWindow(handle);
 
-	Opal_SwapchainDesc swapchain_desc =
-	{
-		OPAL_PRESENT_MODE_MAILBOX,
-		OPAL_FORMAT_BGRA8_UNORM,
-		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
-		handle
-	};
+	app.init(handle);
 
-	Opal_Swapchain swapchain = OPAL_NULL_HANDLE;
-	Opal_Result result = opalCreateSwapchain(app.getDevice(), &swapchain_desc, &swapchain);
-	assert(result == OPAL_SUCCESS);
-	
 	MSG msg = {};
 	LARGE_INTEGER begin_time = {};
 	LARGE_INTEGER end_time = {};
@@ -464,24 +517,26 @@ void mainloop()
 	QueryPerformanceFrequency(&frequency);
 	double denominator = 1.0 / frequency.QuadPart;
 
-	while (running)
+	while (true)
 	{
 		QueryPerformanceCounter(&begin_time);
-		if (PeekMessage(&msg, handle, 0, 0, PM_REMOVE))
+		if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) > 0)
 		{
+			if (msg.message == WM_QUIT)
+				break;
+
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 		}
 
 		app.update(dt);
-		app.render(swapchain);
-		app.present(swapchain);
+		app.render();
+		app.present();
 
 		QueryPerformanceCounter(&end_time);
 		dt = static_cast<float>((end_time.QuadPart - begin_time.QuadPart) * denominator);
 	}
 
-	opalDestroySwapchain(app.getDevice(), swapchain);
 	app.shutdown();
 
 	destroyWindow(handle);

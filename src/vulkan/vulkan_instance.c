@@ -72,6 +72,28 @@ static Opal_Result vulkan_instanceEnumerateDevices(Opal_Instance this, uint32_t 
 	return opal_result;
 }
 
+static Opal_Result vulkan_instanceCreateSurface(Opal_Instance this, void *handle, Opal_Surface *surface)
+{
+	assert(this);
+	assert(handle);
+	assert(surface);
+
+	Vulkan_Instance *instance_ptr = (Vulkan_Instance *)this;
+
+	VkInstance vulkan_instance = instance_ptr->instance;
+	VkSurfaceKHR vulkan_surface = VK_NULL_HANDLE;
+
+	Opal_Result opal_result = vulkan_platformCreateSurface(vulkan_instance, handle, &vulkan_surface);
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
+
+	Vulkan_Surface result = {0};
+	result.surface = vulkan_surface;
+
+	*surface = (Opal_Surface)opal_poolAddElement(&instance_ptr->surfaces, &result);
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
@@ -213,11 +235,33 @@ static Opal_Result vulkan_instanceCreateDevice(Opal_Instance this, uint32_t inde
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result vulkan_instanceDestroySurface(Opal_Instance this, Opal_Surface surface)
+{
+	assert(this);
+	assert(surface);
+ 
+	Opal_PoolHandle handle = (Opal_PoolHandle)surface;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Vulkan_Instance *instance_ptr = (Vulkan_Instance *)this;
+	Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElement(&instance_ptr->surfaces, handle);
+	assert(surface_ptr);
+
+	opal_poolRemoveElement(&instance_ptr->surfaces, handle);
+
+	vkDestroySurfaceKHR(instance_ptr->instance, surface_ptr->surface, NULL);
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 
 	Vulkan_Instance *ptr = (Vulkan_Instance *)this;
+
+	// TODO: proper cleanup for all pooled resources
+	opal_poolShutdown(&ptr->surfaces);
+
 	vkDestroyInstance(ptr->instance, NULL);
 
 	free(ptr);
@@ -228,10 +272,14 @@ static Opal_Result vulkan_instanceDestroy(Opal_Instance this)
  */
 static Opal_InstanceTable instance_vtbl =
 {
-	vulkan_instanceDestroy,
 	vulkan_instanceEnumerateDevices,
+
+	vulkan_instanceCreateSurface,
 	vulkan_instanceCreateDevice,
 	vulkan_instanceCreateDefaultDevice,
+
+	vulkan_instanceDestroySurface,
+	vulkan_instanceDestroy,
 };
 
 /*
@@ -289,6 +337,9 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	ptr->max_heap_allocations = desc->max_heap_allocations;
 	ptr->max_heaps = desc->max_heaps;
 	ptr->flags = desc->flags;
+
+	// pools
+	opal_poolInitialize(&ptr->surfaces, sizeof(Vulkan_Surface), 32);
 
 	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;

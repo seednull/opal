@@ -19,6 +19,11 @@ static Opal_Result null_instanceEnumerateDevices(Opal_Instance this, uint32_t *d
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result null_instanceCreateSurface(Opal_Instance this, void *handle, Opal_Surface *surface)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
 {
 	assert(this);
@@ -62,6 +67,11 @@ static Opal_Result null_instanceCreateDevice(Opal_Instance this, uint32_t index,
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result null_instanceDestroySurface(Opal_Instance this, Opal_Surface surface)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
@@ -79,10 +89,14 @@ static Opal_Result null_instanceDestroy(Opal_Instance this)
  */
 static Opal_InstanceTable instance_vtbl =
 {
-	null_instanceDestroy,
 	null_instanceEnumerateDevices,
+
+	null_instanceCreateSurface,
 	null_instanceCreateDevice,
 	null_instanceCreateDefaultDevice,
+
+	null_instanceDestroySurface,
+	null_instanceDestroy,
 };
 
 /*

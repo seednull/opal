@@ -21,18 +21,6 @@ static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineT
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceDestroy(Opal_Device this)
-{
-	assert(this);
-
-	DirectX12_Device *ptr = (DirectX12_Device *)this;
-	IDXGIAdapter1_Release(ptr->adapter);
-	ID3D12Device_Release(ptr->device);
-
-	free(ptr);
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -171,6 +159,18 @@ static Opal_Result directx12_deviceDestroyRaytracePipeline(Opal_Device this, Opa
 static Opal_Result directx12_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroy(Opal_Device this)
+{
+	assert(this);
+
+	DirectX12_Device *ptr = (DirectX12_Device *)this;
+	IDXGIAdapter1_Release(ptr->adapter);
+	ID3D12Device_Release(ptr->device);
+
+	free(ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
@@ -357,7 +357,6 @@ static Opal_Result directx12_deviceCmdTextureQueueReleaseBarrier(Opal_Device thi
  */
 static Opal_DeviceTable device_vtbl =
 {
-	directx12_deviceDestroy,
 	directx12_deviceGetInfo,
 	directx12_deviceGetQueue,
 
@@ -390,6 +389,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroyComputePipeline,
 	directx12_deviceDestroyRaytracePipeline,
 	directx12_deviceDestroySwapchain,
+	directx12_deviceDestroy,
 
 	directx12_deviceAllocateBindset,
 	directx12_deviceFreeBindset,

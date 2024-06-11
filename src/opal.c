@@ -63,18 +63,6 @@ Opal_Result opalGetDeviceTable(Opal_Device device, Opal_DeviceTable *device_tabl
 
 /*
  */
-Opal_Result opalDestroyInstance(Opal_Instance instance)
-{
-	if (instance == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_INSTANCE;
-
-	Opal_InstanceInternal *ptr = (Opal_InstanceInternal *)instance;
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyInstance);
-
-	return ptr->vtbl->destroyInstance(instance);
-}
-
 Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	if (instance == OPAL_NULL_HANDLE)
@@ -85,6 +73,20 @@ Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count,
 	assert(ptr->vtbl->enumerateDevices);
 
 	return ptr->vtbl->enumerateDevices(instance, device_count, infos);
+}
+
+/*
+ */
+Opal_Result opalCreateSurface(Opal_Instance instance, void *handle, Opal_Surface *surface)
+{
+	if (instance == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_INSTANCE;
+
+	Opal_InstanceInternal *ptr = (Opal_InstanceInternal *)instance;
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createSurface);
+
+	return ptr->vtbl->createSurface(instance, handle, surface);
 }
 
 Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device)
@@ -113,18 +115,32 @@ Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint
 
 /*
  */
-Opal_Result opalDestroyDevice(Opal_Device device)
+Opal_Result opalDestroySurface(Opal_Instance instance, Opal_Surface surface)
 {
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
+	if (instance == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_INSTANCE;
 
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	Opal_InstanceInternal *ptr = (Opal_InstanceInternal *)instance;
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyDevice);
+	assert(ptr->vtbl->destroySurface);
 
-	return ptr->vtbl->destroyDevice(device);
+	return ptr->vtbl->destroySurface(instance, surface);
 }
 
+Opal_Result opalDestroyInstance(Opal_Instance instance)
+{
+	if (instance == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_INSTANCE;
+
+	Opal_InstanceInternal *ptr = (Opal_InstanceInternal *)instance;
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyInstance);
+
+	return ptr->vtbl->destroyInstance(instance);
+}
+
+/*
+ */
 Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -487,6 +503,18 @@ Opal_Result opalDestroySwapchain(Opal_Device device, Opal_Swapchain swapchain)
 	assert(ptr->vtbl->destroySwapchain);
 
 	return ptr->vtbl->destroySwapchain(device, swapchain);
+}
+
+Opal_Result opalDestroyDevice(Opal_Device device)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyDevice);
+
+	return ptr->vtbl->destroyDevice(device);
 }
 
 /*

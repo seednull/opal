@@ -33,63 +33,6 @@ static Opal_Result vulkan_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceDestroy(Opal_Device this)
-{
-	assert(this);
-
-	Vulkan_Device *ptr = (Vulkan_Device *)this;
-
-#ifdef OPAL_HAS_VMA
-	if (ptr->use_vma > 0)
-	{
-		vmaDestroyAllocator(ptr->vma_allocator);
-	}
-	else
-#endif
-	{
-		Opal_Result result = vulkan_allocatorShutdown(ptr);
-		assert(result == OPAL_SUCCESS);
-	}
-
-	// TODO: proper cleanup for all previously created buffers & images
-	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
-	{
-		vkDestroyCommandPool(ptr->device, ptr->command_pools[i], NULL);
-
-		const Opal_Queue *queues = ptr->queue_handles[i];
-		uint32_t queue_count = ptr->device_engines_info.queue_counts[i];
-
-		for (uint32_t j = 0; j < queue_count; ++j)
-		{
-			Vulkan_Queue *queue = (Vulkan_Queue *)opal_poolGetElement(&ptr->queues, queues[j]);
-			vkDestroyFence(ptr->device, queue->fence, NULL);
-		}
-
-		free(ptr->queue_handles[i]);
-	}
-
-	opal_poolShutdown(&ptr->swapchains);
-	opal_poolShutdown(&ptr->pipelines);
-	opal_poolShutdown(&ptr->pipeline_layouts);
-	opal_poolShutdown(&ptr->bindsets);
-	opal_poolShutdown(&ptr->bindset_pools);
-	opal_poolShutdown(&ptr->bindset_layouts);
-	opal_poolShutdown(&ptr->shaders);
-	opal_poolShutdown(&ptr->command_buffers);
-	opal_poolShutdown(&ptr->samplers);
-	opal_poolShutdown(&ptr->image_views);
-	opal_poolShutdown(&ptr->images);
-	opal_poolShutdown(&ptr->buffers);
-	opal_poolShutdown(&ptr->queues);
-
-	opal_bumpShutdown(&ptr->bump);
-
-	vkDestroyDevice(ptr->device, NULL);
-
-	free(ptr);
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result vulkan_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	assert(this);
@@ -918,30 +861,26 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 {
 	assert(this);
 	assert(desc);
-	assert(desc->handle);
+	assert(desc->surface);
 	assert(swapchain);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	VkInstance vulkan_instance = device_ptr->instance;
+	Vulkan_Instance *instance_ptr = device_ptr->instance;
 	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
 	VkDevice vulkan_device = device_ptr->device;
 
 	// surface
-	VkSurfaceKHR vulkan_surface = VK_NULL_HANDLE;
-	VkSwapchainKHR vulkan_swapchain = VK_NULL_HANDLE;
+	Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElement(&instance_ptr->surfaces, desc->surface);
+	assert(surface_ptr);
 
-	Opal_Result opal_result = vulkan_platformCreateSurface(vulkan_instance, desc->handle, &vulkan_surface);
-	if (opal_result != OPAL_SUCCESS)
-		return opal_result;
+	VkSurfaceKHR vulkan_surface = surface_ptr->surface;
+	VkSwapchainKHR vulkan_swapchain = VK_NULL_HANDLE;
 
 	// surface capabilities
 	VkSurfaceCapabilitiesKHR surface_capabilities = {0};
 	VkResult vulkan_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan_physical_device, vulkan_surface, &surface_capabilities);
 	if (vulkan_result != VK_SUCCESS)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
-	}
 
 	uint32_t num_images = surface_capabilities.minImageCount + 1;
 
@@ -976,19 +915,13 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	}
 
 	if (present_supported == VK_FALSE)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED;
-	}
 
 	// surface present mode
 	uint32_t num_present_modes = 0;
 	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, NULL);
 	if (vulkan_result != VK_SUCCESS)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
-	}
 
 	opal_bumpReset(&device_ptr->bump);
 	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * num_present_modes);
@@ -996,10 +929,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	VkPresentModeKHR *present_modes = (VkPresentModeKHR *)device_ptr->bump.data;
 	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, present_modes);
 	if (vulkan_result != VK_SUCCESS)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
-	}
 
 	VkPresentModeKHR wanted_present_mode = vulkan_helperToPresentMode(desc->mode);
 	VkBool32 found_present_mode = VK_FALSE;
@@ -1014,19 +944,13 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	}
 
 	if (found_present_mode == VK_FALSE)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
-	}
 
 	// surface formats
 	uint32_t num_surface_formats = 0;
 	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, NULL);
 	if (vulkan_result != VK_SUCCESS)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
-	}
 
 	opal_bumpReset(&device_ptr->bump);
 	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * num_surface_formats);
@@ -1034,10 +958,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)device_ptr->bump.data;
 	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, surface_formats);
 	if (vulkan_result != VK_SUCCESS)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
-	}
 
 	VkFormat wanted_format = vulkan_helperToFormat(desc->format);
 	VkColorSpaceKHR wanted_color_space = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
@@ -1053,10 +974,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	}
 
 	if (found_format == VK_FALSE)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
-	}
 
 	// swap chain
 	VkSwapchainCreateInfoKHR swapchain_info = {0};
@@ -1075,10 +993,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 
 	vulkan_result = device_ptr->vk.vkCreateSwapchainKHR(vulkan_device, &swapchain_info, NULL, &vulkan_swapchain);
 	if (vulkan_result != VK_SUCCESS)
-	{
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
-	}
 
 	// images
 	opal_bumpReset(&device_ptr->bump);
@@ -1089,7 +1004,6 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	if (vulkan_result != VK_SUCCESS)
 	{
 		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
 	}
 
@@ -1164,12 +1078,10 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 		free(texture_views);
 
 		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
-		vkDestroySurfaceKHR(vulkan_instance, vulkan_surface, NULL);
 		return OPAL_VULKAN_ERROR;
 	}
 
 	Vulkan_Swapchain result = {0};
-	result.surface = vulkan_surface;
 	result.swapchain = vulkan_swapchain;
 	result.present_queue = present_queue;
 	result.texture_views = texture_views;
@@ -1480,8 +1392,65 @@ static Opal_Result vulkan_deviceDestroySwapchain(Opal_Device this, Opal_Swapchai
 	free(swapchain_ptr->texture_views);
 
 	device_ptr->vk.vkDestroySwapchainKHR(device_ptr->device, swapchain_ptr->swapchain, NULL);
-	vkDestroySurfaceKHR(device_ptr->instance, swapchain_ptr->surface, NULL);
 
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceDestroy(Opal_Device this)
+{
+	assert(this);
+
+	Vulkan_Device *ptr = (Vulkan_Device *)this;
+
+#ifdef OPAL_HAS_VMA
+	if (ptr->use_vma > 0)
+	{
+		vmaDestroyAllocator(ptr->vma_allocator);
+	}
+	else
+#endif
+	{
+		Opal_Result result = vulkan_allocatorShutdown(ptr);
+		assert(result == OPAL_SUCCESS);
+	}
+
+	// TODO: proper cleanup for all pooled resources
+
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+	{
+		vkDestroyCommandPool(ptr->device, ptr->command_pools[i], NULL);
+
+		const Opal_Queue *queues = ptr->queue_handles[i];
+		uint32_t queue_count = ptr->device_engines_info.queue_counts[i];
+
+		for (uint32_t j = 0; j < queue_count; ++j)
+		{
+			Vulkan_Queue *queue = (Vulkan_Queue *)opal_poolGetElement(&ptr->queues, queues[j]);
+			vkDestroyFence(ptr->device, queue->fence, NULL);
+		}
+
+		free(ptr->queue_handles[i]);
+	}
+
+	opal_poolShutdown(&ptr->swapchains);
+	opal_poolShutdown(&ptr->pipelines);
+	opal_poolShutdown(&ptr->pipeline_layouts);
+	opal_poolShutdown(&ptr->bindsets);
+	opal_poolShutdown(&ptr->bindset_pools);
+	opal_poolShutdown(&ptr->bindset_layouts);
+	opal_poolShutdown(&ptr->shaders);
+	opal_poolShutdown(&ptr->command_buffers);
+	opal_poolShutdown(&ptr->samplers);
+	opal_poolShutdown(&ptr->image_views);
+	opal_poolShutdown(&ptr->images);
+	opal_poolShutdown(&ptr->buffers);
+	opal_poolShutdown(&ptr->queues);
+
+	opal_bumpShutdown(&ptr->bump);
+
+	vkDestroyDevice(ptr->device, NULL);
+
+	free(ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -2368,7 +2337,6 @@ static Opal_Result vulkan_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, 
  */
 static Opal_DeviceTable device_vtbl =
 {
-	vulkan_deviceDestroy,
 	vulkan_deviceGetInfo,
 	vulkan_deviceGetQueue,
 
@@ -2401,6 +2369,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyComputePipeline,
 	vulkan_deviceDestroyRaytracePipeline,
 	vulkan_deviceDestroySwapchain,
+	vulkan_deviceDestroy,
 
 	vulkan_deviceAllocateBindset,
 	vulkan_deviceFreeBindset,
@@ -2457,7 +2426,7 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	volkLoadDeviceTable(&device_ptr->vk, device);
 
 	// data
-	device_ptr->instance = instance_ptr->instance;
+	device_ptr->instance = instance_ptr;
 	device_ptr->physical_device = physical_device;
 	device_ptr->device = device;
 
