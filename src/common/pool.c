@@ -163,7 +163,9 @@ Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data)
 	uint8_t *generation_ptr = pool->generations + index;
 
 	memcpy(data_ptr, data, pool->element_size);
-	(*generation_ptr)++;
+
+	uint8_t generation = *generation_ptr + 1;
+	*generation_ptr = max(1, generation);
 
 	pool->size++;
 
