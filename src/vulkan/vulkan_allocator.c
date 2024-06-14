@@ -289,7 +289,18 @@ Opal_Result vulkan_allocatorShutdown(Vulkan_Device *device)
 	}
 	free(allocator->heaps);
 
-	// TODO: proper cleanup for all previously allocated memory blocks
+	uint32_t head = opal_poolGetHeadIndex(&allocator->blocks);
+	while (head != OPAL_POOL_HANDLE_NULL)
+	{
+		Vulkan_MemoryBlock *block = (Vulkan_MemoryBlock *)opal_poolGetElementByIndex(&allocator->blocks, head);
+
+		if (block->map_count > 0)
+			vkUnmapMemory(device->device, block->memory);
+
+		vkFreeMemory(device->device, block->memory, NULL);
+		head = opal_poolGetNextIndex(&allocator->blocks, head);
+	}
+
 	opal_poolShutdown(&allocator->blocks);
 
 	return OPAL_SUCCESS;
