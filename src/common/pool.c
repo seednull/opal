@@ -174,9 +174,11 @@ Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data)
 	uint8_t *data_ptr = pool->data + index * pool->element_size;
 	uint8_t *generation_ptr = pool->generations + index;
 
-	if (pool->head == OPAL_POOL_HANDLE_NULL && pool->tail == OPAL_POOL_HANDLE_NULL)
-	{
+	if (pool->head == OPAL_POOL_HANDLE_NULL)
 		pool->head = index;
+
+	if (pool->tail == OPAL_POOL_HANDLE_NULL)
+	{
 		pool->tail = index;
 	}
 	else
