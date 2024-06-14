@@ -88,6 +88,8 @@ Opal_Result opal_poolInitialize(Opal_Pool *pool, uint32_t element_size, uint32_t
 	pool->element_size = element_size;
 	pool->capacity = capacity;
 	pool->num_free_indices = capacity;
+	pool->head = OPAL_POOL_HANDLE_NULL;
+	pool->tail = OPAL_POOL_HANDLE_NULL;
 
 	if (capacity > 0)
 	{
@@ -95,12 +97,16 @@ Opal_Result opal_poolInitialize(Opal_Pool *pool, uint32_t element_size, uint32_t
 
 		pool->data = (uint8_t *)malloc(element_size * capacity);
 		pool->generations = (uint8_t *)malloc(sizeof(uint8_t) * capacity);
+		pool->nexts = (uint32_t *)malloc(sizeof(uint32_t) * capacity);
+		pool->prevs = (uint32_t *)malloc(sizeof(uint32_t) * capacity);
 		pool->indices = (uint32_t *)malloc(sizeof(uint32_t) * capacity);
 		pool->masks = (uint32_t *)malloc(sizeof(uint32_t) * num_masks);
 
 		for (uint32_t i = 0; i < capacity; ++i)
 			pool->indices[i] = capacity - i - 1;
 
+		memset(pool->nexts, OPAL_POOL_HANDLE_NULL, sizeof(uint32_t) * capacity);
+		memset(pool->prevs, OPAL_POOL_HANDLE_NULL, sizeof(uint32_t) * capacity);
 		memset(pool->masks, 0xFFFFFFFF, sizeof(uint32_t) * num_masks);
 		memset(pool->generations, 0, sizeof(uint8_t) * capacity);
 	}
@@ -114,6 +120,8 @@ Opal_Result opal_poolShutdown(Opal_Pool *pool)
 
 	free(pool->data);
 	free(pool->generations);
+	free(pool->nexts);
+	free(pool->prevs);
 	free(pool->indices);
 	free(pool->masks);
 
@@ -139,6 +147,8 @@ Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data)
 
 		pool->data = (uint8_t *)realloc(pool->data, pool->element_size * pool->capacity);
 		pool->generations = (uint8_t *)realloc(pool->generations, sizeof(uint8_t) * pool->capacity);
+		pool->nexts = (uint32_t *)realloc(pool->nexts, sizeof(uint32_t) * pool->capacity);
+		pool->prevs = (uint32_t *)realloc(pool->prevs, sizeof(uint32_t) * pool->capacity);
 		pool->indices = (uint32_t *)realloc(pool->indices, sizeof(uint32_t) * pool->capacity);
 
 		if (old_num_masks != new_num_masks)
@@ -149,6 +159,8 @@ Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data)
 			pool->num_free_indices++;
 			pool->indices[pool->num_free_indices - 1] = old_capacity + pool->capacity - i - 1;
 			pool->generations[i] = 0;
+			pool->nexts[i] = OPAL_POOL_HANDLE_NULL;
+			pool->prevs[i] = OPAL_POOL_HANDLE_NULL;
 		}
 
 		for (uint32_t i = old_num_masks; i < new_num_masks; ++i)
@@ -161,6 +173,19 @@ Opal_PoolHandle opal_poolAddElement(Opal_Pool *pool, const void *data)
 
 	uint8_t *data_ptr = pool->data + index * pool->element_size;
 	uint8_t *generation_ptr = pool->generations + index;
+
+	if (pool->head == OPAL_POOL_HANDLE_NULL && pool->tail == OPAL_POOL_HANDLE_NULL)
+	{
+		pool->head = index;
+		pool->tail = index;
+	}
+	else
+	{
+		pool->nexts[pool->tail] = index;
+		pool->prevs[index] = pool->tail;
+
+		pool->tail = index;
+	}
 
 	memcpy(data_ptr, data, pool->element_size);
 
@@ -191,6 +216,21 @@ Opal_Result opal_poolRemoveElement(Opal_Pool *pool, Opal_PoolHandle handle)
 	if (opal_poolIsIndexFree(pool, index))
 		return OPAL_INTERNAL_ERROR;
 
+	uint32_t prev = pool->prevs[index];
+	uint32_t next = pool->nexts[index];
+
+	if (next != OPAL_POOL_HANDLE_NULL)
+		pool->prevs[next] = prev;
+
+	if (prev != OPAL_POOL_HANDLE_NULL)
+		pool->nexts[prev] = next;
+
+	if (pool->head == index)
+		pool->head = next;
+
+	if (pool->tail == index)
+		pool->tail = prev;
+
 	opal_poolReleaseIndex(pool, index);
 	pool->size--;
 
@@ -215,4 +255,46 @@ void *opal_poolGetElement(const Opal_Pool *pool, Opal_PoolHandle handle)
 		return NULL;
 
 	return pool->data + index * pool->element_size;
+}
+
+void *opal_poolGetElementByIndex(const Opal_Pool *pool, uint32_t index)
+{
+	assert(pool);
+	assert(pool->size > 0);
+	assert(pool->capacity > index);
+	assert(index != OPAL_POOL_HANDLE_NULL);
+	
+	return pool->data + index * pool->element_size;
+}
+
+uint32_t opal_poolGetHeadIndex(const Opal_Pool *pool)
+{
+	assert(pool);
+	return pool->head;
+}
+
+uint32_t opal_poolGetTailIndex(const Opal_Pool *pool)
+{
+	assert(pool);
+	return pool->head;
+}
+
+uint32_t opal_poolGetNextIndex(const Opal_Pool *pool, uint32_t index)
+{
+	assert(pool);
+	assert(pool->size > 0);
+	assert(pool->capacity > index);
+	assert(index != OPAL_POOL_HANDLE_NULL);
+	
+	return pool->nexts[index];
+}
+
+uint32_t opal_poolGetPrevIndex(const Opal_Pool *pool, uint32_t index)
+{
+	assert(pool);
+	assert(pool->size > 0);
+	assert(pool->capacity > index);
+	assert(index != OPAL_POOL_HANDLE_NULL);
+	
+	return pool->prevs[index];
 }
