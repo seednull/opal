@@ -87,6 +87,7 @@ typedef struct Vulkan_DeviceEnginesInfo_t
 typedef struct Vulkan_Instance_t
 {
 	Opal_InstanceTable *vtbl;
+	// TODO: add Vulkan_Device intrusive list head here, so Vulkan_Instance will be able to delete all of them
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
@@ -99,6 +100,7 @@ typedef struct Vulkan_Device_t
 {
 	Opal_DeviceTable *vtbl;
 	Vulkan_Instance *instance;
+	// TODO: organize all heap allocated devices into intrusive list
 	VolkDeviceTable vk;
 	VkPhysicalDevice physical_device;
 	VkDevice device;
@@ -181,6 +183,7 @@ typedef struct Vulkan_CommandBuffer_t
 	VkCommandBuffer command_buffer;
 	VkSemaphore semaphore;
 	Opal_DeviceEngineType type;
+	VkPipelineBindPoint pipeline_bind_point;
 } Vulkan_CommandBuffer;
 
 typedef struct Vulkan_Shader_t
@@ -215,6 +218,7 @@ typedef struct Vulkan_PipelineLayout_t
 typedef struct Vulkan_Pipeline_t
 {
 	VkPipeline pipeline;
+	VkPipelineBindPoint bind_point;
 } Vulkan_Pipeline;
 
 typedef struct Vulkan_Surface_t

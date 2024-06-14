@@ -66,22 +66,22 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
+static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline)
+static Opal_Result directx12_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
+static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
+static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -136,22 +136,7 @@ static Opal_Result directx12_deviceDestroyPipelineLayout(Opal_Device this, Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceDestroyGraphicsPipeline(Opal_Device this, Opal_GraphicsPipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result directx12_deviceDestroyMeshletPipeline(Opal_Device this, Opal_MeshletPipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result directx12_deviceDestroyComputePipeline(Opal_Device this, Opal_ComputePipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result directx12_deviceDestroyRaytracePipeline(Opal_Device this, Opal_RaytracePipeline pipeline)
+static Opal_Result directx12_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -243,27 +228,32 @@ static Opal_Result directx12_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetGraphicsPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+static Opal_Result directx12_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetMeshletPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_MeshletPipeline pipeline)
+static Opal_Result directx12_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetComputePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
+static Opal_Result directx12_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetRaytracePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_RaytracePipeline pipeline)
+static Opal_Result directx12_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -384,10 +374,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroyBindsetLayout,
 	directx12_deviceDestroyBindsetPool,
 	directx12_deviceDestroyPipelineLayout,
-	directx12_deviceDestroyGraphicsPipeline,
-	directx12_deviceDestroyMeshletPipeline,
-	directx12_deviceDestroyComputePipeline,
-	directx12_deviceDestroyRaytracePipeline,
+	directx12_deviceDestroyPipeline,
 	directx12_deviceDestroySwapchain,
 	directx12_deviceDestroy,
 
@@ -406,10 +393,11 @@ static Opal_DeviceTable device_vtbl =
 
 	directx12_deviceCmdBeginGraphicsPass,
 	directx12_deviceCmdEndGraphicsPass,
-	directx12_deviceCmdSetGraphicsPipeline,
-	directx12_deviceCmdSetMeshletPipeline,
-	directx12_deviceCmdSetComputePipeline,
-	directx12_deviceCmdSetRaytracePipeline,
+	directx12_deviceCmdBeginComputePass,
+	directx12_deviceCmdEndComputePass,
+	directx12_deviceCmdBeginRaytracePass,
+	directx12_deviceCmdEndRaytracePass,
+	directx12_deviceCmdSetPipeline,
 	directx12_deviceCmdSetBindsets,
 	directx12_deviceCmdSetVertexBuffers,
 	directx12_deviceCmdSetIndexBuffer,

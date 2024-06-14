@@ -394,6 +394,7 @@ static Opal_Result vulkan_deviceCreateCommandBuffer(Opal_Device this, Opal_Devic
 	result.command_buffer = vulkan_command_buffer;
 	result.semaphore = vulkan_semaphore;
 	result.type = engine_type;
+	result.pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 
 	*command_buffer = (Opal_CommandBuffer)opal_poolAddElement(&device_ptr->command_buffers, &result);
 	return OPAL_SUCCESS;
@@ -567,7 +568,7 @@ static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
+static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	assert(this);
 	assert(desc);
@@ -794,17 +795,18 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	Vulkan_Pipeline result = {0};
 	result.pipeline = vulkan_pipeline;
+	result.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-	*pipeline = (Opal_GraphicsPipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
+	*pipeline = (Opal_Pipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline)
+static Opal_Result vulkan_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
+static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	assert(this);
 	assert(desc);
@@ -847,12 +849,13 @@ static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Op
 
 	Vulkan_Pipeline result = {0};
 	result.pipeline = vulkan_pipeline;
+	result.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
 
-	*pipeline = (Opal_ComputePipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
+	*pipeline = (Opal_Pipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
+static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -1292,64 +1295,7 @@ static Opal_Result vulkan_deviceDestroyPipelineLayout(Opal_Device this, Opal_Pip
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceDestroyGraphicsPipeline(Opal_Device this, Opal_GraphicsPipeline pipeline)
-{
-	assert(this);
-	assert(pipeline);
- 
-	Opal_PoolHandle handle = (Opal_PoolHandle)pipeline;
-	assert(handle != OPAL_POOL_HANDLE_NULL);
-
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, handle);
-	assert(pipeline_ptr);
-
-	opal_poolRemoveElement(&device_ptr->pipelines, handle);
-
-	device_ptr->vk.vkDestroyPipeline(device_ptr->device, pipeline_ptr->pipeline, NULL);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceDestroyMeshletPipeline(Opal_Device this, Opal_MeshletPipeline pipeline)
-{
-	assert(this);
-	assert(pipeline);
- 
-	Opal_PoolHandle handle = (Opal_PoolHandle)pipeline;
-	assert(handle != OPAL_POOL_HANDLE_NULL);
-
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, handle);
-	assert(pipeline_ptr);
-
-	opal_poolRemoveElement(&device_ptr->pipelines, handle);
-
-	device_ptr->vk.vkDestroyPipeline(device_ptr->device, pipeline_ptr->pipeline, NULL);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceDestroyComputePipeline(Opal_Device this, Opal_ComputePipeline pipeline)
-{
-	assert(this);
-	assert(pipeline);
- 
-	Opal_PoolHandle handle = (Opal_PoolHandle)pipeline;
-	assert(handle != OPAL_POOL_HANDLE_NULL);
-
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, handle);
-	assert(pipeline_ptr);
-
-	opal_poolRemoveElement(&device_ptr->pipelines, handle);
-
-	device_ptr->vk.vkDestroyPipeline(device_ptr->device, pipeline_ptr->pipeline, NULL);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceDestroyRaytracePipeline(Opal_Device this, Opal_RaytracePipeline pipeline)
+static Opal_Result vulkan_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline pipeline)
 {
 	assert(this);
 	assert(pipeline);
@@ -2017,6 +1963,8 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 		memcpy(&vulkan_depthstencil_attachment->clearValue, depthstencil_attachment->clear_value, sizeof(VkClearValue));
 	}
 
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
 	VkRenderingInfo rendering_info = {0};
 	rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 	rendering_info.renderArea.extent.width = width;
@@ -2042,11 +1990,77 @@ static Opal_Result vulkan_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Comman
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
 	assert(command_buffer_ptr);
 
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
 	device_ptr->vk.vkCmdEndRenderingKHR(command_buffer_ptr->command_buffer);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetGraphicsPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+static Opal_Result vulkan_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
 	assert(this);
 	assert(command_buffer);
@@ -2059,15 +2073,19 @@ static Opal_Result vulkan_deviceCmdSetGraphicsPipeline(Opal_Device this, Opal_Co
 
 	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, pipeline);
 	assert(pipeline_ptr);
+	assert(command_buffer_ptr->pipeline_bind_point == pipeline_ptr->bind_point);
 
-	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_ptr->pipeline);
+	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, command_buffer_ptr->pipeline_bind_point, pipeline_ptr->pipeline);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetMeshletPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_MeshletPipeline pipeline)
+static Opal_Result vulkan_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
 {
 	assert(this);
 	assert(command_buffer);
+	assert(pipeline_layout);
+	assert(num_bindsets > 0);
+	assert(bindsets);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
@@ -2075,39 +2093,26 @@ static Opal_Result vulkan_deviceCmdSetMeshletPipeline(Opal_Device this, Opal_Com
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
 	assert(command_buffer_ptr);
 
-	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, pipeline);
-	assert(pipeline_ptr);
+	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, pipeline_layout);
 
-	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_ptr->pipeline);
+	VkCommandBuffer vulkan_command_buffer = command_buffer_ptr->command_buffer;
+	VkPipelineBindPoint vulkan_bind_point = command_buffer_ptr->pipeline_bind_point;
+	VkPipelineLayout vulkan_pipeline_layout = pipeline_layout_ptr->layout;
+
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorSet) * num_bindsets);
+
+	VkDescriptorSet *vulkan_sets = (VkDescriptorSet *)(device_ptr->bump.data + offset);
+	for (uint32_t i = 0; i < num_bindsets; ++i)
+	{
+		Vulkan_Bindset *bindset_ptr = (Vulkan_Bindset *)opal_poolGetElement(&device_ptr->bindsets, bindsets[i]);
+		assert(bindset_ptr);
+
+		vulkan_sets[i] = bindset_ptr->set;
+	}
+
+	device_ptr->vk.vkCmdBindDescriptorSets(vulkan_command_buffer, vulkan_bind_point, vulkan_pipeline_layout, 0, num_bindsets, vulkan_sets, 0, NULL);
 	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceCmdSetComputePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
-{
-	assert(this);
-	assert(command_buffer);
- 
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	VkDevice vulkan_device = device_ptr->device;
-
-	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
-	assert(command_buffer_ptr);
-
-	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, pipeline);
-	assert(pipeline_ptr);
-
-	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_ptr->pipeline);
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceCmdSetRaytracePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_RaytracePipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result vulkan_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_bindsets, const Opal_Bindset *bindsets)
-{
-	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result vulkan_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
@@ -2364,10 +2369,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyBindsetLayout,
 	vulkan_deviceDestroyBindsetPool,
 	vulkan_deviceDestroyPipelineLayout,
-	vulkan_deviceDestroyGraphicsPipeline,
-	vulkan_deviceDestroyMeshletPipeline,
-	vulkan_deviceDestroyComputePipeline,
-	vulkan_deviceDestroyRaytracePipeline,
+	vulkan_deviceDestroyPipeline,
 	vulkan_deviceDestroySwapchain,
 	vulkan_deviceDestroy,
 
@@ -2386,10 +2388,11 @@ static Opal_DeviceTable device_vtbl =
 
 	vulkan_deviceCmdBeginGraphicsPass,
 	vulkan_deviceCmdEndGraphicsPass,
-	vulkan_deviceCmdSetGraphicsPipeline,
-	vulkan_deviceCmdSetMeshletPipeline,
-	vulkan_deviceCmdSetComputePipeline,
-	vulkan_deviceCmdSetRaytracePipeline,
+	vulkan_deviceCmdBeginComputePass,
+	vulkan_deviceCmdEndComputePass,
+	vulkan_deviceCmdBeginRaytracePass,
+	vulkan_deviceCmdEndRaytracePass,
+	vulkan_deviceCmdSetPipeline,
 	vulkan_deviceCmdSetBindsets,
 	vulkan_deviceCmdSetVertexBuffers,
 	vulkan_deviceCmdSetIndexBuffer,

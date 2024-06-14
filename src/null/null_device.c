@@ -71,22 +71,22 @@ static Opal_Result null_deviceCreatePipelineLayout(Opal_Device this, uint32_t nu
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
+static Opal_Result null_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_MeshletPipeline *pipeline)
+static Opal_Result null_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
+static Opal_Result null_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
+static Opal_Result null_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -141,22 +141,7 @@ static Opal_Result null_deviceDestroyPipelineLayout(Opal_Device this, Opal_Pipel
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyGraphicsPipeline(Opal_Device this, Opal_GraphicsPipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceDestroyMeshletPipeline(Opal_Device this, Opal_MeshletPipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceDestroyComputePipeline(Opal_Device this, Opal_ComputePipeline pipeline)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceDestroyRaytracePipeline(Opal_Device this, Opal_RaytracePipeline pipeline)
+static Opal_Result null_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline pipeline)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -246,27 +231,32 @@ static Opal_Result null_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetGraphicsPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+static Opal_Result null_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetMeshletPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_MeshletPipeline pipeline)
+static Opal_Result null_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetComputePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
+static Opal_Result null_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetRaytracePipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_RaytracePipeline pipeline)
+static Opal_Result null_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -387,10 +377,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyBindsetLayout,
 	null_deviceDestroyBindsetPool,
 	null_deviceDestroyPipelineLayout,
-	null_deviceDestroyGraphicsPipeline,
-	null_deviceDestroyMeshletPipeline,
-	null_deviceDestroyComputePipeline,
-	null_deviceDestroyRaytracePipeline,
+	null_deviceDestroyPipeline,
 	null_deviceDestroySwapchain,
 	null_deviceDestroy,
 
@@ -409,10 +396,11 @@ static Opal_DeviceTable device_vtbl =
 
 	null_deviceCmdBeginGraphicsPass,
 	null_deviceCmdEndGraphicsPass,
-	null_deviceCmdSetGraphicsPipeline,
-	null_deviceCmdSetMeshletPipeline,
-	null_deviceCmdSetComputePipeline,
-	null_deviceCmdSetRaytracePipeline,
+	null_deviceCmdBeginComputePass,
+	null_deviceCmdEndComputePass,
+	null_deviceCmdBeginRaytracePass,
+	null_deviceCmdEndRaytracePass,
+	null_deviceCmdSetPipeline,
 	null_deviceCmdSetBindsets,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,
