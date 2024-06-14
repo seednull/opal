@@ -43,10 +43,10 @@ bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 class Application
 {
 public:
-	void init(void *handle);
+	void init(void *handle, uint32_t width, uint32_t height);
 	void shutdown();
 	void update(float dt);
-	void resize();
+	void resize(uint32_t width, uint32_t height);
 	void render();
 	void present();
 
@@ -79,16 +79,21 @@ private:
 	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
 	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
-	Opal_GraphicsPipeline pipeline {OPAL_NULL_HANDLE};
+	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
 	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 
 	uint32_t current_in_flight_frame {0};
+	uint32_t width {0};
+	uint32_t height {0};
 };
 
 /*
  */
-void Application::init(void *handle)
+void Application::init(void *handle, uint32_t w, uint32_t h)
 {
+	width = w;
+	height = h;
+
 	// instance & surface
 	Opal_InstanceDesc instance_desc =
 	{
@@ -119,6 +124,7 @@ void Application::init(void *handle)
 	{
 		OPAL_PRESENT_MODE_MAILBOX,
 		OPAL_FORMAT_BGRA8_UNORM,
+		OPAL_COLORSPACE_SRGB,
 		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
 		surface
 	};
@@ -281,7 +287,7 @@ void Application::shutdown()
 	result = opalDestroyPipelineLayout(device, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyGraphicsPipeline(device, pipeline);
+	result = opalDestroyPipeline(device, pipeline);
 	assert(result == OPAL_SUCCESS);
 
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
@@ -308,10 +314,13 @@ void Application::update(float dt)
 
 }
 
-void Application::resize()
+void Application::resize(uint32_t w, uint32_t h)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return;
+
+	width = w;
+	height = h;
 
 	Opal_Result result = opalWaitIdle(device);
 	assert(result == OPAL_SUCCESS);
@@ -323,6 +332,7 @@ void Application::resize()
 	{
 		OPAL_PRESENT_MODE_MAILBOX,
 		OPAL_FORMAT_BGRA8_UNORM,
+		OPAL_COLORSPACE_SRGB,
 		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
 		surface
 	};
@@ -362,7 +372,7 @@ void Application::render()
 	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetGraphicsPipeline(device, command_buffer, pipeline);
+	result = opalCmdSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferView vertex_buffer = {triangle_buffer, 0};
@@ -377,14 +387,14 @@ void Application::render()
 	Opal_Viewport viewport =
 	{
 		0, 0,
-		800, 600,
+		static_cast<float>(width), static_cast<float>(height),
 		0.0f, 1.0f,
 	};
 
 	result = opalCmdSetViewport(device, command_buffer, viewport);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetScissor(device, command_buffer, 0, 0, 800, 600);
+	result = opalCmdSetScissor(device, command_buffer, 0, 0, width, height);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdDrawIndexedInstanced(device, command_buffer, 3, 0, 1, 0);
@@ -433,13 +443,20 @@ LRESULT CALLBACK windowProc(HWND handle, UINT message, WPARAM w_param, LPARAM l_
 	switch (message)
 	{
 		case WM_SIZE:
+		{
+			uint32_t width = static_cast<uint32_t>(LOWORD(l_param));
+			uint32_t height = static_cast<uint32_t>(HIWORD(l_param));
+
 			if (app)
-				app->resize();
-			break;
+				app->resize(width, height);
+		}
+		break;
 
 		case WM_CLOSE:
+		{
 			PostQuitMessage(0);
-			break;
+		}
+		break;
 
 		default:
 			return DefWindowProcW(handle, message, w_param, l_param);
@@ -448,7 +465,7 @@ LRESULT CALLBACK windowProc(HWND handle, UINT message, WPARAM w_param, LPARAM l_
 	return 0;
 }
 
-HWND createWindow(const char *title)
+HWND createWindow(const char *title, uint32_t width, uint32_t height)
 {
 	HINSTANCE instance = GetModuleHandle(nullptr);
 	WNDCLASSEXW wc = {};
@@ -468,7 +485,7 @@ HWND createWindow(const char *title)
 	wchar_t titlew[4096] = {};
 	MultiByteToWideChar(CP_UTF8, 0, title, size, titlew, 4096);
 
-	RECT rect = {0, 0, 800, 600};
+	RECT rect = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	HWND handle = CreateWindowExW(
@@ -497,16 +514,18 @@ void destroyWindow(HWND handle)
 void mainloop()
 {
 	const char *title = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
+	const uint32_t width = 800;
+	const uint32_t height = 600;
 
 	Application app;
 
-	HWND handle = createWindow(title);
+	HWND handle = createWindow(title, width, height);
 
 	SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&app));
 	ShowWindow(handle, SW_SHOW);
 	UpdateWindow(handle);
 
-	app.init(handle);
+	app.init(handle, width, height);
 
 	MSG msg = {};
 	LARGE_INTEGER begin_time = {};
