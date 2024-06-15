@@ -5,6 +5,134 @@
 
 /*
  */
+static void vulkan_destroyBuffer(Vulkan_Device *device_ptr, Vulkan_Buffer *buffer_ptr)
+{
+	assert(device_ptr);
+	assert(buffer_ptr);
+
+#if OPAL_HAS_VMA
+	if (device_ptr->use_vma)
+	{
+		vmaDestroyBuffer(device_ptr->vma_allocator, buffer_ptr->buffer, buffer_ptr->vma_allocation);
+		return;
+	}
+#endif
+
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	assert(allocator);
+
+	device_ptr->vk.vkDestroyBuffer(device_ptr->device, buffer_ptr->buffer, NULL);
+
+	if (buffer_ptr->map_count > 0)
+		vulkan_allocatorUnmapMemory(device_ptr, buffer_ptr->allocation);
+
+	vulkan_allocatorFreeMemory(device_ptr, buffer_ptr->allocation);
+}
+
+static void vulkan_destroyTexture(Vulkan_Device *device_ptr, Vulkan_Image *image_ptr)
+{
+	assert(device_ptr);
+	assert(image_ptr);
+ 
+#if OPAL_HAS_VMA
+	if (device_ptr->use_vma)
+	{
+		vmaDestroyImage(device_ptr->vma_allocator, image_ptr->image, image_ptr->vma_allocation);
+		return;
+	}
+#endif
+
+	Vulkan_Allocator *allocator = &device_ptr->allocator;
+	assert(allocator);
+
+	device_ptr->vk.vkDestroyImage(device_ptr->device, image_ptr->image, NULL);
+	vulkan_allocatorFreeMemory(device_ptr, image_ptr->allocation);
+}
+
+static void vulkan_destroyTextureView(Vulkan_Device *device_ptr, Vulkan_ImageView *image_view_ptr)
+{
+	assert(device_ptr);
+	assert(image_view_ptr);
+ 
+	device_ptr->vk.vkDestroyImageView(device_ptr->device, image_view_ptr->image_view, NULL);
+}
+
+static void vulkan_destroySampler(Vulkan_Device *device_ptr, Vulkan_Sampler *sampler_ptr)
+{
+	assert(device_ptr);
+	assert(sampler_ptr);
+ 
+	device_ptr->vk.vkDestroySampler(device_ptr->device, sampler_ptr->sampler, NULL);
+}
+
+static void vulkan_destroyCommandBuffer(Vulkan_Device *device_ptr, Vulkan_CommandBuffer *command_buffer_ptr)
+{
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+ 
+	VkCommandPool command_pool = device_ptr->command_pools[command_buffer_ptr->type];
+
+	device_ptr->vk.vkFreeCommandBuffers(device_ptr->device, command_pool, 1, &command_buffer_ptr->command_buffer);
+	device_ptr->vk.vkDestroySemaphore(device_ptr->device, command_buffer_ptr->semaphore, NULL);
+}
+
+static void vulkan_destroyShader(Vulkan_Device *device_ptr, Vulkan_Shader *shader_ptr)
+{
+	assert(device_ptr);
+	assert(shader_ptr);
+ 
+	device_ptr->vk.vkDestroyShaderModule(device_ptr->device, shader_ptr->shader, NULL);
+}
+
+static void vulkan_destroyBindsetLayout(Vulkan_Device *device_ptr, Vulkan_BindsetLayout *bindset_layout_ptr)
+{
+	assert(device_ptr);
+	assert(bindset_layout_ptr);
+ 
+	device_ptr->vk.vkDestroyDescriptorSetLayout(device_ptr->device, bindset_layout_ptr->layout, NULL);
+	free(bindset_layout_ptr->layout_bindings);
+}
+
+static void vulkan_destroyBindsetPool(Vulkan_Device *device_ptr, Vulkan_BindsetPool *bindset_pool_ptr)
+{
+	assert(device_ptr);
+	assert(bindset_pool_ptr);
+ 
+	device_ptr->vk.vkDestroyDescriptorPool(device_ptr->device, bindset_pool_ptr->pool, NULL);
+}
+
+static void vulkan_destroyPipelineLayout(Vulkan_Device *device_ptr, Vulkan_PipelineLayout *pipeline_layout_ptr)
+{
+	assert(device_ptr);
+	assert(pipeline_layout_ptr);
+ 
+	device_ptr->vk.vkDestroyPipelineLayout(device_ptr->device, pipeline_layout_ptr->layout, NULL);
+}
+
+static void vulkan_destroyPipeline(Vulkan_Device *device_ptr, Vulkan_Pipeline *pipeline_ptr)
+{
+	assert(device_ptr);
+	assert(pipeline_ptr);
+ 
+	device_ptr->vk.vkDestroyPipeline(device_ptr->device, pipeline_ptr->pipeline, NULL);
+}
+
+static void vulkan_destroySwapchain(Vulkan_Device *device_ptr, Vulkan_Swapchain *swapchain_ptr)
+{
+	assert(device_ptr);
+	assert(swapchain_ptr);
+ 
+	for (uint32_t i = 0; i < swapchain_ptr->num_images; ++i)
+		device_ptr->vk.vkDestroySemaphore(device_ptr->device, swapchain_ptr->semaphores[i], NULL);
+
+	free(swapchain_ptr->semaphores);
+	free(swapchain_ptr->texture_views);
+
+	device_ptr->vk.vkDestroySwapchainKHR(device_ptr->device, swapchain_ptr->swapchain, NULL);
+}
+
+/*
+ */
 static Opal_Result vulkan_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 {
 	assert(this);
@@ -1111,24 +1239,8 @@ static Opal_Result vulkan_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buff
 
 	opal_poolRemoveElement(&device_ptr->buffers, handle);
 
-#if OPAL_HAS_VMA
-	if (device_ptr->use_vma)
-	{
-		vmaDestroyBuffer(device_ptr->vma_allocator, buffer_ptr->buffer, buffer_ptr->vma_allocation);
-		return OPAL_SUCCESS;
-	}
-#endif
-
-	Vulkan_Allocator *allocator = &device_ptr->allocator;
-	assert(allocator);
-
-	device_ptr->vk.vkDestroyBuffer(device_ptr->device, buffer_ptr->buffer, NULL);
-	Opal_Result result = vulkan_allocatorFreeMemory(device_ptr, buffer_ptr->allocation);
-
-	if (buffer_ptr->map_count > 0)
-		vulkan_allocatorUnmapMemory(device_ptr, buffer_ptr->allocation);
-
-	return result;
+	vulkan_destroyBuffer(device_ptr, buffer_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceDestroyTexture(Opal_Device this, Opal_Texture texture)
@@ -1145,20 +1257,8 @@ static Opal_Result vulkan_deviceDestroyTexture(Opal_Device this, Opal_Texture te
 
 	opal_poolRemoveElement(&device_ptr->images, handle);
 
-#if OPAL_HAS_VMA
-	if (device_ptr->use_vma)
-	{
-		vmaDestroyImage(device_ptr->vma_allocator, image_ptr->image, image_ptr->vma_allocation);
-		return OPAL_SUCCESS;
-	}
-#endif
-
-	Vulkan_Allocator *allocator = &device_ptr->allocator;
-	assert(allocator);
-
-	device_ptr->vk.vkDestroyImage(device_ptr->device, image_ptr->image, NULL);
-	Opal_Result result = vulkan_allocatorFreeMemory(device_ptr, image_ptr->allocation);
-	return result;
+	vulkan_destroyTexture(device_ptr, image_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view)
@@ -1175,7 +1275,7 @@ static Opal_Result vulkan_deviceDestroyTextureView(Opal_Device this, Opal_Textur
 
 	opal_poolRemoveElement(&device_ptr->image_views, handle);
 
-	device_ptr->vk.vkDestroyImageView(device_ptr->device, image_view_ptr->image_view, NULL);
+	vulkan_destroyTextureView(device_ptr, image_view_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1193,7 +1293,7 @@ static Opal_Result vulkan_deviceDestroySampler(Opal_Device this, Opal_Sampler sa
 
 	opal_poolRemoveElement(&device_ptr->samplers, handle);
 
-	device_ptr->vk.vkDestroySampler(device_ptr->device, sampler_ptr->sampler, NULL);
+	vulkan_destroySampler(device_ptr, sampler_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1211,11 +1311,7 @@ static Opal_Result vulkan_deviceDestroyCommandBuffer(Opal_Device this, Opal_Comm
 
 	opal_poolRemoveElement(&device_ptr->command_buffers, handle);
 
-	VkCommandPool command_pool = device_ptr->command_pools[command_buffer_ptr->type];
-
-	device_ptr->vk.vkFreeCommandBuffers(device_ptr->device, command_pool, 1, &command_buffer_ptr->command_buffer);
-	device_ptr->vk.vkDestroySemaphore(device_ptr->device, command_buffer_ptr->semaphore, NULL);
-
+	vulkan_destroyCommandBuffer(device_ptr, command_buffer_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1233,7 +1329,7 @@ static Opal_Result vulkan_deviceDestroyShader(Opal_Device this, Opal_Shader shad
 
 	opal_poolRemoveElement(&device_ptr->shaders, handle);
 
-	device_ptr->vk.vkDestroyShaderModule(device_ptr->device, shader_ptr->shader, NULL);
+	vulkan_destroyShader(device_ptr, shader_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1251,9 +1347,7 @@ static Opal_Result vulkan_deviceDestroyBindsetLayout(Opal_Device this, Opal_Bind
 
 	opal_poolRemoveElement(&device_ptr->bindset_layouts, handle);
 
-	device_ptr->vk.vkDestroyDescriptorSetLayout(device_ptr->device, bindset_layout_ptr->layout, NULL);
-	free(bindset_layout_ptr->layout_bindings);
-
+	vulkan_destroyBindsetLayout(device_ptr, bindset_layout_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1271,8 +1365,7 @@ static Opal_Result vulkan_deviceDestroyBindsetPool(Opal_Device this, Opal_Bindse
 
 	opal_poolRemoveElement(&device_ptr->bindset_pools, handle);
 
-	device_ptr->vk.vkDestroyDescriptorPool(device_ptr->device, bindset_pool_ptr->pool, NULL);
-
+	vulkan_destroyBindsetPool(device_ptr, bindset_pool_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1290,8 +1383,7 @@ static Opal_Result vulkan_deviceDestroyPipelineLayout(Opal_Device this, Opal_Pip
 
 	opal_poolRemoveElement(&device_ptr->pipeline_layouts, handle);
 
-	device_ptr->vk.vkDestroyPipelineLayout(device_ptr->device, pipeline_layout_ptr->layout, NULL);
-
+	vulkan_destroyPipelineLayout(device_ptr, pipeline_layout_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1309,8 +1401,7 @@ static Opal_Result vulkan_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline 
 
 	opal_poolRemoveElement(&device_ptr->pipelines, handle);
 
-	device_ptr->vk.vkDestroyPipeline(device_ptr->device, pipeline_ptr->pipeline, NULL);
-
+	vulkan_destroyPipeline(device_ptr, pipeline_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1326,19 +1417,12 @@ static Opal_Result vulkan_deviceDestroySwapchain(Opal_Device this, Opal_Swapchai
 	Vulkan_Swapchain *swapchain_ptr = (Vulkan_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, handle);
 	assert(swapchain_ptr);
 
+	for (uint32_t i = 0; i < swapchain_ptr->num_images; ++i)
+		vulkan_deviceDestroyTextureView(this, swapchain_ptr->texture_views[i]);
+
 	opal_poolRemoveElement(&device_ptr->swapchains, handle);
 
-	for (uint32_t i = 0; i < swapchain_ptr->num_images; ++i)
-	{
-		device_ptr->vk.vkDestroySemaphore(device_ptr->device, swapchain_ptr->semaphores[i], NULL);
-		vulkan_deviceDestroyTextureView(this, swapchain_ptr->texture_views[i]);
-	}
-
-	free(swapchain_ptr->semaphores);
-	free(swapchain_ptr->texture_views);
-
-	device_ptr->vk.vkDestroySwapchainKHR(device_ptr->device, swapchain_ptr->swapchain, NULL);
-
+	vulkan_destroySwapchain(device_ptr, swapchain_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1348,19 +1432,149 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 
 	Vulkan_Device *ptr = (Vulkan_Device *)this;
 
-#ifdef OPAL_HAS_VMA
-	if (ptr->use_vma > 0)
 	{
-		vmaDestroyAllocator(ptr->vma_allocator);
-	}
-	else
-#endif
-	{
-		Opal_Result result = vulkan_allocatorShutdown(ptr);
-		assert(result == OPAL_SUCCESS);
+		uint32_t head = opal_poolGetHeadIndex(&ptr->swapchains);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_Swapchain *swapchain_ptr = (Vulkan_Swapchain *)opal_poolGetElementByIndex(&ptr->swapchains, head);
+			vulkan_destroySwapchain(ptr, swapchain_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->swapchains, head);
+		}
+
+
+		opal_poolShutdown(&ptr->swapchains);
 	}
 
-	// TODO: proper cleanup for all pooled resources
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->pipelines);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElementByIndex(&ptr->pipelines, head);
+			vulkan_destroyPipeline(ptr, pipeline_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->pipelines, head);
+		}
+
+		opal_poolShutdown(&ptr->pipelines);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->pipeline_layouts);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElementByIndex(&ptr->pipeline_layouts, head);
+			vulkan_destroyPipelineLayout(ptr, pipeline_layout_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->pipeline_layouts, head);
+		}
+
+		opal_poolShutdown(&ptr->pipeline_layouts);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->bindset_pools);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElementByIndex(&ptr->bindset_pools, head);
+			vulkan_destroyBindsetPool(ptr, bindset_pool_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->bindset_pools, head);
+		}
+
+		opal_poolShutdown(&ptr->bindset_pools);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->bindset_layouts);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElementByIndex(&ptr->bindset_layouts, head);
+			vulkan_destroyBindsetLayout(ptr, bindset_layout_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->bindset_layouts, head);
+		}
+
+		opal_poolShutdown(&ptr->bindset_layouts);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->shaders);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_Shader *shader_ptr = (Vulkan_Shader *)opal_poolGetElementByIndex(&ptr->shaders, head);
+			vulkan_destroyShader(ptr, shader_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->shaders, head);
+		}
+
+		opal_poolShutdown(&ptr->shaders);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->command_buffers);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElementByIndex(&ptr->command_buffers, head);
+			vulkan_destroyCommandBuffer(ptr, command_buffer_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->command_buffers, head);
+		}
+
+		opal_poolShutdown(&ptr->command_buffers);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->samplers);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_Sampler *sampler_ptr = (Vulkan_Sampler *)opal_poolGetElementByIndex(&ptr->samplers, head);
+			vulkan_destroySampler(ptr, sampler_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->samplers, head);
+		}
+
+		opal_poolShutdown(&ptr->samplers);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->image_views);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElementByIndex(&ptr->image_views, head);
+			vulkan_destroyTextureView(ptr, image_view_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->image_views, head);
+		}
+
+		opal_poolShutdown(&ptr->image_views);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->images);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_Image *image_ptr = (Vulkan_Image *)opal_poolGetElementByIndex(&ptr->images, head);
+			vulkan_destroyTexture(ptr, image_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->images, head);
+		}
+
+		opal_poolShutdown(&ptr->images);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->buffers);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElementByIndex(&ptr->buffers, head);
+			vulkan_destroyBuffer(ptr, buffer_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->buffers, head);
+		}
+
+		opal_poolShutdown(&ptr->buffers);
+	}
 
 	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
 	{
@@ -1378,21 +1592,22 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 		free(ptr->queue_handles[i]);
 	}
 
-	opal_poolShutdown(&ptr->swapchains);
-	opal_poolShutdown(&ptr->pipelines);
-	opal_poolShutdown(&ptr->pipeline_layouts);
-	opal_poolShutdown(&ptr->bindsets);
-	opal_poolShutdown(&ptr->bindset_pools);
-	opal_poolShutdown(&ptr->bindset_layouts);
-	opal_poolShutdown(&ptr->shaders);
-	opal_poolShutdown(&ptr->command_buffers);
-	opal_poolShutdown(&ptr->samplers);
-	opal_poolShutdown(&ptr->image_views);
-	opal_poolShutdown(&ptr->images);
-	opal_poolShutdown(&ptr->buffers);
 	opal_poolShutdown(&ptr->queues);
+	opal_poolShutdown(&ptr->bindsets);
 
 	opal_bumpShutdown(&ptr->bump);
+
+#ifdef OPAL_HAS_VMA
+	if (ptr->use_vma > 0)
+	{
+		vmaDestroyAllocator(ptr->vma_allocator);
+	}
+	else
+#endif
+	{
+		Opal_Result result = vulkan_allocatorShutdown(ptr);
+		assert(result == OPAL_SUCCESS);
+	}
 
 	vkDestroyDevice(ptr->device, NULL);
 
