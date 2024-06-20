@@ -607,6 +607,7 @@ static Opal_Result vulkan_deviceCreateBindsetPool(Opal_Device this, Opal_Bindset
 
 	VkDescriptorPoolCreateInfo pool_info = {0};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	pool_info.maxSets = max_bindsets;
 
 	opal_bumpReset(&device_ptr->bump);
