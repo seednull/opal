@@ -221,6 +221,9 @@ Opal_Result opal_poolRemoveElement(Opal_Pool *pool, Opal_PoolHandle handle)
 	uint32_t prev = pool->prevs[index];
 	uint32_t next = pool->nexts[index];
 
+	pool->prevs[index] = OPAL_POOL_HANDLE_NULL;
+	pool->nexts[index] = OPAL_POOL_HANDLE_NULL;
+
 	if (next != OPAL_POOL_HANDLE_NULL)
 		pool->prevs[next] = prev;
 
