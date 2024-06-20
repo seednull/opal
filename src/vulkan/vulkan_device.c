@@ -1896,8 +1896,13 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_bindings);
 
 	VkWriteDescriptorSet *vulkan_descriptor_writes = (VkWriteDescriptorSet *)(device_ptr->bump.data + descriptors_offset);
+	memset(vulkan_descriptor_writes, 0, sizeof(VkWriteDescriptorSet) * num_bindings);
+
 	VkDescriptorImageInfo *vulkan_image_writes = (VkDescriptorImageInfo *)(device_ptr->bump.data + images_offset);
+	memset(vulkan_image_writes, 0, sizeof(VkDescriptorImageInfo) * num_bindings);
+
 	VkDescriptorBufferInfo *vulkan_buffer_writes = (VkDescriptorBufferInfo *)(device_ptr->bump.data + buffer_offset);
+	memset(vulkan_buffer_writes, 0, sizeof(VkDescriptorBufferInfo) * num_bindings);
 
 	uint32_t current_image = 0;
 	uint32_t current_buffer = 0;
@@ -1912,7 +1917,7 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 		write->dstBinding = binding;
 		write->descriptorCount = 1;
 		write->descriptorType = type;
-		
+
 		switch (type)
 		{
 			case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
