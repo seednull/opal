@@ -80,6 +80,7 @@ private:
 	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
 	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
+	Opal_CommandPool command_pool {OPAL_NULL_HANDLE};
 	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 
 	uint32_t current_in_flight_frame {0};
@@ -132,6 +133,10 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCreateSwapchain(device, &swapchain_desc, &swapchain);
 	assert(result == OPAL_SUCCESS);
 
+	// command pool
+	result = opalCreateCommandPool(device, queue, &command_pool);
+	assert(result == OPAL_SUCCESS);
+
 	// buffers
 	Opal_BufferDesc triangle_buffer_desc =
 	{
@@ -182,7 +187,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	// transfer
 	Opal_CommandBuffer staging_command_buffer = OPAL_NULL_HANDLE;
-	result = opalCreateCommandBuffer(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, &staging_command_buffer);
+	result = opalAllocateCommandBuffer(device, command_pool, &staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalBeginCommandBuffer(device, staging_command_buffer);
@@ -210,7 +215,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalWaitQueue(device, queue, WAIT_TIMEOUT_MS);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyCommandBuffer(device, staging_command_buffer);
+	result = opalFreeCommandBuffer(device, command_pool, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyBuffer(device, staging_buffer);
@@ -263,7 +268,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	// command buffer
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
 	{
-		result = opalCreateCommandBuffer(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, &command_buffers[i]);
+		result = opalAllocateCommandBuffer(device, command_pool, &command_buffers[i]);
 		assert(result == OPAL_SUCCESS);
 	}
 
@@ -292,9 +297,12 @@ void Application::shutdown()
 
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
 	{
-		result = opalDestroyCommandBuffer(device, command_buffers[i]);
+		result = opalFreeCommandBuffer(device, command_pool, command_buffers[i]);
 		assert(result == OPAL_SUCCESS);
 	}
+
+	result = opalDestroyCommandPool(device, command_pool);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroySwapchain(device, swapchain);
 	assert(result == OPAL_SUCCESS);
@@ -352,6 +360,9 @@ void Application::render()
 	assert(result == OPAL_SUCCESS);
 
 	result = opalWaitQueue(device, queue, WAIT_TIMEOUT_MS);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalResetCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalBeginCommandBuffer(device, command_buffer);
