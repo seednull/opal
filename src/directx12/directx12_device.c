@@ -41,7 +41,7 @@ static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_Sa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCreateCommandBuffer(Opal_Device this, Opal_DeviceEngineType engine_type, Opal_CommandBuffer *command_buffer)
+static Opal_Result directx12_deviceCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -111,7 +111,7 @@ static Opal_Result directx12_deviceDestroySampler(Opal_Device this, Opal_Sampler
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -158,12 +158,37 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result directx12_deviceAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceResetCommandPool(Opal_Device device, Opal_CommandPool command_pool)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result directx12_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -354,7 +379,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCreateTexture,
 	directx12_deviceCreateTextureView,
 	directx12_deviceCreateSampler,
-	directx12_deviceCreateCommandBuffer,
+	directx12_deviceCreateCommandPool,
 	directx12_deviceCreateShader,
 	directx12_deviceCreateBindsetLayout,
 	directx12_deviceCreateBindsetPool,
@@ -369,7 +394,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroyTexture,
 	directx12_deviceDestroyTextureView,
 	directx12_deviceDestroySampler,
-	directx12_deviceDestroyCommandBuffer,
+	directx12_deviceDestroyCommandPool,
 	directx12_deviceDestroyShader,
 	directx12_deviceDestroyBindsetLayout,
 	directx12_deviceDestroyBindsetPool,
@@ -378,8 +403,13 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroySwapchain,
 	directx12_deviceDestroy,
 
+	directx12_deviceAllocateCommandBuffer,
+	directx12_deviceFreeCommandBuffer,
+	directx12_deviceResetCommandPool,
+	directx12_deviceResetCommandBuffer,
 	directx12_deviceAllocateBindset,
 	directx12_deviceFreeBindset,
+	directx12_deviceResetBindsetPool,
 	directx12_deviceMapBuffer,
 	directx12_deviceUnmapBuffer,
 	directx12_deviceUpdateBindset,

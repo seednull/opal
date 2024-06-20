@@ -106,13 +106,13 @@ typedef struct Vulkan_Device_t
 	VkDevice device;
 	Vulkan_DeviceEnginesInfo device_engines_info;
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
-	VkCommandPool command_pools[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
 	Opal_Pool queues;
 	Opal_Pool buffers;
 	Opal_Pool images;
 	Opal_Pool image_views;
 	Opal_Pool samplers;
+	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool bindset_layouts;
@@ -178,11 +178,16 @@ typedef struct Vulkan_Sampler_t
 	VkSampler sampler;
 } Vulkan_Sampler;
 
+typedef struct Vulkan_CommandPool_t
+{
+	VkCommandPool pool;
+	Opal_Queue queue;
+} Vulkan_CommandPool;
+
 typedef struct Vulkan_CommandBuffer_t
 {
 	VkCommandBuffer command_buffer;
 	VkSemaphore semaphore;
-	Opal_DeviceEngineType type;
 	VkPipelineBindPoint pipeline_bind_point;
 } Vulkan_CommandBuffer;
 

@@ -29,3 +29,9 @@ Both API allow creating an arbitary number of queues, however, in order to keep 
 - Main (aka direct or graphics) engine will have 16 queues.
 - Compute (aka async compute) engine will have 8 queues.
 - Copy (aka async transfer) engine will have 2 queues.
+
+## Vulkan command pools & command buffers flags
+
+VkCommandPool is always created with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT so that command buffer can be reset and resubmitted.
+
+opalBeginCommandBuffer will call vkBeginCommandBuffer with VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT so command buffer must be either reset or recreated after submit. This is done intentionally to match other API designs.

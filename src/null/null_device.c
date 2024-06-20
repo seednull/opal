@@ -46,7 +46,7 @@ static Opal_Result null_deviceCreateSampler(Opal_Device this, const Opal_Sampler
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateCommandBuffer(Opal_Device this, Opal_DeviceEngineType engine_type, Opal_CommandBuffer *command_buffer)
+static Opal_Result null_deviceCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -116,7 +116,7 @@ static Opal_Result null_deviceDestroySampler(Opal_Device this, Opal_Sampler samp
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -161,12 +161,37 @@ static Opal_Result null_deviceDestroy(Opal_Device this)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result null_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result null_deviceAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceResetCommandPool(Opal_Device device, Opal_CommandPool command_pool)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -357,7 +382,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateTexture,
 	null_deviceCreateTextureView,
 	null_deviceCreateSampler,
-	null_deviceCreateCommandBuffer,
+	null_deviceCreateCommandPool,
 	null_deviceCreateShader,
 	null_deviceCreateBindsetLayout,
 	null_deviceCreateBindsetPool,
@@ -372,7 +397,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyTexture,
 	null_deviceDestroyTextureView,
 	null_deviceDestroySampler,
-	null_deviceDestroyCommandBuffer,
+	null_deviceDestroyCommandPool,
 	null_deviceDestroyShader,
 	null_deviceDestroyBindsetLayout,
 	null_deviceDestroyBindsetPool,
@@ -381,8 +406,13 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroySwapchain,
 	null_deviceDestroy,
 
+	null_deviceAllocateCommandBuffer,
+	null_deviceFreeCommandBuffer,
+	null_deviceResetCommandPool,
+	null_deviceResetCommandBuffer,
 	null_deviceAllocateBindset,
 	null_deviceFreeBindset,
+	null_deviceResetBindsetPool,
 	null_deviceMapBuffer,
 	null_deviceUnmapBuffer,
 	null_deviceUpdateBindset,

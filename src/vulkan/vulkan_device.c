@@ -65,15 +65,12 @@ static void vulkan_destroySampler(Vulkan_Device *device_ptr, Vulkan_Sampler *sam
 	device_ptr->vk.vkDestroySampler(device_ptr->device, sampler_ptr->sampler, NULL);
 }
 
-static void vulkan_destroyCommandBuffer(Vulkan_Device *device_ptr, Vulkan_CommandBuffer *command_buffer_ptr)
+static void vulkan_destroyCommandPool(Vulkan_Device *device_ptr, Vulkan_CommandPool *command_pool_ptr)
 {
 	assert(device_ptr);
-	assert(command_buffer_ptr);
+	assert(command_pool_ptr);
  
-	VkCommandPool command_pool = device_ptr->command_pools[command_buffer_ptr->type];
-
-	device_ptr->vk.vkFreeCommandBuffers(device_ptr->device, command_pool, 1, &command_buffer_ptr->command_buffer);
-	device_ptr->vk.vkDestroySemaphore(device_ptr->device, command_buffer_ptr->semaphore, NULL);
+	device_ptr->vk.vkDestroyCommandPool(device_ptr->device, command_pool_ptr->pool, NULL);
 }
 
 static void vulkan_destroyShader(Vulkan_Device *device_ptr, Vulkan_Shader *shader_ptr)
@@ -486,45 +483,33 @@ static Opal_Result vulkan_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCreateCommandBuffer(Opal_Device this, Opal_DeviceEngineType engine_type, Opal_CommandBuffer *command_buffer)
+static Opal_Result vulkan_deviceCreateCommandPool(Opal_Device this, Opal_Queue queue, Opal_CommandPool *command_pool)
 {
 	assert(this);
-	assert(command_buffer);
+	assert(command_pool);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
 
-	VkCommandBuffer vulkan_command_buffer = VK_NULL_HANDLE;
-	VkSemaphore vulkan_semaphore = VK_NULL_HANDLE;
-	VkCommandPool vulkan_command_pool = device_ptr->command_pools[engine_type];
+	Vulkan_Queue *queue_ptr = (Vulkan_Queue *)opal_poolGetElement(&device_ptr->queues, queue);
+	assert(queue_ptr);
 
-	VkCommandBufferAllocateInfo command_buffer_info = {0};
-	command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	command_buffer_info.commandPool = vulkan_command_pool;
-	command_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	command_buffer_info.commandBufferCount = 1;
+	VkCommandPool vulkan_command_pool = VK_NULL_HANDLE;
 
-	VkResult vulkan_result = device_ptr->vk.vkAllocateCommandBuffers(vulkan_device, &command_buffer_info, &vulkan_command_buffer);
+	VkCommandPoolCreateInfo command_pool_info = {0};
+	command_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	command_pool_info.queueFamilyIndex = queue_ptr->family_index;
+	command_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+	VkResult vulkan_result = device_ptr->vk.vkCreateCommandPool(vulkan_device, &command_pool_info, NULL, &vulkan_command_pool);
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
-	VkSemaphoreCreateInfo semaphore_info = {0};
-	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	Vulkan_CommandPool result = {0};
+	result.pool = vulkan_command_pool;
+	result.queue = queue;
 
-	vulkan_result = device_ptr->vk.vkCreateSemaphore(vulkan_device, &semaphore_info, NULL, &vulkan_semaphore);
-	if (vulkan_result != VK_SUCCESS)
-	{
-		device_ptr->vk.vkFreeCommandBuffers(vulkan_device, vulkan_command_pool, 1, &vulkan_command_buffer);
-		return OPAL_VULKAN_ERROR;
-	}
-
-	Vulkan_CommandBuffer result = {0};
-	result.command_buffer = vulkan_command_buffer;
-	result.semaphore = vulkan_semaphore;
-	result.type = engine_type;
-	result.pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-
-	*command_buffer = (Opal_CommandBuffer)opal_poolAddElement(&device_ptr->command_buffers, &result);
+	*command_pool = (Opal_CommandPool)opal_poolAddElement(&device_ptr->command_pools, &result);
 	return OPAL_SUCCESS;
 }
 
@@ -1297,21 +1282,21 @@ static Opal_Result vulkan_deviceDestroySampler(Opal_Device this, Opal_Sampler sa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result vulkan_deviceDestroyCommandPool(Opal_Device this, Opal_CommandPool command_pool)
 {
 	assert(this);
-	assert(command_buffer);
+	assert(command_pool);
  
-	Opal_PoolHandle handle = (Opal_PoolHandle)command_buffer;
+	Opal_PoolHandle handle = (Opal_PoolHandle)command_pool;
 	assert(handle != OPAL_POOL_HANDLE_NULL);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, handle);
-	assert(command_buffer_ptr);
+	Vulkan_CommandPool *command_pool_ptr = (Vulkan_CommandPool *)opal_poolGetElement(&device_ptr->command_pools, handle);
+	assert(command_pool_ptr);
 
-	opal_poolRemoveElement(&device_ptr->command_buffers, handle);
+	opal_poolRemoveElement(&device_ptr->command_pools, handle);
 
-	vulkan_destroyCommandBuffer(device_ptr, command_buffer_ptr);
+	vulkan_destroyCommandPool(device_ptr, command_pool_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1512,11 +1497,26 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 	}
 
 	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->command_pools);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_CommandPool *command_pool_ptr = (Vulkan_CommandPool *)opal_poolGetElementByIndex(&ptr->command_pools, head);
+			vulkan_destroyCommandPool(ptr, command_pool_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->command_pools, head);
+		}
+
+		opal_poolShutdown(&ptr->command_pools);
+	}
+
+	// TODO: get rid of this once Opal_Fence will be available in public API
+	{
 		uint32_t head = opal_poolGetHeadIndex(&ptr->command_buffers);
 		while (head != OPAL_POOL_HANDLE_NULL)
 		{
 			Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElementByIndex(&ptr->command_buffers, head);
-			vulkan_destroyCommandBuffer(ptr, command_buffer_ptr);
+			
+			ptr->vk.vkDestroySemaphore(ptr->device, command_buffer_ptr->semaphore, NULL);
 
 			head = opal_poolGetNextIndex(&ptr->command_buffers, head);
 		}
@@ -1578,8 +1578,6 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 
 	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
 	{
-		vkDestroyCommandPool(ptr->device, ptr->command_pools[i], NULL);
-
 		const Opal_Queue *queues = ptr->queue_handles[i];
 		uint32_t queue_count = ptr->device_engines_info.queue_counts[i];
 
@@ -1615,7 +1613,113 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result vulkan_deviceAllocateCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
+{
+	assert(this);
+	assert(command_pool);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+	VkCommandBuffer vulkan_command_buffer = VK_NULL_HANDLE;
+	VkSemaphore vulkan_semaphore = VK_NULL_HANDLE;
+
+	Vulkan_CommandPool *command_pool_ptr = (Vulkan_CommandPool *)opal_poolGetElement(&device_ptr->command_pools, command_pool);
+	assert(command_pool_ptr);
+
+	// TODO: get rid of this once Opal_Fence will be available in public API
+	VkSemaphoreCreateInfo semaphore_info = {0};
+	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkResult vulkan_result = device_ptr->vk.vkCreateSemaphore(vulkan_device, &semaphore_info, NULL, &vulkan_semaphore);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	VkCommandBufferAllocateInfo command_buffer_info = {0};
+	command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	command_buffer_info.commandPool = command_pool_ptr->pool;
+	command_buffer_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	command_buffer_info.commandBufferCount = 1;
+
+	vulkan_result = device_ptr->vk.vkAllocateCommandBuffers(vulkan_device, &command_buffer_info, &vulkan_command_buffer);
+	if (vulkan_result != VK_SUCCESS)
+	{
+		device_ptr->vk.vkDestroySemaphore(vulkan_device, vulkan_semaphore, NULL);
+		return OPAL_VULKAN_ERROR;
+	}
+
+	Vulkan_CommandBuffer result = {0};
+	result.command_buffer = vulkan_command_buffer;
+	result.semaphore = vulkan_semaphore;
+	result.pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+	*command_buffer = (Opal_CommandBuffer)opal_poolAddElement(&device_ptr->command_buffers, &result);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceFreeCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_pool);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+	VkCommandBuffer vulkan_command_buffer = VK_NULL_HANDLE;
+
+	Vulkan_CommandPool *command_pool_ptr = (Vulkan_CommandPool *)opal_poolGetElement(&device_ptr->command_pools, command_pool);
+	assert(command_pool_ptr);
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	device_ptr->vk.vkDestroySemaphore(vulkan_device, command_buffer_ptr->semaphore, NULL);
+	device_ptr->vk.vkFreeCommandBuffers(vulkan_device, command_pool_ptr->pool, 1, &command_buffer_ptr->command_buffer);
+
+	opal_poolRemoveElement(&device_ptr->command_buffers, command_buffer);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceResetCommandPool(Opal_Device this, Opal_CommandPool command_pool)
+{
+	assert(this);
+	assert(command_pool);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+	VkCommandBuffer vulkan_command_buffer = VK_NULL_HANDLE;
+
+	Vulkan_CommandPool *command_pool_ptr = (Vulkan_CommandPool *)opal_poolGetElement(&device_ptr->command_pools, command_pool);
+	assert(command_pool_ptr);
+
+	VkResult vulkan_result = device_ptr->vk.vkResetCommandPool(vulkan_device, command_pool_ptr->pool, 0);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	// TODO: fix memory leak caused by orphaned Vulkan_CommandBuffer instances
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceResetCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	VkResult result = device_ptr->vk.vkResetCommandBuffer(command_buffer_ptr->command_buffer, 0);
+	if (result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
 {
 	assert(this);
 	assert(bindset_pool);
@@ -1646,14 +1750,6 @@ static Opal_Result vulkan_deviceAllocateBindset(Opal_Device this, Opal_BindsetPo
 	result.bindset_layout = bindset_pool_ptr->bindset_layout;
 
 	*bindset = (Opal_Bindset)opal_poolAddElement(&device_ptr->bindsets, &result);
-
-	Opal_Result opal_result = vulkan_deviceUpdateBindset(this, *bindset, num_bindings, bindings);
-	if (opal_result != OPAL_SUCCESS)
-	{
-		vulkan_deviceFreeBindset(this, bindset_pool, *bindset);
-		return opal_result;
-	}
-
 	return OPAL_SUCCESS;
 }
 
@@ -1678,6 +1774,27 @@ static Opal_Result vulkan_deviceFreeBindset(Opal_Device this, Opal_BindsetPool b
 		return OPAL_VULKAN_ERROR;
 	
 	opal_poolRemoveElement(&device_ptr->bindsets, bindset);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceResetBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
+{
+	assert(this);
+	assert(bindset_pool);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+	VkDescriptorSet vulkan_descriptor_set = VK_NULL_HANDLE;
+
+	Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElement(&device_ptr->bindset_pools, bindset_pool);
+	assert(bindset_pool_ptr);
+
+	VkResult vulkan_result = device_ptr->vk.vkResetDescriptorPool(vulkan_device, bindset_pool_ptr->pool, 0);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	// TODO: fix memory leak caused by orphaned Vulkan_CommandBuffer instances
+
 	return OPAL_SUCCESS;
 }
 
@@ -1857,14 +1974,11 @@ static Opal_Result vulkan_deviceBeginCommandBuffer(Opal_Device this, Opal_Comman
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
 	assert(command_buffer_ptr);
 
-	VkResult result = device_ptr->vk.vkResetCommandBuffer(command_buffer_ptr->command_buffer, 0);
-	if (result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
 	VkCommandBufferBeginInfo info = {0};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	result = device_ptr->vk.vkBeginCommandBuffer(command_buffer_ptr->command_buffer, &info);
+	VkResult result = device_ptr->vk.vkBeginCommandBuffer(command_buffer_ptr->command_buffer, &info);
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
@@ -2564,7 +2678,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCreateTexture,
 	vulkan_deviceCreateTextureView,
 	vulkan_deviceCreateSampler,
-	vulkan_deviceCreateCommandBuffer,
+	vulkan_deviceCreateCommandPool,
 	vulkan_deviceCreateShader,
 	vulkan_deviceCreateBindsetLayout,
 	vulkan_deviceCreateBindsetPool,
@@ -2579,7 +2693,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyTexture,
 	vulkan_deviceDestroyTextureView,
 	vulkan_deviceDestroySampler,
-	vulkan_deviceDestroyCommandBuffer,
+	vulkan_deviceDestroyCommandPool,
 	vulkan_deviceDestroyShader,
 	vulkan_deviceDestroyBindsetLayout,
 	vulkan_deviceDestroyBindsetPool,
@@ -2588,8 +2702,13 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroySwapchain,
 	vulkan_deviceDestroy,
 
+	vulkan_deviceAllocateCommandBuffer,
+	vulkan_deviceFreeCommandBuffer,
+	vulkan_deviceResetCommandPool,
+	vulkan_deviceResetCommandBuffer,
 	vulkan_deviceAllocateBindset,
 	vulkan_deviceFreeBindset,
+	vulkan_deviceResetBindsetPool,
 	vulkan_deviceMapBuffer,
 	vulkan_deviceUnmapBuffer,
 	vulkan_deviceUpdateBindset,
@@ -2713,6 +2832,7 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	opal_poolInitialize(&device_ptr->images, sizeof(Vulkan_Image), 32);
 	opal_poolInitialize(&device_ptr->image_views, sizeof(Vulkan_ImageView), 32);
 	opal_poolInitialize(&device_ptr->samplers, sizeof(Vulkan_Sampler), 32);
+	opal_poolInitialize(&device_ptr->command_pools, sizeof(Vulkan_CommandPool), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(Vulkan_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(Vulkan_Shader), 32);
 	opal_poolInitialize(&device_ptr->bindset_layouts, sizeof(Vulkan_BindsetLayout), 32);
@@ -2750,20 +2870,6 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 		}
 
 		device_ptr->queue_handles[i] = queue_handles;
-	}
-
-	// command pools
-	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
-	{
-		VkCommandPoolCreateInfo command_pool_info = {0};
-		command_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		command_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		command_pool_info.queueFamilyIndex = engines_info->queue_families[i];
-
-		VkResult vulkan_result = device_ptr->vk.vkCreateCommandPool(device, &command_pool_info, NULL, &device_ptr->command_pools[i]);
-
-		if (vulkan_result != VK_SUCCESS)
-			return OPAL_VULKAN_ERROR;
 	}
 
 	return OPAL_SUCCESS;
