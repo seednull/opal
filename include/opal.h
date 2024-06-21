@@ -720,9 +720,13 @@ typedef struct Opal_FramebufferAttachment_t
 
 typedef struct Opal_TextureRegion_t
 {
-	Opal_Texture texture;
-	int32_t texture_offset[3];
-	uint32_t texture_extent[3];
+	Opal_TextureView texture_view;
+	int32_t offset_x;
+	int32_t offset_y;
+	int32_t offset_z;
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
 } Opal_TextureRegion;
 
 typedef struct Opal_BufferView_t
