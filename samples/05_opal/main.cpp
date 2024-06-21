@@ -8,6 +8,198 @@
 #include <iostream>
 #include <filesystem>
 
+#include <openexr.h>
+
+Opal_Result createHdriTexture(const float *buffer, uint32_t width, uint32_t height, Opal_Device device, Opal_Queue queue, Opal_CommandPool command_pool, Opal_Texture *texture, Opal_TextureView *texture_view)
+{
+	uint32_t size = width * height * 4 * sizeof(float);
+
+	Opal_Buffer staging_buffer = OPAL_NULL_HANDLE;
+	Opal_BufferDesc staging_buffer_desc =
+	{
+		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_TRANSFER_SRC),
+		size,
+		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
+		OPAL_ALLOCATION_HINT_AUTO,
+	};
+
+	Opal_Result result = opalCreateBuffer(device, &staging_buffer_desc, &staging_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_TextureDesc texture_desc =
+	{
+		OPAL_TEXTURE_TYPE_2D,
+		OPAL_FORMAT_RGBA32_SFLOAT,
+		width,
+		height,
+		1,
+		1,
+		1,
+		OPAL_SAMPLES_1,
+		static_cast<Opal_TextureUsageFlags>(OPAL_TEXTURE_USAGE_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_TRANSFER_DST),
+		OPAL_ALLOCATION_HINT_AUTO
+	};
+
+	result = opalCreateTexture(device, &texture_desc, texture);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_TextureViewDesc texture_view_desc =
+	{
+		*texture,
+		OPAL_TEXTURE_VIEW_TYPE_2D,
+		0,
+		1,
+		0,
+		1
+	};
+
+	result = opalCreateTextureView(device, &texture_view_desc, texture_view);
+	assert(result == OPAL_SUCCESS);
+
+	// copy
+	void *staging_ptr = nullptr;
+	result = opalMapBuffer(device, staging_buffer, &staging_ptr);
+	assert(result == OPAL_SUCCESS);
+
+	memcpy(staging_ptr, buffer, size);
+
+	result = opalUnmapBuffer(device, staging_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	// transfer
+	Opal_CommandBuffer staging_command_buffer = OPAL_NULL_HANDLE;
+	result = opalAllocateCommandBuffer(device, command_pool, &staging_command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalBeginCommandBuffer(device, staging_command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_BufferView staging_buffer_view = { staging_buffer, 0 };
+	Opal_TextureRegion texture_region = { *texture_view, 0, 0, 0, width, height, 1 };
+
+	result = opalCmdTextureTransitionBarrier(device, staging_command_buffer, *texture_view, OPAL_RESOURCE_STATE_GENERAL, OPAL_RESOURCE_STATE_COPY_DEST);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdCopyBufferToTexture(device, staging_command_buffer, staging_buffer_view, texture_region);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdTextureTransitionBarrier(device, staging_command_buffer, *texture_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalEndCommandBuffer(device, staging_command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_SubmitDesc submit =
+	{
+		1, &staging_command_buffer,
+		0, nullptr,
+		0, nullptr,
+	};
+
+	result = opalSubmit(device, queue, &submit);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalWaitIdle(device);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalFreeCommandBuffer(device, command_pool, staging_command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroyBuffer(device, staging_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	return OPAL_SUCCESS;
+}
+
+bool loadHdri(const char *name, Opal_Device device, Opal_Queue queue, Opal_CommandPool command_pool, Opal_Texture *texture, Opal_TextureView *texture_view)
+{
+	exr_context_initializer_t context_init = EXR_DEFAULT_CONTEXT_INITIALIZER;
+	exr_context_t context = {};
+
+	exr_result_t result = exr_start_read(&context, name, &context_init);
+	assert(result == EXR_ERR_SUCCESS);
+
+	const int part_index = 0;
+
+	exr_attr_box2i_t data_window = {};
+	result = exr_get_data_window(context, part_index, &data_window);
+	assert(result == EXR_ERR_SUCCESS);
+
+	exr_storage_t storage = {};
+	result = exr_get_storage(context, part_index, &storage);
+	assert(result == EXR_ERR_SUCCESS);
+	assert(storage == EXR_STORAGE_SCANLINE);
+
+	int num_scanlines_per_chunk = 0;
+	result = exr_get_scanlines_per_chunk(context, part_index, &num_scanlines_per_chunk);
+	assert(result == EXR_ERR_SUCCESS);
+
+	int current_scanline = 0;
+
+	uint32_t width = data_window.max.x + 1;
+	uint32_t height = data_window.max.y + 1;
+
+	float *buffer = new float[width * height * 4];
+	float *current_ptr = buffer;
+
+	uint32_t channel_stride = width * num_scanlines_per_chunk;
+
+	while (current_scanline < height)
+	{
+		exr_chunk_info_t chunk_info = {};
+		result = exr_read_scanline_chunk_info(context, part_index, current_scanline, &chunk_info);
+		assert(result == EXR_ERR_SUCCESS);
+
+		exr_decode_pipeline_t decode = EXR_DECODE_PIPELINE_INITIALIZER;
+		result = exr_decoding_initialize(context, part_index, &chunk_info, &decode);
+		assert(result == EXR_ERR_SUCCESS);
+		assert(decode.channel_count == 3);
+
+		result = exr_decoding_choose_default_routines(context, part_index, &decode);
+		assert(result == EXR_ERR_SUCCESS);
+
+		result = exr_decoding_run(context, part_index, &decode);
+		assert(result == EXR_ERR_SUCCESS);
+
+		current_scanline += num_scanlines_per_chunk;
+
+		const float *input = reinterpret_cast<const float *>(decode.unpacked_buffer);
+
+		for (uint32_t scanline = 0; scanline < num_scanlines_per_chunk; ++scanline)
+		{
+			const float *b_channel = input + width * 0;
+			const float *g_channel = input + width * 1;
+			const float *r_channel = input + width * 2;
+
+			for (uint32_t i = 0; i < width; ++i)
+			{
+				current_ptr[0] = *r_channel;
+				current_ptr[1] = *g_channel;
+				current_ptr[2] = *b_channel;
+				current_ptr[3] = 1.0f;
+
+				r_channel++;
+				g_channel++;
+				b_channel++;
+				current_ptr += 4;
+			}
+
+			input += width * 3;
+		}
+
+		result = exr_decoding_destroy(context, &decode);
+		assert(result == EXR_ERR_SUCCESS);
+	}
+
+	result = exr_finish(&context);
+	assert(result == EXR_ERR_SUCCESS);
+
+	Opal_Result opal_result = createHdriTexture(buffer, width, height, device, queue, command_pool, texture, texture_view);
+	delete[] buffer;
+
+	return opal_result == OPAL_SUCCESS;
+}
+
 bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 {
 	assert(name);
@@ -46,6 +238,7 @@ class Application
 public:
 	void init(void *handle, uint32_t width, uint32_t height);
 	void shutdown();
+	void buildContent();
 	void buildPipeline();
 	void update(float dt);
 	void resize(uint32_t width, uint32_t height);
@@ -86,17 +279,22 @@ private:
 	Opal_Swapchain swapchain {OPAL_NULL_HANDLE};
 	Opal_Device device {OPAL_NULL_HANDLE};
 	Opal_Queue queue {OPAL_NULL_HANDLE};
-	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
-	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
-	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
 	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
 	Opal_BindsetPool bindset_pool {OPAL_NULL_HANDLE};
 	Opal_BindsetLayout bindset_layout {OPAL_NULL_HANDLE};
 	Opal_Bindset bindset {OPAL_NULL_HANDLE};
-	Opal_Buffer application_buffer {OPAL_NULL_HANDLE};
 	Opal_CommandPool command_pool {OPAL_NULL_HANDLE};
 	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
+
+	Opal_Texture hdri {OPAL_NULL_HANDLE};
+	Opal_TextureView hdri_view {OPAL_NULL_HANDLE};
+	Opal_Sampler hdri_sampler {OPAL_NULL_HANDLE};
+	Opal_Buffer application_buffer {OPAL_NULL_HANDLE};
+	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
+
+	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
+	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
 
 	float current_time {0.0f};
 	uint32_t current_in_flight_frame {0};
@@ -153,7 +351,55 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCreateCommandPool(device, queue, &command_pool);
 	assert(result == OPAL_SUCCESS);
 
-	// buffers
+	// content
+	buildContent();
+
+	// bindings
+	Opal_BindsetLayoutBinding layout_bindings[] =
+	{
+		0, OPAL_BINDING_TYPE_UNIFORM_BUFFER, OPAL_SHADER_STAGE_ALL_GRAPHICS,
+		1, OPAL_BINDING_TYPE_COMBINED_TEXTURE_SAMPLER, OPAL_SHADER_STAGE_ALL_GRAPHICS,
+	};
+
+	result = opalCreateBindsetLayout(device, 2, layout_bindings, &bindset_layout);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCreateBindsetPool(device, bindset_layout, 32, &bindset_pool);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalAllocateBindset(device, bindset_pool, &bindset);
+	assert(result == OPAL_SUCCESS);
+
+	Opal_BindsetBinding bindings[2];
+	bindings[0].binding = 0;
+	bindings[0].buffer.buffer = application_buffer;
+	bindings[0].buffer.offset = 0;
+	bindings[0].buffer.size = sizeof(AppData);
+	bindings[1].binding = 1;
+	bindings[1].texture_view = hdri_view;
+	bindings[1].sampler = hdri_sampler;
+
+	result = opalUpdateBindset(device, bindset, 2, bindings);
+	assert(result == OPAL_SUCCESS);
+
+	// pipeline layout
+	result = opalCreatePipelineLayout(device, 1, &bindset_layout, &pipeline_layout);
+	assert(result == OPAL_SUCCESS);
+
+	buildPipeline();
+
+	// command buffer
+	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
+	{
+		result = opalAllocateCommandBuffer(device, command_pool, &command_buffers[i]);
+		assert(result == OPAL_SUCCESS);
+	}
+
+	current_in_flight_frame = 0;
+}
+
+void Application::buildContent()
+{
 	Opal_BufferDesc triangle_buffer_desc =
 	{
 		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_VERTEX | OPAL_BUFFER_USAGE_INDEX | OPAL_BUFFER_USAGE_TRANSFER_DST),
@@ -162,7 +408,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		OPAL_ALLOCATION_HINT_AUTO,
 	};
 
-	result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
+	Opal_Result result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferDesc staging_buffer_desc =
@@ -239,18 +485,6 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalDestroyBuffer(device, staging_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	// bindings
-	Opal_BindsetLayoutBinding layout_binding = { 0, OPAL_BINDING_TYPE_UNIFORM_BUFFER, OPAL_SHADER_STAGE_ALL_GRAPHICS };
-
-	result = opalCreateBindsetLayout(device, 1, &layout_binding, &bindset_layout);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalCreateBindsetPool(device, bindset_layout, 32, &bindset_pool);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalAllocateBindset(device, bindset_pool, &bindset);
-	assert(result == OPAL_SUCCESS);
-
 	Opal_BufferDesc application_buffer_desc =
 	{
 		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM),
@@ -261,30 +495,26 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	result = opalCreateBuffer(device, &application_buffer_desc, &application_buffer);
 	assert(result == OPAL_SUCCESS);
-	
-	Opal_BindsetBinding binding = {};
-	binding.binding = 0;
-	binding.buffer.buffer = application_buffer;
-	binding.buffer.offset = 0;
-	binding.buffer.size = sizeof(AppData);
 
-	result = opalUpdateBindset(device, bindset, 1, &binding);
-	assert(result == OPAL_SUCCESS);
+	bool loaded = loadHdri("samples/05_opal/hdri/blue_photo_studio_1k.exr", device, queue, command_pool, &hdri, &hdri_view);
+	assert(loaded == true);
 
-	// pipeline layout
-	result = opalCreatePipelineLayout(device, 1, &bindset_layout, &pipeline_layout);
-	assert(result == OPAL_SUCCESS);
-
-	buildPipeline();
-
-	// command buffer
-	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
+	Opal_SamplerDesc sampler_desc =
 	{
-		result = opalAllocateCommandBuffer(device, command_pool, &command_buffers[i]);
-		assert(result == OPAL_SUCCESS);
-	}
+		OPAL_SAMPLER_FILTER_MODE_LINEAR,
+		OPAL_SAMPLER_FILTER_MODE_LINEAR,
+		OPAL_SAMPLER_FILTER_MODE_LINEAR,
+		OPAL_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		OPAL_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		OPAL_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		0.0f,
+		1.0f,
+		0,
+		OPAL_COMPARE_OP_NEVER,
+	};
 
-	current_in_flight_frame = 0;
+	result = opalCreateSampler(device, &sampler_desc, &hdri_sampler);
+	assert(result == OPAL_SUCCESS);
 }
 
 void Application::buildPipeline()
@@ -360,6 +590,15 @@ void Application::shutdown()
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyBuffer(device, triangle_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroyTextureView(device, hdri_view);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroyTexture(device, hdri);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroySampler(device, hdri_sampler);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyShader(device, vertex_shader);

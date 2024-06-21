@@ -45,6 +45,7 @@ set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
 # Includes
 # ==================================================================================================
 target_include_directories(${TARGET} PUBLIC ${OPAL_API_DIR})
+target_include_directories(${TARGET} PUBLIC ${OPAL_API_DIR}/openexr/src/lib/OpenEXRCore)
 
 # ==================================================================================================
 # Preprocessor
@@ -54,7 +55,7 @@ target_compile_definitions(${TARGET} PRIVATE ${OPAL_PLATFORM_DEFINES})
 # ==================================================================================================
 # Libraries
 # ==================================================================================================
-target_link_libraries(${TARGET} PUBLIC opal)
+target_link_libraries(${TARGET} PUBLIC opal OpenEXRCore)
 
 # ==================================================================================================
 # Custom commands
