@@ -308,7 +308,7 @@ static Opal_Result vulkan_deviceCreateTexture(Opal_Device this, const Opal_Textu
 	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	image_info.usage = vulkan_helperToImageUsage(desc->usage, desc->format);
 	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	image_info.initialLayout = VK_IMAGE_LAYOUT_GENERAL;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	Vulkan_Allocation allocation = {0};
 
