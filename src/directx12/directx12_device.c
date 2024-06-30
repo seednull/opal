@@ -21,6 +21,11 @@ static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineT
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result directx12_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -87,6 +92,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 }
 
 static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroySemaphore(Opal_Device this, Opal_Semaphore semaphore)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -218,7 +228,22 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceWaitQueue(Opal_Device this, Opal_Queue queue, uint64_t timeout_milliseconds)
+static Opal_Result directx12_deviceQuerySemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t *value)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceSignalSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceWaitQueue(Opal_Device this, Opal_Queue queue)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -238,7 +263,7 @@ static Opal_Result directx12_deviceAcquire(Opal_Device this, Opal_Swapchain swap
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -375,6 +400,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceGetInfo,
 	directx12_deviceGetQueue,
 
+	directx12_deviceCreateSemaphore,
 	directx12_deviceCreateBuffer,
 	directx12_deviceCreateTexture,
 	directx12_deviceCreateTextureView,
@@ -390,6 +416,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCreateRaytracePipeline,
 	directx12_deviceCreateSwapchain,
 
+	directx12_deviceDestroySemaphore,
 	directx12_deviceDestroyBuffer,
 	directx12_deviceDestroyTexture,
 	directx12_deviceDestroyTextureView,
@@ -415,6 +442,9 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceUpdateBindset,
 	directx12_deviceBeginCommandBuffer,
 	directx12_deviceEndCommandBuffer,
+	directx12_deviceQuerySemaphore,
+	directx12_deviceSignalSemaphore,
+	directx12_deviceWaitSemaphore,
 	directx12_deviceWaitQueue,
 	directx12_deviceWaitIdle,
 	directx12_deviceSubmit,

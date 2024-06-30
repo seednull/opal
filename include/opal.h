@@ -47,6 +47,7 @@ OPAL_DEFINE_HANDLE(Opal_Instance);
 OPAL_DEFINE_HANDLE(Opal_Surface);
 OPAL_DEFINE_HANDLE(Opal_Device);
 OPAL_DEFINE_HANDLE(Opal_Queue);
+OPAL_DEFINE_HANDLE(Opal_Semaphore);
 OPAL_DEFINE_HANDLE(Opal_Buffer);
 OPAL_DEFINE_HANDLE(Opal_Texture);
 OPAL_DEFINE_HANDLE(Opal_TextureView);
@@ -151,6 +152,13 @@ typedef enum Opal_DeviceEngineType_t
 	OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX,
 	OPAL_DEVICE_ENGINE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_DeviceEngineType;
+
+typedef enum Opal_SemaphoreCreationFlags_t
+{
+	OPAL_SEMAPHORE_CREATION_FLAGS_HOST_OPERATIONS = 0x00000001,
+
+	OPAL_SEMAPHORE_CREATION_FLAGS_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_SemaphoreCreationFlags;
 
 typedef enum Opal_AllocationMemoryType_t
 {
@@ -641,6 +649,12 @@ typedef struct Opal_InstanceDesc_t
 	Opal_InstanceCreationFlags flags;
 } Opal_InstanceDesc;
 
+typedef struct Opal_SemaphoreDesc_t
+{
+	uint64_t initial_value;
+	Opal_SemaphoreCreationFlags flags;
+} Opal_SemaphoreDesc;
+
 typedef struct Opal_BufferDesc_t
 {
 	Opal_BufferUsageFlags usage;
@@ -905,14 +919,22 @@ typedef struct Opal_SwapchainDesc_t
 
 typedef struct Opal_SubmitDesc_t
 {
-	uint32_t num_command_buffers;
-	const Opal_CommandBuffer *command_buffers;
-
-	uint32_t num_wait_command_buffers;
-	const Opal_CommandBuffer *wait_command_buffers;
+	uint32_t num_wait_semaphores;
+	const Opal_Semaphore *wait_semaphores;
+	const uint64_t *wait_values;
 
 	uint32_t num_wait_swapchains;
 	const Opal_Swapchain *wait_swapchains;
+
+	uint32_t num_command_buffers;
+	const Opal_CommandBuffer *command_buffers;
+
+	uint32_t num_signal_semaphores;
+	const Opal_Semaphore *signal_semaphores;
+	const uint64_t *signal_values;
+
+	uint32_t num_signal_swapchains;
+	const Opal_Swapchain *signal_swapchains;
 } Opal_SubmitDesc;
 
 // Function pointers
@@ -928,6 +950,7 @@ typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
 typedef Opal_Result (*PFN_opalGetDeviceQueue)(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 
+typedef Opal_Result (*PFN_opalCreateSemaphore)(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore);
 typedef Opal_Result (*PFN_opalCreateBuffer)(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
 typedef Opal_Result (*PFN_opalCreateTexture)(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture);
 typedef Opal_Result (*PFN_opalCreateTextureView)(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
@@ -943,6 +966,7 @@ typedef Opal_Result (*PFN_opalCreateComputePipeline)(Opal_Device device, const O
 typedef Opal_Result (*PFN_opalCreateRaytracePipeline)(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline);
 typedef Opal_Result (*PFN_opalCreateSwapchain)(Opal_Device device, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain);
 
+typedef Opal_Result (*PFN_opalDestroySemaphore)(Opal_Device device, Opal_Semaphore semaphore);
 typedef Opal_Result (*PFN_opalDestroyBuffer)(Opal_Device device, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_opalDestroyTexture)(Opal_Device device, Opal_Texture texture);
 typedef Opal_Result (*PFN_opalDestroyTextureView)(Opal_Device device, Opal_TextureView texture_view);
@@ -968,11 +992,14 @@ typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffe
 typedef Opal_Result (*PFN_opalUpdateBindset)(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
 typedef Opal_Result (*PFN_opalBeginCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalEndCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalWaitQueue)(Opal_Device device, Opal_Queue queue, uint64_t timeout_milliseconds);
+typedef Opal_Result (*PFN_opalQuerySemaphore)(Opal_Device device, Opal_Semaphore semaphore, uint64_t *value);
+typedef Opal_Result (*PFN_opalSignalSemaphore)(Opal_Device device, Opal_Semaphore semaphore, uint64_t value);
+typedef Opal_Result (*PFN_opalWaitSemaphore)(Opal_Device device, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds);
+typedef Opal_Result (*PFN_opalWaitQueue)(Opal_Device device, Opal_Queue queue);
 typedef Opal_Result (*PFN_opalWaitIdle)(Opal_Device device);
 typedef Opal_Result (*PFN_opalSubmit)(Opal_Device device, Opal_Queue queue, const Opal_SubmitDesc *desc);
 typedef Opal_Result (*PFN_opalAcquire)(Opal_Device device, Opal_Swapchain swapchain, Opal_TextureView *texture_view);
-typedef Opal_Result (*PFN_opalPresent)(Opal_Device device, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
+typedef Opal_Result (*PFN_opalPresent)(Opal_Device device, Opal_Swapchain swapchain);
 
 typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment);
 typedef Opal_Result (*PFN_opalCmdEndGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer);
@@ -1017,6 +1044,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalGetDeviceInfo getDeviceInfo;
 	PFN_opalGetDeviceQueue getDeviceQueue;
 
+	PFN_opalCreateSemaphore createSemaphore;
 	PFN_opalCreateBuffer createBuffer;
 	PFN_opalCreateTexture createTexture;
 	PFN_opalCreateTextureView createTextureView;
@@ -1032,6 +1060,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCreateRaytracePipeline createRaytracePipeline;
 	PFN_opalCreateSwapchain createSwapchain;
 
+	PFN_opalDestroySemaphore destroySemaphore;
 	PFN_opalDestroyBuffer destroyBuffer;
 	PFN_opalDestroyTexture destroyTexture;
 	PFN_opalDestroyTextureView destroyTextureView;
@@ -1057,6 +1086,9 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalUpdateBindset updateBindset;
 	PFN_opalBeginCommandBuffer beginCommandBuffer;
 	PFN_opalEndCommandBuffer endCommandBuffer;
+	PFN_opalQuerySemaphore querySemaphore;
+	PFN_opalSignalSemaphore signalSemaphore;
+	PFN_opalWaitSemaphore waitSemaphore;
 	PFN_opalWaitQueue waitQueue;
 	PFN_opalWaitIdle waitIdle;
 	PFN_opalSubmit submit;
@@ -1108,6 +1140,7 @@ OPAL_APIENTRY Opal_Result opalDestroySurface(Opal_Instance instance, Opal_Surfac
 OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);
 OPAL_APIENTRY Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 
+OPAL_APIENTRY Opal_Result opalCreateSemaphore(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore);
 OPAL_APIENTRY Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
 OPAL_APIENTRY Opal_Result opalCreateTexture(Opal_Device device, const Opal_TextureDesc *desc, Opal_Texture *texture);
 OPAL_APIENTRY Opal_Result opalCreateTextureView(Opal_Device device, const Opal_TextureViewDesc *desc, Opal_TextureView *texture_view);
@@ -1123,6 +1156,7 @@ OPAL_APIENTRY Opal_Result opalCreateComputePipeline(Opal_Device device, const Op
 OPAL_APIENTRY Opal_Result opalCreateRaytracePipeline(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline);
 OPAL_APIENTRY Opal_Result opalCreateSwapchain(Opal_Device device, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain);
 
+OPAL_APIENTRY Opal_Result opalDestroySemaphore(Opal_Device device, Opal_Semaphore semaphore);
 OPAL_APIENTRY Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer);
 OPAL_APIENTRY Opal_Result opalDestroyTexture(Opal_Device device, Opal_Texture texture);
 OPAL_APIENTRY Opal_Result opalDestroyTextureView(Opal_Device device, Opal_TextureView texture_view);
@@ -1148,11 +1182,14 @@ OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer
 OPAL_APIENTRY Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
 OPAL_APIENTRY Opal_Result opalBeginCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalEndCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalWaitQueue(Opal_Device device, Opal_Queue queue, uint64_t timeout_milliseconds);
+OPAL_APIENTRY Opal_Result opalQuerySemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t *value);
+OPAL_APIENTRY Opal_Result opalSignalSemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t value);
+OPAL_APIENTRY Opal_Result opalWaitSemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds);
+OPAL_APIENTRY Opal_Result opalWaitQueue(Opal_Device device, Opal_Queue queue);
 OPAL_APIENTRY Opal_Result opalWaitIdle(Opal_Device device);
 OPAL_APIENTRY Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, const Opal_SubmitDesc *desc);
 OPAL_APIENTRY Opal_Result opalAcquire(Opal_Device device, Opal_Swapchain swapchain, Opal_TextureView *texture_view);
-OPAL_APIENTRY Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers);
+OPAL_APIENTRY Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain);
 
 OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment);
 OPAL_APIENTRY Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer);

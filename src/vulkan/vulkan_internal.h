@@ -108,6 +108,7 @@ typedef struct Vulkan_Device_t
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
 	Opal_Pool queues;
+	Opal_Pool semaphores;
 	Opal_Pool buffers;
 	Opal_Pool images;
 	Opal_Pool image_views;
@@ -129,10 +130,14 @@ typedef struct Vulkan_Device_t
 	Vulkan_Allocator allocator;
 } Vulkan_Device;
 
+typedef struct Vulkan_Semaphore_t
+{
+	VkSemaphore semaphore;
+} Vulkan_Semaphore;
+
 typedef struct Vulkan_Queue_t
 {
 	VkQueue queue;
-	VkFence fence;
 	uint32_t family_index;
 } Vulkan_Queue;
 
@@ -187,7 +192,6 @@ typedef struct Vulkan_CommandPool_t
 typedef struct Vulkan_CommandBuffer_t
 {
 	VkCommandBuffer command_buffer;
-	VkSemaphore semaphore;
 	VkPipelineBindPoint pipeline_bind_point;
 } Vulkan_CommandBuffer;
 
@@ -236,7 +240,8 @@ typedef struct Vulkan_Swapchain_t
 	VkSwapchainKHR swapchain;
 	Opal_Queue present_queue;
 	Opal_TextureView *texture_views;
-	VkSemaphore *semaphores;
+	VkSemaphore *acquire_semaphores;
+	VkSemaphore *present_semaphores;
 	uint32_t num_images;
 	uint32_t current_image;
 	uint32_t current_semaphore;

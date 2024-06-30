@@ -167,6 +167,18 @@ Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_
 
 /*
  */
+Opal_Result opalCreateSemaphore(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createSemaphore);
+
+	return ptr->vtbl->createSemaphore(device, desc, semaphore);
+}
+
 Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -337,6 +349,18 @@ Opal_Result opalCreateSwapchain(Opal_Device device, const Opal_SwapchainDesc *de
 
 /*
  */
+Opal_Result opalDestroySemaphore(Opal_Device device, Opal_Semaphore semaphore)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroySemaphore);
+
+	return ptr->vtbl->destroySemaphore(device, semaphore);
+}
+
 Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -627,7 +651,43 @@ Opal_Result opalEndCommandBuffer(Opal_Device device, Opal_CommandBuffer command_
 	return ptr->vtbl->endCommandBuffer(device, command_buffer);
 }
 
-Opal_Result opalWaitQueue(Opal_Device device, Opal_Queue queue, uint64_t timeout_milliseconds)
+Opal_Result opalQuerySemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t *value)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->querySemaphore);
+
+	return ptr->vtbl->querySemaphore(device, semaphore, value);
+}
+
+Opal_Result opalSignalSemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t value)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->signalSemaphore);
+
+	return ptr->vtbl->signalSemaphore(device, semaphore, value);
+}
+
+Opal_Result opalWaitSemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->waitSemaphore);
+
+	return ptr->vtbl->waitSemaphore(device, semaphore, value, timeout_milliseconds);
+}
+
+Opal_Result opalWaitQueue(Opal_Device device, Opal_Queue queue)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -636,7 +696,7 @@ Opal_Result opalWaitQueue(Opal_Device device, Opal_Queue queue, uint64_t timeout
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->waitQueue);
 
-	return ptr->vtbl->waitQueue(device, queue, timeout_milliseconds);
+	return ptr->vtbl->waitQueue(device, queue);
 }
 
 Opal_Result opalWaitIdle(Opal_Device device)
@@ -675,7 +735,7 @@ Opal_Result opalAcquire(Opal_Device device, Opal_Swapchain swapchain, Opal_Textu
 	return ptr->vtbl->acquire(device, swapchain, texture_view);
 }
 
-Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -684,7 +744,7 @@ Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain, uint32_t n
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->present);
 
-	return ptr->vtbl->present(device, swapchain, num_wait_command_buffers, wait_command_buffers);
+	return ptr->vtbl->present(device, swapchain);
 }
 
 /*

@@ -26,6 +26,11 @@ static Opal_Result null_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType e
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -92,6 +97,11 @@ static Opal_Result null_deviceCreateRaytracePipeline(Opal_Device this, const Opa
 }
 
 static Opal_Result null_deviceCreateSwapchain(Opal_Device this, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroySemaphore(Opal_Device this, Opal_Semaphore semaphore)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -221,7 +231,22 @@ static Opal_Result null_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBuf
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceWaitQueue(Opal_Device this, Opal_Queue queue, uint64_t timeout_milliseconds)
+static Opal_Result null_deviceQuerySemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t *value)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceSignalSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceWaitQueue(Opal_Device this, Opal_Queue queue)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -241,7 +266,7 @@ static Opal_Result null_deviceAcquire(Opal_Device this, Opal_Swapchain swapchain
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_devicePresent(Opal_Device this, Opal_Swapchain swapchain, uint32_t num_wait_command_buffers, const Opal_CommandBuffer *wait_command_buffers)
+static Opal_Result null_devicePresent(Opal_Device this, Opal_Swapchain swapchain)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -378,6 +403,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceGetInfo,
 	null_deviceGetQueue,
 
+	null_deviceCreateSemaphore,
 	null_deviceCreateBuffer,
 	null_deviceCreateTexture,
 	null_deviceCreateTextureView,
@@ -393,6 +419,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateRaytracePipeline,
 	null_deviceCreateSwapchain,
 
+	null_deviceDestroySemaphore,
 	null_deviceDestroyBuffer,
 	null_deviceDestroyTexture,
 	null_deviceDestroyTextureView,
@@ -418,6 +445,9 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceUpdateBindset,
 	null_deviceBeginCommandBuffer,
 	null_deviceEndCommandBuffer,
+	null_deviceQuerySemaphore,
+	null_deviceSignalSemaphore,
+	null_deviceWaitSemaphore,
 	null_deviceWaitQueue,
 	null_deviceWaitIdle,
 	null_deviceSubmit,
