@@ -865,22 +865,72 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {0};
 	acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
-	VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features = {0};
-	buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-		
+	VkPhysicalDeviceBufferDeviceAddressFeaturesKHR buffer_device_address_features = {0};
+	buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {0};
 	raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
 
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_features = {0};
 	mesh_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 
+	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timeline_semaphore_features = {0};
+	timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
+
 	features.pNext = &dynamic_rendering_features;
 	dynamic_rendering_features.pNext = &acceleration_structure_features;
 	acceleration_structure_features.pNext = &buffer_device_address_features;
 	buffer_device_address_features.pNext = &raytracing_features;
 	raytracing_features.pNext = &mesh_features;
+	mesh_features.pNext = &timeline_semaphore_features;
 
 	vkGetPhysicalDeviceFeatures2(physical_device, &features);
+
+	// check available device extensions
+	uint32_t num_device_extensions = 0;
+	VkResult result = vkEnumerateDeviceExtensionProperties(physical_device, NULL, &num_device_extensions, NULL);
+	if (result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	VkExtensionProperties *device_extensions = malloc(sizeof(VkExtensionProperties) * num_device_extensions);
+	result = vkEnumerateDeviceExtensionProperties(physical_device, NULL, &num_device_extensions, device_extensions);
+	if (result != VK_SUCCESS)
+	{
+		free(device_extensions);
+		return OPAL_VULKAN_ERROR;
+	}
+
+	VkBool32 has_dynamic_rendering = VK_FALSE;
+	VkBool32 has_acceleration_structure = VK_FALSE;
+	VkBool32 has_buffer_device_address = VK_FALSE;
+	VkBool32 has_raytracing = VK_FALSE;
+	VkBool32 has_meshlet = VK_FALSE;
+	VkBool32 has_timeline_semaphores = VK_FALSE;
+
+	for (uint32_t i = 0; i < num_device_extensions; ++i)
+	{
+		const char *device_extension_name = device_extensions[i].extensionName;
+
+		if (strcmp(device_extension_name, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0)
+			has_dynamic_rendering = dynamic_rendering_features.dynamicRendering;
+
+		if (strcmp(device_extension_name, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+			has_acceleration_structure = acceleration_structure_features.accelerationStructure;
+
+		if (strcmp(device_extension_name, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0)
+			has_buffer_device_address = buffer_device_address_features.bufferDeviceAddress;
+
+		if (strcmp(device_extension_name, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
+			has_raytracing = raytracing_features.rayTracingPipeline;
+
+		if (strcmp(device_extension_name, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
+			has_meshlet = mesh_features.meshShader && mesh_features.taskShader;
+
+		if (strcmp(device_extension_name, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0)
+			has_timeline_semaphores = timeline_semaphore_features.timelineSemaphore;
+	}
+
+	free(device_extensions);
 
 	// fill required extensions
 	const char *extensions[16];
@@ -894,53 +944,56 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 		void *next;
 	} VkParavozikKHR;
 
-	features.pNext = NULL;
-	dynamic_rendering_features.pNext = NULL;
-	acceleration_structure_features.pNext = NULL;
-	buffer_device_address_features.pNext = NULL;
-	raytracing_features.pNext = NULL;
-
 	VkParavozikKHR *paravozik = (VkParavozikKHR *)&features;
+	paravozik->next = NULL;
 
-	if (dynamic_rendering_features.dynamicRendering == VK_TRUE)
+	if (has_dynamic_rendering == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME;
 		extensions[num_extensions++] = VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME;
 		extensions[num_extensions++] = VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME;
 
 		paravozik->next = &dynamic_rendering_features;
+
 		paravozik = (VkParavozikKHR *)&dynamic_rendering_features;
+		paravozik->next = NULL;
 	}
 
-	if (acceleration_structure_features.accelerationStructure == VK_TRUE)
+	if (has_acceleration_structure == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
 		extensions[num_extensions++] = VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
 		extensions[num_extensions++] = VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME;
 
 		paravozik->next = &acceleration_structure_features;
+
 		paravozik = (VkParavozikKHR *)&acceleration_structure_features;
+		paravozik->next = NULL;
 	}
 
-	if (buffer_device_address_features.bufferDeviceAddress == VK_TRUE)
+	if (has_buffer_device_address == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME;
 
 		paravozik->next = &buffer_device_address_features;
+
 		paravozik = (VkParavozikKHR *)&buffer_device_address_features;
+		paravozik->next = NULL;
 	}
 
-	if (raytracing_features.rayTracingPipeline == VK_TRUE)
+	if (has_raytracing == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME;
 		extensions[num_extensions++] = VK_KHR_SPIRV_1_4_EXTENSION_NAME;
 		extensions[num_extensions++] = VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME;
 
 		paravozik->next = &raytracing_features;
+
 		paravozik = (VkParavozikKHR *)&raytracing_features;
+		paravozik->next = NULL;
 	}
 
-	if (mesh_features.meshShader == VK_TRUE && mesh_features.taskShader == VK_TRUE)
+	if (has_meshlet == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_EXT_MESH_SHADER_EXTENSION_NAME;
 
@@ -948,7 +1001,19 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 		mesh_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
 
 		paravozik->next = &mesh_features;
+
 		paravozik = (VkParavozikKHR *)&mesh_features;
+		paravozik->next = NULL;
+	}
+
+	if (has_timeline_semaphores == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME;
+
+		paravozik->next = &timeline_semaphore_features;
+
+		paravozik = (VkParavozikKHR *)&timeline_semaphore_features;
+		paravozik->next = NULL;
 	}
 
 	// get physical device queues
@@ -988,7 +1053,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	create_info.queueCreateInfoCount = OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX;
 	create_info.pQueueCreateInfos = queue_infos;
 
-	VkResult result = vkCreateDevice(physical_device, &create_info, NULL, device);
+	result = vkCreateDevice(physical_device, &create_info, NULL, device);
 
 	free(queue_priorities);
 
@@ -1003,6 +1068,7 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	assert(device != VK_NULL_HANDLE);
 	assert(info);
 
+	// get features
 	VkPhysicalDeviceProperties properties = {0};
 
 	VkPhysicalDeviceFeatures2 features = {0};
@@ -1024,6 +1090,40 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	vkGetPhysicalDeviceProperties(device, &properties);
 	vkGetPhysicalDeviceFeatures2(device, &features);
 
+	// check available device extensions
+	uint32_t num_device_extensions = 0;
+	VkResult result = vkEnumerateDeviceExtensionProperties(device, NULL, &num_device_extensions, NULL);
+	if (result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	VkExtensionProperties *device_extensions = malloc(sizeof(VkExtensionProperties) * num_device_extensions);
+	result = vkEnumerateDeviceExtensionProperties(device, NULL, &num_device_extensions, device_extensions);
+	if (result != VK_SUCCESS)
+	{
+		free(device_extensions);
+		return OPAL_VULKAN_ERROR;
+	}
+
+	VkBool32 has_acceleration_structure = VK_FALSE;
+	VkBool32 has_raytracing = VK_FALSE;
+	VkBool32 has_meshlet = VK_FALSE;
+
+	for (uint32_t i = 0; i < num_device_extensions; ++i)
+	{
+		const char *device_extension_name = device_extensions[i].extensionName;
+
+		if (strcmp(device_extension_name, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+			has_acceleration_structure = acceleration_structure_features.accelerationStructure;
+
+		if (strcmp(device_extension_name, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
+			has_raytracing = raytracing_features.rayTracingPipeline;
+
+		if (strcmp(device_extension_name, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
+			has_meshlet = mesh_features.meshShader && mesh_features.taskShader;
+	}
+
+	free(device_extensions);
+
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
 	strncpy(info->name, properties.deviceName, 256);
@@ -1042,8 +1142,8 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->tessellation_shader = features.features.tessellationShader;
 	info->geometry_shader = features.features.geometryShader;
 	info->compute_pipeline = 1;
-	info->meshlet_pipeline = mesh_features.meshShader && mesh_features.taskShader;
-info->raytrace_pipeline = raytracing_features.rayTracingPipeline && acceleration_structure_features.accelerationStructure;
+	info->meshlet_pipeline = has_meshlet;
+	info->raytrace_pipeline = has_raytracing && has_acceleration_structure;
 	info->texture_compression_etc2 = features.features.textureCompressionETC2;
 	info->texture_compression_astc = features.features.textureCompressionASTC_LDR;
 	info->texture_compression_bc = features.features.textureCompressionBC;
