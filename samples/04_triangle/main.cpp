@@ -82,6 +82,8 @@ private:
 	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
 	Opal_CommandPool command_pool {OPAL_NULL_HANDLE};
 	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
+	Opal_Semaphore semaphores[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
+	uint64_t semaphore_values[IN_FLIGHT_FRAMES] {0, 0};
 
 	uint32_t current_in_flight_frame {0};
 	uint32_t width {0};
@@ -202,17 +204,14 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalEndCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_SubmitDesc submit =
-	{
-		1, &staging_command_buffer,
-		0, nullptr,
-		0, nullptr,
-	};
+	Opal_SubmitDesc submit = {};
+	submit.num_command_buffers = 1;
+	submit.command_buffers = &staging_command_buffer;
 
 	result = opalSubmit(device, queue, &submit);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitQueue(device, queue, WAIT_TIMEOUT_MS);
+	result = opalWaitQueue(device, queue);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalFreeCommandBuffer(device, command_pool, staging_command_buffer);
@@ -265,10 +264,17 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCreateGraphicsPipeline(device, &pipeline_desc, &pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	// command buffer
+	// command buffers & semaphores
+	Opal_SemaphoreDesc semaphore_desc = {};
+	semaphore_desc.flags = OPAL_SEMAPHORE_CREATION_FLAGS_HOST_OPERATIONS;
+	semaphore_desc.initial_value = 0;
+
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
 	{
 		result = opalAllocateCommandBuffer(device, command_pool, &command_buffers[i]);
+		assert(result == OPAL_SUCCESS);
+
+		result = opalCreateSemaphore(device, &semaphore_desc, &semaphores[i]);
 		assert(result == OPAL_SUCCESS);
 	}
 
@@ -298,6 +304,9 @@ void Application::shutdown()
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
 	{
 		result = opalFreeCommandBuffer(device, command_pool, command_buffers[i]);
+		assert(result == OPAL_SUCCESS);
+
+		result = opalDestroySemaphore(device, semaphores[i]);
 		assert(result == OPAL_SUCCESS);
 	}
 
@@ -355,11 +364,13 @@ void Application::render()
 
 	Opal_TextureView swapchain_texture_view = OPAL_NULL_HANDLE;
 	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
+	Opal_Semaphore semaphore = semaphores[current_in_flight_frame];
+	uint64_t semaphore_value = semaphore_values[current_in_flight_frame];
 
 	Opal_Result result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalWaitQueue(device, queue, WAIT_TIMEOUT_MS);
+	result = opalWaitSemaphore(device, semaphore, semaphore_value, WAIT_TIMEOUT_MS);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalResetCommandBuffer(device, command_buffer);
@@ -420,12 +431,19 @@ void Application::render()
 	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_SubmitDesc submit =
-	{
-		1, &command_buffer,
-		0, nullptr,
-		1, &swapchain,
-	};
+	semaphore_value++;
+	semaphore_values[current_in_flight_frame] = semaphore_value;
+
+	Opal_SubmitDesc submit = {0};
+	submit.num_wait_swapchains = 1;
+	submit.wait_swapchains = &swapchain;
+	submit.num_command_buffers = 1;
+	submit.command_buffers = &command_buffer;
+	submit.num_signal_swapchains = 1;
+	submit.signal_swapchains = &swapchain;
+	submit.num_signal_semaphores = 1;
+	submit.signal_semaphores = &semaphore;
+	submit.signal_values = &semaphore_value;
 
 	result = opalSubmit(device, queue, &submit);
 	assert(result == OPAL_SUCCESS);
@@ -435,9 +453,7 @@ void Application::present()
 {
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
-	Opal_CommandBuffer command_buffer = command_buffers[current_in_flight_frame];
-
-	Opal_Result result = opalPresent(device, swapchain, 1, &command_buffer);
+	Opal_Result result = opalPresent(device, swapchain);
 	assert(result == OPAL_SUCCESS);
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
