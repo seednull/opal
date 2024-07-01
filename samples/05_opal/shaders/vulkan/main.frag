@@ -11,18 +11,41 @@ layout(set = 0, binding = 0) uniform Application
 
 layout(set = 0, binding = 1) uniform sampler2D hdriSampler;
 
+// tracing params
 const int MAX_STEPS = 100;
-const int MAX_TRANSMITTANCE_STEPS = 8;
+const int MAX_INTERIOR_STEPS = 4;
 const float START_DEPTH = 0.01f;
 const float END_DEPTH = 10.0f;
 
+// shading params
+const int NUM_VORONOI_PASSES = 3;
+const vec4 INTERIOR_VORONOI[] = vec4[]
+(
+	vec4(8.0f, 8.0f, 8.0f, 0.7f),
+	vec4(50.0f, 50.0f, 50.0f, 0.7f),
+	vec4(100.0f, 100.0f, 100.0f, 0.7f)
+);
+
+const vec3 TRANSLUCENT_COLOR = vec3(0.4f, 0.7f, 0.8f);
+const float MAIN_TRANSMITTANCE = 4.0f;
+const float INTERIOR_TRANSMITTANCE = 2.0f;
+const float MAIN_REFLECTANCE = 0.04f;
+const float GRATING_DISTANCE = 700.0f;
+
+// spectral constants
+const int NUM_WAVELENGHTS = 9;
+const float WAVELENGTHS[9] = float[9](400.0, 437.0, 474.0, 511.0, 548.0, 585.0, 622.0, 659.0, 700.0);
+const float INTENSITIES[9] = float[9](1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+
+// math constants
 const float PI =  3.141592653589798979f;
 const float PI2 = 6.283185307179586477f;
 const float iPI = 0.318309886183790672f;
 const float iPI2 = 0.1591549430918953357f;
 const float EPSILON = 1e-3f;
 const vec2 ATAN_INV = vec2(iPI2, iPI);
-
+const vec4 RANDOM_SCALE = vec4(443.897f, 441.423f, 0.0973f, 0.1099f);
+const vec3 LUMA = vec3(0.299f, 0.587f, 0.114f);
 const float GAMMA = 2.2f;
 const float INV_GAMMA = (1.0f / GAMMA);
 
@@ -41,9 +64,62 @@ vec3 gamma(vec3 col)
 	return pow(col, vec3(INV_GAMMA));
 }
 
-vec3 inv_gamma(vec3 col)
+vec3 invGamma(vec3 col)
 {
 	return pow(col, vec3(GAMMA));
+}
+
+vec2 random2(vec2 p)
+{
+	vec3 p3 = fract(p.xyx * RANDOM_SCALE.xyz);
+	p3 += dot(p3, p3.yzx + 19.19f);
+	return fract((p3.xx + p3.yz) * p3.zy);
+}
+
+vec3 random3(vec3 p)
+{
+	p = fract(p * RANDOM_SCALE.xyz);
+	p += dot(p, p.yxz + 19.19f);
+	return fract((p.xxy + p.yzz) * p.zyx);
+}
+
+vec2 voronoi(vec3 p, out vec3 id, out vec3 a, out vec3 b)
+{
+	vec3 tile_coords = floor(p);
+	vec3 lerp_coords = fract(p);
+
+	vec2 closest_distances = vec2(10000.0f, 10000.0f);
+
+	for (int x = -1; x <= 1; ++x)
+	{
+		for (int y = -1; y <= 1; ++y)
+		{
+			for (int z = -1; z <= 1; ++z)
+			{
+				vec3 tile = vec3(float(x), float(y), float(z));
+				vec3 tile_point = random3(tile_coords + tile);
+
+				vec3 r = tile + tile_point - lerp_coords;
+				float d = dot(r, r);
+
+				if (d < closest_distances.x)
+				{
+					closest_distances.y = closest_distances.x;
+					closest_distances.x = d;
+					b = a;
+					a = r;
+					id = tile_point;
+				}
+				else if (d < closest_distances.y)
+				{
+					closest_distances.y = d;
+					b = r;
+				}
+			}
+		}
+	}
+
+	return sqrt(closest_distances);
 }
 
 float sdSphere(vec3 p, vec3 center, float radius)
@@ -87,7 +163,7 @@ vec2 equirectangularUV(vec3 v)
 	return uv;
 }
 
-vec3 bump3y (vec3 x, vec3 yoffset)
+vec3 bump3y(vec3 x, vec3 yoffset)
 {
 	vec3 y = vec3(1) - x * x;
 	y = saturate(y - yoffset);
@@ -113,7 +189,7 @@ vec3 getRainbowGradient(float w)
 
 	vec3 col = bump3y(c1 * (x - x1), y1) + bump3y(c2 * (x - x2), y2);
 
-	col = inv_gamma(col);
+	col = invGamma(col);
 	return col;
 }
 
@@ -122,28 +198,25 @@ vec3 opalIridescence(vec3 view, vec3 normal, vec3 light, vec3 grating, float d)
 	vec3 color = vec3(0);
 	
 	if (dot(normal, light) < 0.0 || dot(normal, view) < 0.0)
-	{
 		return color;
-	}
 
 	float sin_theta_l = dot(grating, light);
 	float sin_theta_v = dot(grating, view);
 
 	float distance_difference = abs(d * sin_theta_l - d * sin_theta_v);
 
-	float wavelengths[9] = float[9](400.0, 437.0, 474.0, 511.0, 548.0, 585.0, 622.0, 659.0, 700.0);
-	float intensities[9] = float[9](1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+	const float interference_threshold = (700.0f - 400.0f) / (NUM_WAVELENGHTS - 1);
 
-	for (int i = 0; i < 9; i++)
+	for (int i = 0; i < NUM_WAVELENGHTS; i++)
 	{
-		float wavelength = wavelengths[i];
-		float intensity = intensities[i];
+		float wavelength = WAVELENGTHS[i];
+		float intensity = INTENSITIES[i];
 		vec3 wavelength_color = getRainbowGradient(wavelength) * intensity;
 
 		for (int n = 1; n <= 2; n++)
 		{
 			float target_distance = wavelength * float(n);
-			float interference = 1.0f - saturate(abs(target_distance - distance_difference) / (37.0 * float(n)));
+			float interference = 1.0f - saturate(abs(target_distance - distance_difference) / (interference_threshold * float(n)));
 			color += wavelength_color * interference;
 		}
 	}
@@ -151,23 +224,47 @@ vec3 opalIridescence(vec3 view, vec3 normal, vec3 light, vec3 grating, float d)
 	return saturate(color);
 }
 
-vec3 opalTransmittance(vec3 color, vec3 p, vec3 direction, float max_distance)
+vec3 opalReflectance(vec3 color)
 {
-	float transmittance = 1.0f;
-	float step_size = max_distance / MAX_TRANSMITTANCE_STEPS;
+	return color * MAIN_REFLECTANCE;
+}
 
-	for (int i = 0; i < MAX_TRANSMITTANCE_STEPS; ++i)
+vec3 opalTranslucency(vec3 color, vec3 view, vec3 light, vec3 position, vec3 direction, float max_distance)
+{
+	vec3 interior_color = vec3(0.0f);
+	float step_size = max_distance / MAX_INTERIOR_STEPS;
+	vec3 id, a, b;
+
+	for (int i = 0; i < MAX_INTERIOR_STEPS; ++i)
 	{
-		vec3 origin = p + direction * step_size * i;
-		transmittance *= exp(-step_size * 5.0f);
+		vec3 origin = position + direction * step_size * i;
+
+		for (int j = 0; j < NUM_VORONOI_PASSES; ++j)
+		{
+			vec4 voronoi_param = INTERIOR_VORONOI[j];
+			vec3 voronoi_origin = origin * voronoi_param.xyz;
+			vec2 distances = voronoi(voronoi_origin, id, a, b);
+
+			float probability = dot(id, LUMA);
+			if (probability > voronoi_param.w)
+			{
+				vec3 normal = normalize(b - a);
+				vec3 grating = normal;
+
+				interior_color += opalIridescence(view, normal, light, grating, GRATING_DISTANCE);
+			}
+		}
 	}
 
-	return color * transmittance;
+	float t_main = exp(-max_distance * MAIN_TRANSMITTANCE);
+	float t_interior = exp(-max_distance * INTERIOR_TRANSMITTANCE);
+
+	return mix(TRANSLUCENT_COLOR, color, t_main) + interior_color * t_interior;
 }
 
 float world(vec3 p, float sdf_sign)
 {
-	vec3 scale = vec3(1.0f, 0.8f, 0.4f);
+	vec3 scale = vec3(1.0f, 0.8f, 0.5f);
 	float min_scale = min(scale.x, min(scale.y, scale.z));
 
 	float sdf_distance = opSmoothDifference(
@@ -232,7 +329,7 @@ void main()
 	vec3 ray_direction = normalize(forward + up * offset.y + right * offset.x);
 
 	vec4 color = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	vec3 light_direction = normalize(vec3(0.0f, -1.0f, -1.0f));
+	vec3 light_direction = normalize(vec3(0.0f, 0.0f, -1.0f));
 
 	float distance_near = trace(ray_origin, ray_direction, START_DEPTH, END_DEPTH, 1.0f);
 	if (distance_near != END_DEPTH)
@@ -244,15 +341,20 @@ void main()
 
 		vec3 n_near = normal(p_near, 1.0f);
 		vec3 n_far = normal(p_far, -1.0f);
-		vec3 grating = n_near;
 
+		vec3 view = -ray_direction;
+		vec3 light = -light_direction;
+
+		vec3 reflected = normalize(reflect(ray_direction, n_near));
 		vec3 refracted = normalize(refract(ray_direction, n_far, 0.5f));
-		vec3 transmitted = texture(hdriSampler, equirectangularUV(refracted)).rgb;
 
-		vec3 transmittance = opalTransmittance(transmitted, p_near, ray_direction, distance_far);
-		vec3 iridescence = opalIridescence(-ray_direction, n_near, -light_direction, grating, 700.0f);
+		vec3 transmitted_color = texture(hdriSampler, equirectangularUV(refracted)).rgb;
+		vec3 reflected_color = texture(hdriSampler, equirectangularUV(reflected)).rgb;
 
-		color.rgb = transmittance + iridescence;
+		vec3 translucency = opalTranslucency(transmitted_color, view, light, p_near, ray_direction, distance_far);
+		vec3 reflectance = opalReflectance(reflected_color);
+
+		color.rgb = translucency + reflectance;
 	}
 	else
 	{
