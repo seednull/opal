@@ -170,6 +170,16 @@ static Opal_Result vulkan_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result vulkan_deviceGetAccelerationStructurePrebuildInfo(Opal_Device this, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result vulkan_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
 	assert(this);
@@ -524,6 +534,16 @@ static Opal_Result vulkan_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 
 	*sampler = (Opal_Sampler)opal_poolAddElement(&device_ptr->samplers, &result);
 	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCreateAccelerationStructure(Opal_Device device, Opal_BufferView buffer, Opal_AccelerationStructure *acceleration_structure)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceCreateShaderBindingTable(Opal_Device device, Opal_BufferView buffer, Opal_ShaderBindingTable *shader_binding_table)
+{
+	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result vulkan_deviceCreateCommandPool(Opal_Device this, Opal_Queue queue, Opal_CommandPool *command_pool)
@@ -1357,6 +1377,16 @@ static Opal_Result vulkan_deviceDestroySampler(Opal_Device this, Opal_Sampler sa
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result vulkan_deviceDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result vulkan_deviceDestroyCommandPool(Opal_Device this, Opal_CommandPool command_pool)
 {
 	assert(this);
@@ -1679,6 +1709,11 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 
 	free(ptr);
 	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result vulkan_deviceAllocateCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
@@ -2712,7 +2747,22 @@ static Opal_Result vulkan_deviceCmdComputeDispatch(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableView shader_table, uint32_t width, uint32_t height, uint32_t depth)
+static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -2849,12 +2899,16 @@ static Opal_DeviceTable device_vtbl =
 {
 	vulkan_deviceGetInfo,
 	vulkan_deviceGetQueue,
+	vulkan_deviceGetAccelerationStructurePrebuildInfo,
+	vulkan_deviceGetShaderBindingTablePrebuildInfo,
 
 	vulkan_deviceCreateSemaphore,
 	vulkan_deviceCreateBuffer,
 	vulkan_deviceCreateTexture,
 	vulkan_deviceCreateTextureView,
 	vulkan_deviceCreateSampler,
+	vulkan_deviceCreateAccelerationStructure,
+	vulkan_deviceCreateShaderBindingTable,
 	vulkan_deviceCreateCommandPool,
 	vulkan_deviceCreateShader,
 	vulkan_deviceCreateBindsetLayout,
@@ -2871,6 +2925,8 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyTexture,
 	vulkan_deviceDestroyTextureView,
 	vulkan_deviceDestroySampler,
+	vulkan_deviceDestroyAccelerationStructure,
+	vulkan_deviceDestroyShaderBindingTable,
 	vulkan_deviceDestroyCommandPool,
 	vulkan_deviceDestroyShader,
 	vulkan_deviceDestroyBindsetLayout,
@@ -2880,6 +2936,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroySwapchain,
 	vulkan_deviceDestroy,
 
+	vulkan_deviceBuildShaderBindingTable,
 	vulkan_deviceAllocateCommandBuffer,
 	vulkan_deviceFreeCommandBuffer,
 	vulkan_deviceResetCommandPool,
@@ -2917,6 +2974,9 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdMeshletDispatch,
 	vulkan_deviceCmdComputeDispatch,
 	vulkan_deviceCmdRaytraceDispatch,
+	vulkan_deviceCmdBuildAccelerationStructures,
+	vulkan_deviceCmdCopyAccelerationStructure,
+	vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo,
 	vulkan_deviceCmdCopyBufferToBuffer,
 	vulkan_deviceCmdCopyBufferToTexture,
 	vulkan_deviceCmdCopyTextureToBuffer,

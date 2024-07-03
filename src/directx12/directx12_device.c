@@ -14,10 +14,16 @@ static Opal_Result directx12_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *in
 
 static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
-	assert(this);
-	assert(queue);
-	assert(engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+	return OPAL_NOT_SUPPORTED;
+}
 
+static Opal_Result directx12_deviceGetAccelerationStructurePrebuildInfo(Opal_Device this, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+{
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -42,6 +48,16 @@ static Opal_Result directx12_deviceCreateTextureView(Opal_Device this, const Opa
 }
 
 static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_SamplerDesc *desc, Opal_Sampler *sampler)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateAccelerationStructure(Opal_Device device, Opal_BufferView buffer, Opal_AccelerationStructure *acceleration_structure)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCreateShaderBindingTable(Opal_Device device, Opal_BufferView buffer, Opal_ShaderBindingTable *shader_binding_table)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -121,6 +137,16 @@ static Opal_Result directx12_deviceDestroySampler(Opal_Device this, Opal_Sampler
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result directx12_deviceDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
@@ -166,6 +192,11 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 
 	free(ptr);
 	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc)
+{
+	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result directx12_deviceAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
@@ -343,7 +374,22 @@ static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableView shader_table, uint32_t width, uint32_t height, uint32_t depth)
+static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+{
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -399,12 +445,16 @@ static Opal_DeviceTable device_vtbl =
 {
 	directx12_deviceGetInfo,
 	directx12_deviceGetQueue,
+	directx12_deviceGetAccelerationStructurePrebuildInfo,
+	directx12_deviceGetShaderBindingTablePrebuildInfo,
 
 	directx12_deviceCreateSemaphore,
 	directx12_deviceCreateBuffer,
 	directx12_deviceCreateTexture,
 	directx12_deviceCreateTextureView,
 	directx12_deviceCreateSampler,
+	directx12_deviceCreateAccelerationStructure,
+	directx12_deviceCreateShaderBindingTable,
 	directx12_deviceCreateCommandPool,
 	directx12_deviceCreateShader,
 	directx12_deviceCreateBindsetLayout,
@@ -421,6 +471,8 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroyTexture,
 	directx12_deviceDestroyTextureView,
 	directx12_deviceDestroySampler,
+	directx12_deviceDestroyAccelerationStructure,
+	directx12_deviceDestroyShaderBindingTable,
 	directx12_deviceDestroyCommandPool,
 	directx12_deviceDestroyShader,
 	directx12_deviceDestroyBindsetLayout,
@@ -430,6 +482,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroySwapchain,
 	directx12_deviceDestroy,
 
+	directx12_deviceBuildShaderBindingTable,
 	directx12_deviceAllocateCommandBuffer,
 	directx12_deviceFreeCommandBuffer,
 	directx12_deviceResetCommandPool,
@@ -467,6 +520,9 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdMeshletDispatch,
 	directx12_deviceCmdComputeDispatch,
 	directx12_deviceCmdRaytraceDispatch,
+	directx12_deviceCmdBuildAccelerationStructures,
+	directx12_deviceCmdCopyAccelerationStructure,
+	directx12_deviceCmdCopyAccelerationStructuresPostbuildInfo,
 	directx12_deviceCmdCopyBufferToBuffer,
 	directx12_deviceCmdCopyBufferToTexture,
 	directx12_deviceCmdCopyTextureToBuffer,

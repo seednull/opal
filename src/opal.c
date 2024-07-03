@@ -165,6 +165,30 @@ Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_
 	return ptr->vtbl->getDeviceQueue(device, engine_type, index, queue);
 }
 
+Opal_Result opalGetAccelerationStructurePrebuildInfo(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getAccelerationStructurePrebuildInfo);
+
+	return ptr->vtbl->getAccelerationStructurePrebuildInfo(device, desc, info);
+}
+
+Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getShaderBindingTablePrebuildInfo);
+
+	return ptr->vtbl->getShaderBindingTablePrebuildInfo(device, desc, info);
+}
+
 /*
  */
 Opal_Result opalCreateSemaphore(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
@@ -225,6 +249,30 @@ Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, 
 	assert(ptr->vtbl->createSampler);
 
 	return ptr->vtbl->createSampler(device, desc, sampler);
+}
+
+Opal_Result opalCreateAccelerationStructure(Opal_Device device, Opal_BufferView buffer, Opal_AccelerationStructure *acceleration_structure)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createAccelerationStructure);
+
+	return ptr->vtbl->createAccelerationStructure(device, buffer, acceleration_structure);
+}
+
+Opal_Result opalCreateShaderBindingTable(Opal_Device device, Opal_BufferView buffer, Opal_ShaderBindingTable *shader_binding_table)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createShaderBindingTable);
+
+	return ptr->vtbl->createShaderBindingTable(device, buffer, shader_binding_table);
 }
 
 Opal_Result opalCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool)
@@ -409,6 +457,30 @@ Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler)
 	return ptr->vtbl->destroySampler(device, sampler);
 }
 
+Opal_Result opalDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyAccelerationStructure);
+
+	return ptr->vtbl->destroyAccelerationStructure(device, acceleration_structure);
+}
+
+Opal_Result opalDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyShaderBindingTable);
+
+	return ptr->vtbl->destroyShaderBindingTable(device, shader_binding_table);
+}
+
 Opal_Result opalDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -507,6 +579,18 @@ Opal_Result opalDestroyDevice(Opal_Device device)
 
 /*
  */
+Opal_Result opalBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->buildShaderBindingTable);
+
+	return ptr->vtbl->buildShaderBindingTable(device, desc);
+}
+
 Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -929,7 +1013,7 @@ Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_groups_x, num_groups_y, num_groups_z);
 }
 
-Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableView shader_table, uint32_t width, uint32_t height, uint32_t depth)
+Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -938,7 +1022,43 @@ Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer comma
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdRaytraceDispatch);
 
-	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, shader_table, width, height, depth);
+	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, raygen_entry, hitgroup_entry, miss_entry, width, height, depth);
+}
+
+Opal_Result opalCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdBuildAccelerationStructures);
+
+	return ptr->vtbl->cmdBuildAccelerationStructures(device, command_buffer, num_build_descs, descs);
+}
+
+Opal_Result opalCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdCopyAccelerationStructure);
+
+	return ptr->vtbl->cmdCopyAccelerationStructure(device, command_buffer, src, dst, mode);
+}
+
+Opal_Result opalCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdCopyAccelerationStructuresPostbuildInfo);
+
+	return ptr->vtbl->cmdCopyAccelerationStructuresPostbuildInfo(device, command_buffer, num_src_acceleration_structures, src_acceleration_structures, dst_buffer);
 }
 
 Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
