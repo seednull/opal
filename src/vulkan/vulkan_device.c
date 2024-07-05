@@ -73,6 +73,14 @@ static void vulkan_destroySampler(Vulkan_Device *device_ptr, Vulkan_Sampler *sam
 	device_ptr->vk.vkDestroySampler(device_ptr->device, sampler_ptr->sampler, NULL);
 }
 
+static void vulkan_destroyAccelerationStructure(Vulkan_Device *device_ptr, Vulkan_AccelerationStructure *acceleration_structure_ptr)
+{
+	assert(device_ptr);
+	assert(acceleration_structure_ptr);
+ 
+	device_ptr->vk.vkDestroyAccelerationStructureKHR(device_ptr->device, acceleration_structure_ptr->acceleration_structure, NULL);
+}
+
 static void vulkan_destroyCommandPool(Vulkan_Device *device_ptr, Vulkan_CommandPool *command_pool_ptr)
 {
 	assert(device_ptr);
@@ -172,7 +180,102 @@ static Opal_Result vulkan_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType
 
 static Opal_Result vulkan_deviceGetAccelerationStructurePrebuildInfo(Opal_Device this, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(desc);
+	assert(info);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	uint32_t num_entries = desc->num_entries;
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+		num_entries = 1;
+
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t entries_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkAccelerationStructureGeometryKHR) * num_entries);
+	uint32_t max_primive_counts_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(uint32_t) * num_entries);
+
+	VkAccelerationStructureGeometryKHR *entries = (VkAccelerationStructureGeometryKHR *)(device_ptr->bump.data + entries_offset);
+	memset(entries, 0, sizeof(VkAccelerationStructureGeometryKHR) * num_entries);
+
+	uint32_t *max_primitive_counts = (uint32_t *)(device_ptr->bump.data + max_primive_counts_offset);
+	memset(max_primitive_counts, 0, sizeof(uint32_t) * num_entries);
+
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+	{
+		for (uint32_t i = 0; i < num_entries; ++i)
+		{
+			const Opal_AccelerationStructureGeometry *opal_geometry = &desc->geometries[i];
+			VkAccelerationStructureGeometryKHR *geometry = &entries[i];
+			
+			geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+			geometry->geometryType = vulkan_helperToAccelerationStructureGeometryType(opal_geometry->type);
+			geometry->flags = vulkan_helperToAccelerationStructureGeometryFlags(opal_geometry->flags);
+
+			if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
+			{
+				const Opal_AccelerationStructureGeometryTriangles *opal_triangles = &opal_geometry->triangles;
+				VkAccelerationStructureGeometryTrianglesDataKHR *triangles = &geometry->geometry.triangles;
+
+				triangles->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+				triangles->vertexFormat = vulkan_helperToFormat(opal_triangles->vertex_format);
+				triangles->vertexStride = opal_triangles->vertex_stride;
+				triangles->maxVertex = opal_triangles->num_vertices - 1;
+				triangles->indexType = vulkan_helperToIndexType(opal_triangles->index_format);
+
+				max_primitive_counts[i] = opal_triangles->num_indices;
+			}
+			else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
+			{
+				const Opal_AccelerationStructureGeometryAABBs *opal_aabbs = &opal_geometry->aabbs;
+				VkAccelerationStructureGeometryAabbsDataKHR *aabbs = &geometry->geometry.aabbs;
+
+				Vulkan_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, opal_aabbs->entries_buffer.buffer);
+
+				aabbs->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+				aabbs->stride = opal_aabbs->stride;
+
+				max_primitive_counts[i] = opal_aabbs->num_entries;
+			}
+			else
+				assert(0);
+		}
+	}
+	else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+	{
+		VkAccelerationStructureGeometryKHR *geometry = &entries[0];
+
+		geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+		geometry->geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+
+		VkAccelerationStructureGeometryInstancesDataKHR *instances = &geometry->geometry.instances;
+		instances->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+		instances->arrayOfPointers = VK_FALSE;
+
+		max_primitive_counts[0] = desc->num_entries;
+		num_entries = 1;
+	}
+	else
+		assert(0);
+
+	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
+	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build_info.type = vulkan_helperToAccelerationStructureType(desc->type);
+	build_info.flags = vulkan_helperToAccelerationStructureBuildFlags(desc->build_flags);
+	build_info.mode = vulkan_helperToAccelerationStructureBuildMode(desc->build_mode);
+	build_info.geometryCount = num_entries;
+	build_info.pGeometries = entries;
+
+	VkAccelerationStructureBuildSizesInfoKHR size_info = {0};
+	size_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	device_ptr->vk.vkGetAccelerationStructureBuildSizesKHR(vulkan_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build_info, max_primitive_counts, &size_info);
+
+	info->acceleration_structure_size = size_info.accelerationStructureSize;
+	info->build_scratch_size = size_info.buildScratchSize;
+	info->update_scratch_size = size_info.updateScratchSize;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
@@ -536,14 +639,36 @@ static Opal_Result vulkan_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCreateAccelerationStructure(Opal_Device device, Opal_BufferView buffer, Opal_AccelerationStructure *acceleration_structure)
+static Opal_Result vulkan_deviceCreateAccelerationStructure(Opal_Device this, const Opal_AccelerationStructureDesc *desc, Opal_AccelerationStructure *acceleration_structure)
 {
-	return OPAL_NOT_SUPPORTED;
-}
+	assert(this);
+	assert(desc);
+	assert(acceleration_structure);
 
-static Opal_Result vulkan_deviceCreateShaderBindingTable(Opal_Device device, Opal_BufferView buffer, Opal_ShaderBindingTable *shader_binding_table)
-{
-	return OPAL_NOT_SUPPORTED;
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_Buffer *buffer_ptr = opal_poolGetElement(&device_ptr->buffers, desc->buffer.buffer);
+	assert(buffer_ptr);
+
+	VkAccelerationStructureKHR vulkan_acceleration_structure = VK_NULL_HANDLE;
+
+	VkAccelerationStructureCreateInfoKHR acceleration_structure_info = {0};
+	acceleration_structure_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	acceleration_structure_info.buffer = buffer_ptr->buffer;
+	acceleration_structure_info.offset = desc->buffer.offset;
+	acceleration_structure_info.size = desc->size;
+	acceleration_structure_info.type = vulkan_helperToAccelerationStructureType(desc->type);
+
+	VkResult vulkan_result = device_ptr->vk.vkCreateAccelerationStructureKHR(vulkan_device, &acceleration_structure_info, NULL, &vulkan_acceleration_structure);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	Vulkan_AccelerationStructure result = {0};
+	result.acceleration_structure = vulkan_acceleration_structure;
+
+	*acceleration_structure = (Opal_Sampler)opal_poolAddElement(&device_ptr->acceleration_structures, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCreateCommandPool(Opal_Device this, Opal_Queue queue, Opal_CommandPool *command_pool)
@@ -1034,7 +1159,171 @@ static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Op
 
 static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(desc);
+	assert(pipeline);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	// pipeline layout
+	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, desc->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	VkPipelineLayout vulkan_pipeline_layout = pipeline_layout_ptr->layout;
+	VkPipeline vulkan_pipeline = VK_NULL_HANDLE;
+	VkPipelineCache vulkan_pipeline_cache = VK_NULL_HANDLE;
+
+	uint32_t max_shader_modules = desc->num_raygen_shaders + desc->num_hitgroup_shaders * 3 + desc->num_miss_shaders; 
+	uint32_t max_shader_groups = desc->num_raygen_shaders + desc->num_hitgroup_shaders + desc->num_miss_shaders;
+
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t shader_stages_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkPipelineShaderStageCreateInfo) * max_shader_modules);
+	uint32_t shader_groups_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkVertexInputAttributeDescription) * max_shader_groups);
+
+	VkPipelineShaderStageCreateInfo *shader_stages = (VkPipelineShaderStageCreateInfo *)(device_ptr->bump.data + shader_stages_offset);
+	memset(shader_stages, 0, sizeof(VkPipelineShaderStageCreateInfo) * max_shader_modules);
+
+	VkRayTracingShaderGroupCreateInfoKHR *shader_groups = (VkRayTracingShaderGroupCreateInfoKHR *)(device_ptr->bump.data + shader_groups_offset);
+	memset(shader_groups, 0, sizeof(VkRayTracingShaderGroupCreateInfoKHR) * max_shader_groups);
+
+	// TODO: add hashmap lookup to gather unique shader stages, now let's create shader stages with duplicates
+	uint32_t current_shader_offset = 0;
+	uint32_t current_group_offset = 0;
+
+	for (uint32_t i = 0; i < desc->num_raygen_shaders; ++i)
+	{
+		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, desc->raygen_shaders[i]);
+		assert(shader_ptr);
+
+		VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
+		stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		stage->stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+		stage->module = shader_ptr->shader;
+		stage->pName = "main";
+
+		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
+		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+		group->type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+		group->generalShader = current_shader_offset;
+		group->closestHitShader = VK_SHADER_UNUSED_KHR;
+		group->anyHitShader = VK_SHADER_UNUSED_KHR;
+		group->intersectionShader = VK_SHADER_UNUSED_KHR;
+
+		current_shader_offset++;
+		current_group_offset++;
+	}
+
+	for (uint32_t i = 0; i < desc->num_hitgroup_shaders; ++i)
+	{
+		Vulkan_Shader *closesthit_shader_ptr = NULL;
+		Vulkan_Shader *anyhit_shader_ptr = NULL;
+		Vulkan_Shader *intersection_shader_ptr = NULL;
+		
+		if (desc->hitgroup_closesthit_shaders)
+			closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, desc->hitgroup_closesthit_shaders[i]);
+
+		if (desc->hitgroup_anyhit_shaders)
+			anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, desc->hitgroup_anyhit_shaders[i]);
+
+		if (desc->hitgroup_intersection_shaders)
+			intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, desc->hitgroup_intersection_shaders[i]);
+
+		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
+		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+		group->type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+		group->generalShader = VK_SHADER_UNUSED_KHR;
+
+		if (closesthit_shader_ptr)
+		{
+			VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
+			stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stage->stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+			stage->module = closesthit_shader_ptr->shader;
+			stage->pName = "main";
+
+			group->closestHitShader = current_shader_offset++;
+		}
+
+		if (anyhit_shader_ptr)
+		{
+			VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
+			stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stage->stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+			stage->module = anyhit_shader_ptr->shader;
+			stage->pName = "main";
+
+			group->anyHitShader = current_shader_offset++;
+		}
+
+		if (intersection_shader_ptr)
+		{
+			VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
+			stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stage->stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+			stage->module = intersection_shader_ptr->shader;
+			stage->pName = "main";
+
+			group->intersectionShader = current_shader_offset++;
+			group->type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
+		}
+
+		current_group_offset++;
+	}
+
+	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
+	{
+		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, desc->miss_shaders[i]);
+		assert(shader_ptr);
+
+		VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
+		stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		stage->stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+		stage->module = shader_ptr->shader;
+		stage->pName = "main";
+
+		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
+		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+		group->type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+		group->generalShader = current_shader_offset;
+		group->closestHitShader = VK_SHADER_UNUSED_KHR;
+		group->anyHitShader = VK_SHADER_UNUSED_KHR;
+		group->intersectionShader = VK_SHADER_UNUSED_KHR;
+
+		current_shader_offset++;
+		current_group_offset++;
+	}
+
+	assert(current_shader_offset <= max_shader_modules);
+	assert(current_group_offset <= max_shader_groups);
+
+	// pipeline
+	VkRayTracingPipelineInterfaceCreateInfoKHR pipeline_interface_info = {0};
+	pipeline_interface_info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
+	pipeline_interface_info.maxPipelineRayPayloadSize = desc->max_ray_payload_size;
+	pipeline_interface_info.maxPipelineRayHitAttributeSize = desc->max_hit_attribute_size;
+
+	VkRayTracingPipelineCreateInfoKHR pipeline_info = {0};
+	pipeline_info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+	pipeline_info.stageCount = current_shader_offset;
+	pipeline_info.pStages = shader_stages;
+	pipeline_info.groupCount = current_group_offset;
+	pipeline_info.pGroups = shader_groups;
+	pipeline_info.maxPipelineRayRecursionDepth = desc->max_recursion_depth;
+	pipeline_info.pLibraryInterface = &pipeline_interface_info;
+	pipeline_info.layout = vulkan_pipeline_layout;
+
+	VkResult vulkan_result = device_ptr->vk.vkCreateRayTracingPipelinesKHR(vulkan_device, VK_NULL_HANDLE, vulkan_pipeline_cache, 1, &pipeline_info, NULL, &vulkan_pipeline);
+
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	Vulkan_Pipeline result = {0};
+	result.pipeline = vulkan_pipeline;
+	result.bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+
+	*pipeline = (Opal_Pipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain)
@@ -1377,14 +1666,22 @@ static Opal_Result vulkan_deviceDestroySampler(Opal_Device this, Opal_Sampler sa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure)
+static Opal_Result vulkan_deviceDestroyAccelerationStructure(Opal_Device this, Opal_AccelerationStructure acceleration_structure)
 {
-	return OPAL_NOT_SUPPORTED;
-}
+	assert(this);
+	assert(acceleration_structure);
+ 
+	Opal_PoolHandle handle = (Opal_PoolHandle)acceleration_structure;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
 
-static Opal_Result vulkan_deviceDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table)
-{
-	return OPAL_NOT_SUPPORTED;
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_AccelerationStructure *acceleration_structure_ptr = (Vulkan_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, handle);
+	assert(acceleration_structure_ptr);
+
+	opal_poolRemoveElement(&device_ptr->samplers, handle);
+
+	vulkan_destroyAccelerationStructure(device_ptr, acceleration_structure_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceDestroyCommandPool(Opal_Device this, Opal_CommandPool command_pool)
@@ -1615,6 +1912,19 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 	}
 
 	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->acceleration_structures);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Vulkan_AccelerationStructure *acceleration_structure_ptr = (Vulkan_AccelerationStructure *)opal_poolGetElementByIndex(&ptr->acceleration_structures, head);
+			vulkan_destroyAccelerationStructure(ptr, acceleration_structure_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->acceleration_structures, head);
+		}
+
+		opal_poolShutdown(&ptr->acceleration_structures);
+	}
+
+	{
 		uint32_t head = opal_poolGetHeadIndex(&ptr->samplers);
 		while (head != OPAL_POOL_HANDLE_NULL)
 		{
@@ -1711,7 +2021,7 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc)
+static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -2739,12 +3049,32 @@ static Opal_Result vulkan_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_C
 
 static Opal_Result vulkan_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	device_ptr->vk.vkCmdDrawMeshTasksEXT(command_buffer_ptr->command_buffer, num_groups_x, num_groups_y, num_groups_z);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	device_ptr->vk.vkCmdDispatch(command_buffer_ptr->command_buffer, num_groups_x, num_groups_y, num_groups_z);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth)
@@ -2752,17 +3082,17 @@ static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+static Opal_Result vulkan_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
+static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -2831,12 +3161,66 @@ static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Co
 
 static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	Vulkan_Buffer *dst_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, dst.buffer);
+	assert(dst_buffer_ptr);
+
+	Vulkan_ImageView *src_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, src.texture_view);
+	assert(src_image_view_ptr);
+
+	VkBufferImageCopy copy_region = {0};
+	copy_region.bufferOffset = dst.offset;
+	copy_region.imageExtent.width = src.width;
+	copy_region.imageExtent.height = src.height;
+	copy_region.imageExtent.depth = src.depth;
+	copy_region.imageOffset.x = src.offset_x;
+	copy_region.imageOffset.z = src.offset_y;
+	copy_region.imageOffset.y = src.offset_z;
+	copy_region.imageSubresource.aspectMask = src_image_view_ptr->aspect_mask;
+	copy_region.imageSubresource.mipLevel = src_image_view_ptr->base_mip;
+	copy_region.imageSubresource.baseArrayLayer = src_image_view_ptr->base_layer;
+	copy_region.imageSubresource.layerCount = src_image_view_ptr->num_layers;
+
+	device_ptr->vk.vkCmdCopyImageToBuffer(command_buffer_ptr->command_buffer, src_image_view_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_buffer_ptr->buffer, 1, &copy_region);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
-	return OPAL_NOT_SUPPORTED;
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, command_buffer);
+	assert(command_buffer_ptr);
+
+	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, buffer.buffer);
+	assert(buffer_ptr);
+
+	VkPipelineStageFlags wait_stage = vulkan_helperToPipelineWaitStage(state_before);
+	VkPipelineStageFlags block_stage = vulkan_helperToPipelineBlockStage(state_after);
+
+	VkBufferMemoryBarrier buffer_barrier = {0};
+	buffer_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+	buffer_barrier.srcAccessMask = vulkan_helperToFlushAccessMask(state_before);
+	buffer_barrier.dstAccessMask = vulkan_helperToInvalidateAccessMask(state_after);
+	buffer_barrier.buffer = buffer_ptr->buffer;
+	buffer_barrier.offset = buffer.offset;
+	buffer_barrier.size = buffer.size;
+
+	device_ptr->vk.vkCmdPipelineBarrier(command_buffer_ptr->command_buffer, wait_stage, block_stage, 0, 0, NULL, 1, &buffer_barrier, 0, NULL);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
@@ -2908,7 +3292,6 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCreateTextureView,
 	vulkan_deviceCreateSampler,
 	vulkan_deviceCreateAccelerationStructure,
-	vulkan_deviceCreateShaderBindingTable,
 	vulkan_deviceCreateCommandPool,
 	vulkan_deviceCreateShader,
 	vulkan_deviceCreateBindsetLayout,
@@ -2926,7 +3309,6 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyTextureView,
 	vulkan_deviceDestroySampler,
 	vulkan_deviceDestroyAccelerationStructure,
-	vulkan_deviceDestroyShaderBindingTable,
 	vulkan_deviceDestroyCommandPool,
 	vulkan_deviceDestroyShader,
 	vulkan_deviceDestroyBindsetLayout,
@@ -3074,6 +3456,7 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	opal_poolInitialize(&device_ptr->images, sizeof(Vulkan_Image), 32);
 	opal_poolInitialize(&device_ptr->image_views, sizeof(Vulkan_ImageView), 32);
 	opal_poolInitialize(&device_ptr->samplers, sizeof(Vulkan_Sampler), 32);
+	opal_poolInitialize(&device_ptr->acceleration_structures, sizeof(Vulkan_AccelerationStructure), 32);
 	opal_poolInitialize(&device_ptr->command_pools, sizeof(Vulkan_CommandPool), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(Vulkan_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(Vulkan_Shader), 32);

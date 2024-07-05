@@ -57,17 +57,12 @@ static Opal_Result null_deviceCreateSampler(Opal_Device this, const Opal_Sampler
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateAccelerationStructure(Opal_Device device, Opal_BufferView buffer, Opal_AccelerationStructure *acceleration_structure)
+static Opal_Result null_deviceCreateAccelerationStructure(Opal_Device this, const Opal_AccelerationStructureDesc *desc, Opal_AccelerationStructure *acceleration_structure)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateShaderBindingTable(Opal_Device device, Opal_BufferView buffer, Opal_ShaderBindingTable *shader_binding_table)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool)
+static Opal_Result null_deviceCreateCommandPool(Opal_Device this, Opal_Queue queue, Opal_CommandPool *command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -142,17 +137,12 @@ static Opal_Result null_deviceDestroySampler(Opal_Device this, Opal_Sampler samp
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure)
+static Opal_Result null_deviceDestroyAccelerationStructure(Opal_Device this, Opal_AccelerationStructure acceleration_structure)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table)
-{
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)
+static Opal_Result null_deviceDestroyCommandPool(Opal_Device this, Opal_CommandPool command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -197,27 +187,27 @@ static Opal_Result null_deviceDestroy(Opal_Device this)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result null_deviceBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc)
+static Opal_Result null_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
+static Opal_Result null_deviceAllocateCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceFreeCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceResetCommandPool(Opal_Device device, Opal_CommandPool command_pool)
+static Opal_Result null_deviceResetCommandPool(Opal_Device this, Opal_CommandPool command_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceResetCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -232,7 +222,7 @@ static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bin
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool)
+static Opal_Result null_deviceResetBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -382,17 +372,17 @@ static Opal_Result null_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+static Opal_Result null_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+static Opal_Result null_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
 {
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
+static Opal_Result null_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
 {
 	return OPAL_NOT_SUPPORTED;
 }
@@ -457,7 +447,6 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateTextureView,
 	null_deviceCreateSampler,
 	null_deviceCreateAccelerationStructure,
-	null_deviceCreateShaderBindingTable,
 	null_deviceCreateCommandPool,
 	null_deviceCreateShader,
 	null_deviceCreateBindsetLayout,
@@ -475,7 +464,6 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyTextureView,
 	null_deviceDestroySampler,
 	null_deviceDestroyAccelerationStructure,
-	null_deviceDestroyShaderBindingTable,
 	null_deviceDestroyCommandPool,
 	null_deviceDestroyShader,
 	null_deviceDestroyBindsetLayout,

@@ -327,6 +327,74 @@ VkSamplerAddressMode vulkan_helperToSamplerAddressMode(Opal_SamplerAddressMode m
 	return vk_sampler_address_modes[mode];
 }
 
+VkGeometryTypeKHR vulkan_helperToAccelerationStructureGeometryType(Opal_AccelerationStructureGeometryType type)
+{
+	static VkGeometryTypeKHR vk_geometry_type[] =
+	{
+		VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+		VK_GEOMETRY_TYPE_AABBS_KHR,
+	};
+
+	return vk_geometry_type[type];
+}
+
+VkGeometryFlagsKHR vulkan_helperToAccelerationStructureGeometryFlags(Opal_AccelerationStructureGeometryFlags flags)
+{
+	VkGeometryFlagsKHR vk_flags = 0;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_OPAQUE)
+		vk_flags |= VK_GEOMETRY_OPAQUE_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_NO_DUPLICATE_ANYHIT)
+		vk_flags |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR;
+
+	return vk_flags;
+}
+
+VkAccelerationStructureTypeKHR vulkan_helperToAccelerationStructureType(Opal_AccelerationStructureType type)
+{
+	static VkAccelerationStructureTypeKHR vk_acceleration_structure_types[] =
+	{
+		VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+		VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+	};
+
+	return vk_acceleration_structure_types[type];
+}
+
+VkBuildAccelerationStructureFlagBitsKHR vulkan_helperToAccelerationStructureBuildFlags(Opal_AccelerationStructureBuildFlags flags)
+{
+	VkBuildAccelerationStructureFlagBitsKHR vk_flags = 0;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_ALLOW_UPDATE)
+		vk_flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_ALLOW_COMPACTION)
+		vk_flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_PREFER_FAST_TRACE)
+		vk_flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_PREFER_FAST_BUILD)
+		vk_flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_MINIMIZE_MEMORY)
+		vk_flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
+
+	return vk_flags;
+}
+
+VkBuildAccelerationStructureModeKHR vulkan_helperToAccelerationStructureBuildMode(Opal_AccelerationStructureBuildMode mode)
+{
+	static VkBuildAccelerationStructureModeKHR vk_acceleration_structure_build_modes[] =
+	{
+		VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+		VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR,
+	};
+
+	return vk_acceleration_structure_build_modes[mode];
+}
+
 VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op)
 {
 	static VkCompareOp vk_compare_ops[] =

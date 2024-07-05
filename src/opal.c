@@ -251,7 +251,7 @@ Opal_Result opalCreateSampler(Opal_Device device, const Opal_SamplerDesc *desc, 
 	return ptr->vtbl->createSampler(device, desc, sampler);
 }
 
-Opal_Result opalCreateAccelerationStructure(Opal_Device device, Opal_BufferView buffer, Opal_AccelerationStructure *acceleration_structure)
+Opal_Result opalCreateAccelerationStructure(Opal_Device device, const Opal_AccelerationStructureDesc *desc, Opal_AccelerationStructure *acceleration_structure)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -260,19 +260,7 @@ Opal_Result opalCreateAccelerationStructure(Opal_Device device, Opal_BufferView 
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->createAccelerationStructure);
 
-	return ptr->vtbl->createAccelerationStructure(device, buffer, acceleration_structure);
-}
-
-Opal_Result opalCreateShaderBindingTable(Opal_Device device, Opal_BufferView buffer, Opal_ShaderBindingTable *shader_binding_table)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->createShaderBindingTable);
-
-	return ptr->vtbl->createShaderBindingTable(device, buffer, shader_binding_table);
+	return ptr->vtbl->createAccelerationStructure(device, desc, acceleration_structure);
 }
 
 Opal_Result opalCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool)
@@ -467,18 +455,6 @@ Opal_Result opalDestroyAccelerationStructure(Opal_Device device, Opal_Accelerati
 	assert(ptr->vtbl->destroyAccelerationStructure);
 
 	return ptr->vtbl->destroyAccelerationStructure(device, acceleration_structure);
-}
-
-Opal_Result opalDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyShaderBindingTable);
-
-	return ptr->vtbl->destroyShaderBindingTable(device, shader_binding_table);
 }
 
 Opal_Result opalDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)

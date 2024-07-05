@@ -113,6 +113,7 @@ typedef struct Vulkan_Device_t
 	Opal_Pool images;
 	Opal_Pool image_views;
 	Opal_Pool samplers;
+	Opal_Pool acceleration_structures;
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -182,6 +183,11 @@ typedef struct Vulkan_Sampler_t
 {
 	VkSampler sampler;
 } Vulkan_Sampler;
+
+typedef struct Vulkan_AccelerationStructure_t
+{
+	VkAccelerationStructureKHR acceleration_structure;
+} Vulkan_AccelerationStructure;
 
 typedef struct Vulkan_CommandPool_t
 {
@@ -257,17 +263,30 @@ VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc)
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
 VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type);
 VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type);
+
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
+
 VkFormat vulkan_helperToFormat(Opal_Format format);
 VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format);
+
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
+
 VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode);
 VkSamplerMipmapMode vulkan_helperToSamplerMipmapMode(Opal_SamplerFilterMode mode);
 VkSamplerAddressMode vulkan_helperToSamplerAddressMode(Opal_SamplerAddressMode mode);
+
+VkGeometryTypeKHR vulkan_helperToAccelerationStructureGeometryType(Opal_AccelerationStructureGeometryType type);
+VkGeometryFlagsKHR vulkan_helperToAccelerationStructureGeometryFlags(Opal_AccelerationStructureGeometryFlags flags);
+VkAccelerationStructureTypeKHR vulkan_helperToAccelerationStructureType(Opal_AccelerationStructureType type);
+VkBuildAccelerationStructureFlagBitsKHR vulkan_helperToAccelerationStructureBuildFlags(Opal_AccelerationStructureBuildFlags flags);
+VkBuildAccelerationStructureModeKHR vulkan_helperToAccelerationStructureBuildMode(Opal_AccelerationStructureBuildMode mode);
+
 VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op);
+
 VkDescriptorType vulkan_helperToDescriptorType(Opal_BindingType type);
+
 VkShaderStageFlags vulkan_helperToShaderStageFlags(Opal_ShaderStage stage);
 VkVertexInputRate vulkan_helperToVertexInputRate(Opal_VertexInputRate rate);
 VkPrimitiveTopology vulkan_helperToPrimitiveTopology(Opal_PrimitiveType type);
@@ -279,8 +298,10 @@ VkBlendFactor vulkan_helperToBlendFactor(Opal_BlendFactor factor);
 VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op);
 VkAttachmentLoadOp vulkan_helperToLoadOp(Opal_LoadOp op);
 VkAttachmentStoreOp vulkan_helperToStoreOp(Opal_StoreOp op);
+
 VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state);
 VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state);
+
 VkAccessFlags vulkan_helperToFlushAccessMask(Opal_ResourceState state);
 VkAccessFlags vulkan_helperToInvalidateAccessMask(Opal_ResourceState state);
 VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkImageAspectFlags aspect);
