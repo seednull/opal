@@ -290,6 +290,12 @@ VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
 	if (flags & OPAL_BUFFER_USAGE_INDIRECT)
 		result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 
+	if (flags & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE)
+		result |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+
+	if (flags & OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE)
+		result |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+
 	return result;
 }
 
@@ -393,6 +399,19 @@ VkBuildAccelerationStructureModeKHR vulkan_helperToAccelerationStructureBuildMod
 	};
 
 	return vk_acceleration_structure_build_modes[mode];
+}
+
+VkCopyAccelerationStructureModeKHR vulkan_helperToAccelerationStructureCopyMode(Opal_AccelerationStructureCopyMode mode)
+{
+	static VkCopyAccelerationStructureModeKHR vk_acceleration_structure_copy_modes[] =
+	{
+		VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR,
+		VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR,
+		VK_COPY_ACCELERATION_STRUCTURE_MODE_SERIALIZE_KHR,
+		VK_COPY_ACCELERATION_STRUCTURE_MODE_DESERIALIZE_KHR,
+	};
+
+	return vk_acceleration_structure_copy_modes[mode];
 }
 
 VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op)

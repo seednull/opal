@@ -280,6 +280,8 @@ typedef enum Opal_BufferUsageFlags_t
 	OPAL_BUFFER_USAGE_UNIFORM = 0x00000010,
 	OPAL_BUFFER_USAGE_STORAGE = 0x00000020,
 	OPAL_BUFFER_USAGE_INDIRECT = 0x00000040,
+	OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE = 0x00000080,
+	OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE = 0x00000100,
 
 	OPAL_BUFFER_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_BufferUsageFlags;
@@ -828,12 +830,6 @@ typedef struct Opal_TextureRegion_t
 	uint32_t depth;
 } Opal_TextureRegion;
 
-typedef struct Opal_ShaderBindingTableEntry_t
-{
-	Opal_BufferView sbt;
-	uint32_t index;
-} Opal_ShaderBindingTableEntry;
-
 typedef struct Opal_VertexAttribute_t
 {
 	Opal_Format format;
@@ -963,8 +959,9 @@ typedef struct Opal_AccelerationStructurePrebuildInfo_t
 
 typedef struct Opal_AccelerationStructurePostbuildInfo_t
 {
-	uint64_t compacted_buffer_size;
+	uint64_t acceleration_structure_size;
 	uint64_t serialization_buffer_size;
+	uint64_t compacted_buffer_size;
 } Opal_AccelerationStructurePostbuildInfo;
 
 typedef struct Opal_ShaderBindingTableLayoutDesc_t
@@ -978,14 +975,16 @@ typedef struct Opal_ShaderBindingTableBuildDesc_t
 {
 	Opal_BufferView sbt;
 	Opal_Pipeline pipeline;
-
 	uint32_t num_raygen_entries;
-	const uint32_t *raygen_indices;
-
 	uint32_t num_hitgroup_entries;
+	uint32_t num_miss_entries;
+
+	uint32_t *raygen_index;
+
+	uint32_t num_hitgroup_indices;
 	const uint32_t *hitgroup_indices;
 
-	uint32_t num_miss_entries;
+	uint32_t num_miss_indices;
 	const uint32_t *miss_indices;
 } Opal_ShaderBindingTableBuildDesc;
 
@@ -994,6 +993,7 @@ typedef struct Opal_ShaderBindingTablePrebuildInfo_t
 	uint64_t buffer_size;
 	uint32_t shader_handle_size;
 	uint32_t shader_handle_alignment;
+	uint32_t base_alignment;
 } Opal_ShaderBindingTablePrebuildInfo;
 
 typedef struct Opal_GraphicsPipelineDesc_t
@@ -1199,7 +1199,7 @@ typedef Opal_Result (*PFN_opalCmdSetScissor)(Opal_Device device, Opal_CommandBuf
 typedef Opal_Result (*PFN_opalCmdDrawIndexedInstanced)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance);
 typedef Opal_Result (*PFN_opalCmdMeshletDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
 typedef Opal_Result (*PFN_opalCmdComputeDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
-typedef Opal_Result (*PFN_opalCmdRaytraceDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth);
+typedef Opal_Result (*PFN_opalCmdRaytraceDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth);
 typedef Opal_Result (*PFN_opalCmdBuildAccelerationStructures)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs);
 typedef Opal_Result (*PFN_opalCmdCopyAccelerationStructure)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode);
 typedef Opal_Result (*PFN_opalCmdCopyAccelerationStructuresPostbuildInfo)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer);
@@ -1405,7 +1405,7 @@ OPAL_APIENTRY Opal_Result opalCmdSetScissor(Opal_Device device, Opal_CommandBuff
 OPAL_APIENTRY Opal_Result opalCmdDrawIndexedInstanced(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance);
 OPAL_APIENTRY Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
 OPAL_APIENTRY Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
-OPAL_APIENTRY Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth);
+OPAL_APIENTRY Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth);
 OPAL_APIENTRY Opal_Result opalCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs);
 OPAL_APIENTRY Opal_Result opalCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode);
 OPAL_APIENTRY Opal_Result opalCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer);

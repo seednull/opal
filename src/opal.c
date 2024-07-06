@@ -989,7 +989,7 @@ Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_groups_x, num_groups_y, num_groups_z);
 }
 
-Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;

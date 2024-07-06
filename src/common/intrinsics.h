@@ -51,6 +51,14 @@ static OPAL_INLINE uint32_t isPow2(uint32_t value)
 	return (value & (value - 1)) == 0;
 }
 
+static OPAL_INLINE uint32_t isAligned(uint32_t value, uint32_t alignment)
+{
+	assert(isPow2(alignment));
+
+	uint32_t mask = alignment - 1;
+	return (value & ~mask) == 0;
+}
+
 static OPAL_INLINE uint32_t alignDown(uint32_t value, uint32_t alignment)
 {
 	assert(isPow2(alignment));

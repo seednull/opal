@@ -240,6 +240,13 @@ static Opal_Result vulkan_allocatorBlockAlloc(Vulkan_Device *device, uint32_t me
 	info.memoryTypeIndex = memory_type;
 	info.allocationSize = block.size;
 
+	// TODO: ideally, we should check buffer_device_address feature availability and skip this if it's not present
+	VkMemoryAllocateFlagsInfoKHR flags_info = {0};
+	flags_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+	flags_info.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+	info.pNext = &flags_info;
+
 	VkResult result = device->vk.vkAllocateMemory(device->device, &info, NULL, &block.memory);
 	if (result != VK_SUCCESS)
 		return OPAL_NO_MEMORY;

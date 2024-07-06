@@ -364,7 +364,7 @@ static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTableEntry raygen_entry, Opal_ShaderBindingTableEntry hitgroup_entry, Opal_ShaderBindingTableEntry miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
 {
 	return OPAL_NOT_SUPPORTED;
 }

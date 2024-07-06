@@ -104,6 +104,7 @@ typedef struct Vulkan_Device_t
 	VolkDeviceTable vk;
 	VkPhysicalDevice physical_device;
 	VkDevice device;
+	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytrace_properties;
 	Vulkan_DeviceEnginesInfo device_engines_info;
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
@@ -150,6 +151,7 @@ typedef struct Vulkan_Buffer_t
 	VmaAllocation vma_allocation;
 #endif
 	Vulkan_Allocation allocation;
+	VkDeviceAddress device_address;
 } Vulkan_Buffer;
 
 typedef struct Vulkan_Image_t
@@ -187,6 +189,9 @@ typedef struct Vulkan_Sampler_t
 typedef struct Vulkan_AccelerationStructure_t
 {
 	VkAccelerationStructureKHR acceleration_structure;
+	VkQueryPool size_pool;
+	VkQueryPool serialization_size_pool;
+	VkQueryPool compacted_size_pool;
 } Vulkan_AccelerationStructure;
 
 typedef struct Vulkan_CommandPool_t
@@ -282,6 +287,7 @@ VkGeometryFlagsKHR vulkan_helperToAccelerationStructureGeometryFlags(Opal_Accele
 VkAccelerationStructureTypeKHR vulkan_helperToAccelerationStructureType(Opal_AccelerationStructureType type);
 VkBuildAccelerationStructureFlagBitsKHR vulkan_helperToAccelerationStructureBuildFlags(Opal_AccelerationStructureBuildFlags flags);
 VkBuildAccelerationStructureModeKHR vulkan_helperToAccelerationStructureBuildMode(Opal_AccelerationStructureBuildMode mode);
+VkCopyAccelerationStructureModeKHR vulkan_helperToAccelerationStructureCopyMode(Opal_AccelerationStructureCopyMode mode);
 
 VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op);
 
