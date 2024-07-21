@@ -2,6 +2,7 @@
 #include "common/intrinsics.h"
 
 #include <assert.h>
+#include <string.h>
 #include <stdlib.h>
 
 /*
