@@ -1552,10 +1552,10 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 
 	// semaphores & image views
 	VkSemaphore *vulkan_acquire_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_images);
-	memset(vulkan_acquire_semaphores, VK_NULL_HANDLE, sizeof(VkSemaphore) * num_images);
+	memset(vulkan_acquire_semaphores, 0, sizeof(VkSemaphore) * num_images);
 
 	VkSemaphore *vulkan_present_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_images);
-	memset(vulkan_present_semaphores, VK_NULL_HANDLE, sizeof(VkSemaphore) * num_images);
+	memset(vulkan_present_semaphores, 0, sizeof(VkSemaphore) * num_images);
 
 	Opal_TextureView *texture_views = (Opal_TextureView *)malloc(sizeof(Opal_TextureView) * num_images);
 	memset(texture_views, OPAL_NULL_HANDLE, sizeof(Opal_TextureView) * num_images);
@@ -2145,21 +2145,21 @@ static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device this, const 
 	for (uint32_t i = 0; i < num_raygen_indices; ++i)
 	{
 		uint32_t offset = desc->raygen_index[i] * handle_size;
-		memcpy(raygen_dst_data, raygen_src_data + offset);
+		memcpy(raygen_dst_data, raygen_src_data + offset, handle_size);
 		raygen_dst_data += aligned_handle_size;
 	}
 
 	for (uint32_t i = 0; i < desc->num_hitgroup_indices; ++i)
 	{
 		uint32_t offset = desc->hitgroup_indices[i] * handle_size;
-		memcpy(hitgroup_dst_data, hitgroup_src_data + offset);
+		memcpy(hitgroup_dst_data, hitgroup_src_data + offset, handle_size);
 		hitgroup_dst_data += aligned_handle_size;
 	}
 
 	for (uint32_t i = 0; i < desc->num_miss_indices; ++i)
 	{
 		uint32_t offset = desc->miss_indices[i] * handle_size;
-		memcpy(miss_dst_data, miss_src_data + offset);
+		memcpy(miss_dst_data, miss_src_data + offset, handle_size);
 		miss_dst_data += aligned_handle_size;
 	}
 
@@ -2887,7 +2887,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 			attachment->storeOp = vulkan_helperToStoreOp(opal_attachment->store_op);
 
 			assert(sizeof(VkClearValue) == sizeof(Opal_ClearValue));
-			memcpy(&attachment->clearValue, opal_attachment->clear_value, sizeof(VkClearValue));
+			memcpy(&attachment->clearValue, &opal_attachment->clear_value, sizeof(VkClearValue));
 		}
 	}
 
@@ -2920,7 +2920,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 		vulkan_depthstencil_attachment->storeOp = vulkan_helperToStoreOp(depthstencil_attachment->store_op);
 
 		assert(sizeof(VkClearValue) == sizeof(Opal_ClearValue));
-		memcpy(&vulkan_depthstencil_attachment->clearValue, depthstencil_attachment->clear_value, sizeof(VkClearValue));
+		memcpy(&vulkan_depthstencil_attachment->clearValue, &depthstencil_attachment->clear_value, sizeof(VkClearValue));
 	}
 
 	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
