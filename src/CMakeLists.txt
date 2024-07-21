@@ -142,6 +142,7 @@ set_target_properties(${TARGET} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBIN
 set_target_properties(${TARGET} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
 
 set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
+set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER ${OPAL_DIR_API}/opal.h)
 
 # ==================================================================================================
 # Includes
@@ -173,3 +174,14 @@ endif()
 if (OPAL_HAS_METAL)
 	target_link_libraries(${TARGET} PRIVATE "-framework Metal -framework Quartz -framework IOKit -framework Foundation")
 endif()
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+install(
+	TARGETS ${TARGET} 
+	PUBLIC_HEADER DESTINATION ${OPAL_DIR_EXPORT}/install
+	RUNTIME DESTINATION ${OPAL_DIR_EXPORT}/install
+	ARCHIVE DESTINATION ${OPAL_DIR_EXPORT}/install
+	LIBRARY DESTINATION ${OPAL_DIR_EXPORT}/install
+)
