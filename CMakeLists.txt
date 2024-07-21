@@ -17,8 +17,10 @@ option(OPAL_BUILD_WITH_VMA "Build with Vulkan Memory Allocator along with built-
 # ==================================================================================================
 # Global Variables
 # ==================================================================================================
+string(COMPARE EQUAL "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}" OPAL_STANDALONE)
+
 set(OPAL_DIR_THIRDPARTY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
-set(OPAL_DIR_EXPORT ${CMAKE_CURRENT_SOURCE_DIR}/build)
+set(OPAL_DIR_EXPORT ${CMAKE_SOURCE_DIR}/build)
 set(OPAL_DIR_API ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPAL_DIR_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -73,7 +75,7 @@ endif()
 # ==================================================================================================
 add_subdirectory(src)
 
-if (OPAL_BUILD_TESTS)
+if (OPAL_BUILD_TESTS AND OPAL_STANDALONE)
 	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 	add_subdirectory(3rdparty/gtest)
 
@@ -81,7 +83,7 @@ if (OPAL_BUILD_TESTS)
 	add_subdirectory(tests/pool)
 endif()
 
-if (OPAL_BUILD_BENCHMARKS)
+if (OPAL_BUILD_BENCHMARKS AND OPAL_STANDALONE)
 	set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
 	set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 	add_subdirectory(3rdparty/gbench)
@@ -89,7 +91,7 @@ if (OPAL_BUILD_BENCHMARKS)
 	add_subdirectory(benchmarks/allocator)
 endif()
 
-if (OPAL_BUILD_SAMPLES)
+if (OPAL_BUILD_SAMPLES AND OPAL_STANDALONE)
 	add_subdirectory(samples/01_enumerate_devices)
 	add_subdirectory(samples/02_buffers)
 	add_subdirectory(samples/03_textures)
