@@ -168,7 +168,7 @@ target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM
 # Libraries
 # ==================================================================================================
 if (OPAL_HAS_DIRECTX12)
-	target_link_libraries(${TARGET} PRIVATE d3d12 dxgi) #TODO: get rid of these dependencies, load dll proc adresses manually
+	target_link_libraries(${TARGET} PRIVATE d3d12.lib dxgi.lib) #TODO: get rid of these dependencies, load dll proc adresses manually
 endif()
 
 if (OPAL_HAS_METAL)
