@@ -5,6 +5,38 @@
 
 /*
  */
+typedef HRESULT (WINAPI* PFN_DXGI_CREATE_FACTORY)(REFIID, _COM_Outptr_ void **);
+
+static PFN_D3D12_CREATE_DEVICE opal_d3d12CreateDevice = NULL;
+static PFN_DXGI_CREATE_FACTORY opal_dxgiCreateFactory1 = NULL;
+
+static Opal_Result directx12_initialize()
+{
+	static int once = 0;
+	static HMODULE d3d12_module = NULL;
+	static HMODULE dxgi_module = NULL;
+
+	if (!once)
+	{
+		d3d12_module = LoadLibraryA("d3d12.dll");
+		if (!d3d12_module)
+			return OPAL_DIRECX12_ERROR;
+
+		dxgi_module = LoadLibraryA("dxgi.dll");
+		if (!dxgi_module)
+			return OPAL_DIRECX12_ERROR;
+
+		opal_d3d12CreateDevice = (PFN_D3D12_CREATE_DEVICE)(void(*)(void))GetProcAddress(d3d12_module, "D3D12CreateDevice");
+		opal_dxgiCreateFactory1 = (PFN_DXGI_CREATE_FACTORY)(void(*)(void))GetProcAddress(dxgi_module, "CreateDXGIFactory");
+
+		once = 1;
+	}
+
+	return OPAL_SUCCESS;
+}
+
+/*
+ */
 static Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32_t *device_count, Opal_DeviceInfo *infos)
 {
 	assert(this);
@@ -20,15 +52,26 @@ static Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32
 	{
 		if (infos)
 		{
-			Opal_Result result = directx12_fillDeviceInfo(adapter, &infos[count]);
+			ID3D12Device *d3d_device = NULL;
+			HRESULT hr = opal_d3d12CreateDevice((IUnknown *)adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
+			if (!SUCCEEDED(hr))
+			{
+				IDXGIAdapter1_Release(d3d_device);
+				return OPAL_DIRECX12_ERROR;
+			}
+
+			Opal_Result result = directx12_fillDeviceInfo(adapter, d3d_device, &infos[count]);
+
+			ID3D12Device_Release(d3d_device);
+
 			if (result != OPAL_SUCCESS)
+			{
+				IDXGIAdapter1_Release(d3d_device);
 				return result;
+			}
 		}
 
-		HRESULT hr = IDXGIAdapter1_Release(adapter);
-		if (!SUCCEEDED(hr))
-			return OPAL_DIRECX12_ERROR;
-
+		IDXGIAdapter1_Release(adapter);
 		count++;
 	}
 
@@ -65,14 +108,14 @@ static Opal_Result directx12_instanceCreateDefaultDevice(Opal_Instance this, Opa
 
 		while (IDXGIFactory1_EnumAdapters1(factory, count, &d3d_adapter) != DXGI_ERROR_NOT_FOUND)
 		{
-			HRESULT hr = D3D12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
+			HRESULT hr = opal_d3d12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
 			if (!SUCCEEDED(hr))
 			{
 				IDXGIAdapter1_Release(d3d_adapter);
 				return OPAL_DIRECX12_ERROR;
 			}
 
-			Opal_Result result = directx12_fillDeviceInfoWithDevice(d3d_adapter, d3d_device, &info);
+			Opal_Result result = directx12_fillDeviceInfo(d3d_adapter, d3d_device, &info);
 			if (result != OPAL_SUCCESS)
 			{
 				IDXGIAdapter1_Release(d3d_adapter);
@@ -99,7 +142,7 @@ static Opal_Result directx12_instanceCreateDefaultDevice(Opal_Instance this, Opa
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECX12_ERROR;
 
-	hr = D3D12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
+	hr = opal_d3d12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
 	if (!SUCCEEDED(hr))
 	{
 		IDXGIAdapter1_Release(d3d_adapter);
@@ -135,7 +178,7 @@ static Opal_Result directx12_instanceCreateDevice(Opal_Instance this, uint32_t i
 		return OPAL_INVALID_DEVICE_INDEX;
 
 	ID3D12Device *d3d_device = NULL;
-	hr = D3D12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
+	hr = opal_d3d12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
 	if (!SUCCEEDED(hr))
 	{
 		IDXGIAdapter1_Release(d3d_adapter);
@@ -193,10 +236,14 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 	assert(desc);
 	assert(instance);
 
+	Opal_Result opal_result = directx12_initialize();
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
+
 	IDXGIFactory1 *factory = NULL;
 
 	// factory
-	HRESULT hr = CreateDXGIFactory1(&IID_IDXGIFactory1, &factory);
+	HRESULT hr = opal_dxgiCreateFactory1(&IID_IDXGIFactory1, &factory);
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECX12_ERROR;
 

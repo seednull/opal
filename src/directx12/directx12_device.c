@@ -9,7 +9,7 @@ static Opal_Result directx12_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *in
 	assert(info);
 
 	DirectX12_Device *ptr = (DirectX12_Device *)this;
-	return directx12_fillDeviceInfoWithDevice(ptr->adapter, ptr->device, info);
+	return directx12_fillDeviceInfo(ptr->adapter, ptr->device, info);
 }
 
 static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)

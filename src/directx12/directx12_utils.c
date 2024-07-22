@@ -5,23 +5,7 @@
 
 /*
  */
-Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, Opal_DeviceInfo *info)
-{
-	assert(adapter);
-	assert(info);
-
-	ID3D12Device *device = NULL;
-	HRESULT hr = D3D12CreateDevice((IUnknown *)adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &device);
-	if (!SUCCEEDED(hr))
-		return OPAL_DIRECX12_ERROR;
-
-	Opal_Result result = directx12_fillDeviceInfoWithDevice(adapter, device, info);
-	ID3D12Device_Release(device);
-
-	return result;
-}
-
-Opal_Result directx12_fillDeviceInfoWithDevice(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info)
+Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info)
 {
 	assert(adapter);
 	assert(info);

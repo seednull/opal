@@ -149,10 +149,6 @@ set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER ${OPAL_DIR_API}/opal.h)
 # ==================================================================================================
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_API})
 
-if (OPAL_HAS_DIRECTX12)
-	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/directx12/include)
-endif()
-
 if (OPAL_HAS_VULKAN)
 	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/volk/include)
 	target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${OPAL_DIR_THIRDPARTY}/vulkan/include)
@@ -167,10 +163,6 @@ target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM
 # ==================================================================================================
 # Libraries
 # ==================================================================================================
-if (OPAL_HAS_DIRECTX12)
-	target_link_libraries(${TARGET} PRIVATE d3d12.lib dxgi.lib) #TODO: get rid of these dependencies, load dll proc adresses manually
-endif()
-
 if (OPAL_HAS_METAL)
 	target_link_libraries(${TARGET} PRIVATE "-framework Metal -framework Quartz -framework IOKit -framework Foundation")
 endif()
