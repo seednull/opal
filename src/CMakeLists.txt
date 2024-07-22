@@ -51,6 +51,10 @@ file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/null/*.h
 )
 
+file (GLOB PUBLIC_HEADERS
+	${OPAL_DIR_API}/opal.h
+)
+
 if (OPAL_HAS_DIRECTX12)
 	file(GLOB DIRECTX12_SOURCES
 		${CMAKE_CURRENT_SOURCE_DIR}/directx12/*.c
@@ -124,25 +128,18 @@ endif()
 # ==================================================================================================
 # Target
 # ==================================================================================================
-add_library(${TARGET} ${OPAL_TARGET_TYPE} ${SOURCES} ${HEADERS})
-
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-
-set_target_properties(${TARGET} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-
-set_target_properties(${TARGET} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
+add_library(${TARGET} ${OPAL_TARGET_TYPE} ${SOURCES} ${HEADERS} ${PUBLIC_HEADERS})
 
 set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
-set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER ${OPAL_DIR_API}/opal.h)
+set_target_properties(${TARGET} PROPERTIES PUBLIC_HEADER ${PUBLIC_HEADERS})
+
+if (WIN32)
+	set_target_properties(${TARGET} PROPERTIES PREFIX "")
+	set_target_properties(${TARGET} PROPERTIES IMPORT_PREFIX "")
+	set_target_properties(${TARGET} PROPERTIES IMPORT_SUFFIX ".lib")
+else()
+	set_target_properties(${TARGET} PROPERTIES IMPORT_SUFFIX ".a")
+endif()
 
 # ==================================================================================================
 # Includes
@@ -171,9 +168,11 @@ endif()
 # Installation
 # ==================================================================================================
 install(
-	TARGETS ${TARGET} 
-	PUBLIC_HEADER DESTINATION ${OPAL_DIR_EXPORT}/install
-	RUNTIME DESTINATION ${OPAL_DIR_EXPORT}/install
-	ARCHIVE DESTINATION ${OPAL_DIR_EXPORT}/install
-	LIBRARY DESTINATION ${OPAL_DIR_EXPORT}/install
+	TARGETS ${TARGET}
+	EXPORT ${TARGET}
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib
+	INCLUDES DESTINATION include
+	PUBLIC_HEADER DESTINATION include
 )

@@ -23,11 +23,6 @@ file(GLOB HEADERS
 # ==================================================================================================
 add_executable(${TARGET} ${SOURCES} ${HEADERS})
 
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-set_target_properties(${TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${OPAL_DIR_EXPORT}/${OPAL_PLATFORM}/${OPAL_ABI})
-
 set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
 
 # ==================================================================================================
@@ -48,3 +43,16 @@ target_link_libraries(${TARGET} PUBLIC gtest)
 # ==================================================================================================
 # Custom commands
 # ==================================================================================================
+
+# ==================================================================================================
+# Installation
+# ==================================================================================================
+install(
+	TARGETS ${TARGET}
+	EXPORT ${TARGET}
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib
+	INCLUDES DESTINATION include
+	PUBLIC_HEADER DESTINATION include
+)

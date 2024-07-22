@@ -1,0 +1,35 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "msvc2022-common",
+            "hidden": true,
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${workspaceFolder}/build",
+            "installDir": "${workspaceFolder}/build"
+        },
+        {
+            "name": "msvc2022-x64",
+            "inherits": "msvc2022-common",
+            "hidden": false,
+            "architecture": "x64",
+            "displayName": "Visual Studio 2022 | x64"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "build-debug",
+            "hidden": false,
+            "configurePreset": "msvc2022-x64",
+            "configuration": "Debug",
+            "targets": ["all_build", "install"]
+        },
+        {
+            "name": "build-release",
+            "hidden": false,
+            "configurePreset": "msvc2022-x64",
+            "configuration": "Release",
+            "targets": ["all_build", "install"]
+        }
+    ]
+}
