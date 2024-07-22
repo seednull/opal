@@ -288,7 +288,9 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 {
 	static const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
-	vulkan_volkInitialize();
+	Opal_Result opal_result = vulkan_volkInitialize();
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
 
 	VkInstance vulkan_instance = VK_NULL_HANDLE;
 
