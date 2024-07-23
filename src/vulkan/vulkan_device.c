@@ -1025,7 +1025,7 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 		{
 			const Opal_VertexAttribute *vertex_attribute = &vertex_stream->attributes[j];
 
-			vertex_attributes[num_attributes].location = j;
+			vertex_attributes[num_attributes].location = num_attributes;
 			vertex_attributes[num_attributes].binding = i;
 			vertex_attributes[num_attributes].format = vulkan_helperToFormat(vertex_attribute->format);
 			vertex_attributes[num_attributes].offset = vertex_attribute->offset;
