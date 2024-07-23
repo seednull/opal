@@ -962,7 +962,7 @@ Opal_Result opalCmdDrawIndexedInstanced(Opal_Device device, Opal_CommandBuffer c
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdDrawIndexedInstanced);
 
-	return ptr->vtbl->cmdDrawIndexedInstanced(device, command_buffer, num_indices, base_index, num_indices, base_instance);
+	return ptr->vtbl->cmdDrawIndexedInstanced(device, command_buffer, num_indices, base_index, num_instances, base_instance);
 }
 
 Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
