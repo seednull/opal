@@ -437,6 +437,7 @@ VkDescriptorType vulkan_helperToDescriptorType(Opal_BindingType type)
 	{
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 	};
 
 	return vk_descriptor_types[type];
