@@ -868,7 +868,7 @@ typedef union Opal_BindsetBindingData_t
 	// TODO: add more types
 } Opal_BindsetBindingData;
 
-typedef union Opal_BindsetBinding_t
+typedef struct Opal_BindsetBinding_t
 {
 	uint32_t binding;
 	Opal_BindsetBindingData data;
