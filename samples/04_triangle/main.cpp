@@ -7,6 +7,8 @@
 #include <cassert>
 #include <iostream>
 
+#define UNUSED(x) (x)
+
 bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 {
 	assert(name);
@@ -328,7 +330,7 @@ void Application::shutdown()
 
 void Application::update(float dt)
 {
-
+	UNUSED(dt);
 }
 
 void Application::resize(uint32_t w, uint32_t h)
@@ -454,7 +456,9 @@ void Application::present()
 	assert(current_in_flight_frame < IN_FLIGHT_FRAMES);
 
 	Opal_Result result = opalPresent(device, swapchain);
+
 	assert(result == OPAL_SUCCESS);
+	UNUSED(result);
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
 }

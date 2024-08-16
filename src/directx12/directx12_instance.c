@@ -81,6 +81,14 @@ static Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32
 
 static Opal_Result directx12_instanceCreateSurface(Opal_Instance this, void *handle, Opal_Surface *surface)
 {
+	assert(this);
+	assert(handle);
+	assert(surface);
+
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(handle);
+	OPAL_UNUSED(surface);
+
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -201,6 +209,12 @@ static Opal_Result directx12_instanceCreateDevice(Opal_Instance this, uint32_t i
 
 static Opal_Result directx12_instanceDestroySurface(Opal_Instance this, Opal_Surface surface)
 {
+	assert(this);
+	assert(surface);
+
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(surface);
+
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -235,6 +249,8 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 {
 	assert(desc);
 	assert(instance);
+
+	OPAL_UNUSED(desc);
 
 	Opal_Result opal_result = directx12_initialize();
 	if (opal_result != OPAL_SUCCESS)

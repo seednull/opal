@@ -11,6 +11,8 @@ static Opal_Result null_instanceEnumerateDevices(Opal_Instance this, uint32_t *d
 	assert(this);
 	assert(device_count);
 
+	OPAL_UNUSED(this);
+
 	*device_count = 1;
 
 	if (infos)
@@ -21,6 +23,10 @@ static Opal_Result null_instanceEnumerateDevices(Opal_Instance this, uint32_t *d
 
 static Opal_Result null_instanceCreateSurface(Opal_Instance this, void *handle, Opal_Surface *surface)
 {
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(handle);
+	OPAL_UNUSED(surface);
+
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -28,6 +34,8 @@ static Opal_Result null_instanceCreateDefaultDevice(Opal_Instance this, Opal_Dev
 {
 	assert(this);
 	assert(device);
+
+	OPAL_UNUSED(hint);
 
 	Null_Instance *instance_ptr = (Null_Instance *)this;
 	Null_Device *device_ptr = (Null_Device *)malloc(sizeof(Null_Device));
@@ -69,6 +77,9 @@ static Opal_Result null_instanceCreateDevice(Opal_Instance this, uint32_t index,
 
 static Opal_Result null_instanceDestroySurface(Opal_Instance this, Opal_Surface surface)
 {
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(surface);
+
 	return OPAL_NOT_SUPPORTED;
 }
 

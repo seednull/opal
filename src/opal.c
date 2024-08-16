@@ -809,7 +809,7 @@ Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain)
 
 /*
  */
-Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment)
+Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -818,7 +818,7 @@ Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer comm
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginGraphicsPass);
 
-	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, num_color_attachments, color_attachments, depthstencil_attachment);
+	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, num_color_attachments, color_attachments, depth_stencil_attachment);
 }
 
 Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer)

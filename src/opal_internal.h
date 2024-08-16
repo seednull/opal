@@ -2,6 +2,8 @@
 
 #include <opal.h>
 
+#define OPAL_UNUSED(x) (x)
+
 Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);

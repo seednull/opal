@@ -128,10 +128,10 @@ static Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_D
 
 	for (uint32_t i = 0; i < device_count; ++i)
 	{
-		VkPhysicalDevice device = devices[i];
+		VkPhysicalDevice physical_device = devices[i];
 		Opal_DeviceInfo info = {0};
 
-		opal_result = vulkan_helperFillDeviceInfo(device, &info);
+		opal_result = vulkan_helperFillDeviceInfo(physical_device, &info);
 		if (opal_result != OPAL_SUCCESS)
 			break;
 
@@ -139,7 +139,7 @@ static Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_D
 		if (score > best_score)
 		{
 			best_score = score;
-			vulkan_physical_device = device;
+			vulkan_physical_device = physical_device;
 		}
 	}
 

@@ -276,6 +276,7 @@ VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format);
 
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
+VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_Format format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
 
 VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode);

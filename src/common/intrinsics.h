@@ -46,22 +46,35 @@ static OPAL_INLINE uint32_t popcnt(uint32_t value)
 #endif
 }
 
-static OPAL_INLINE uint32_t isPow2(uint32_t value)
+static OPAL_INLINE uint32_t isPow2u(uint32_t value)
 {
 	return (value & (value - 1)) == 0;
 }
 
-static OPAL_INLINE uint32_t isAligned(uint32_t value, uint32_t alignment)
+static OPAL_INLINE uint64_t isPow2ul(uint64_t value)
 {
-	assert(isPow2(alignment));
+	return (value & (value - 1)) == 0;
+}
+
+static OPAL_INLINE uint32_t isAlignedu(uint32_t value, uint32_t alignment)
+{
+	assert(isPow2u(alignment));
 
 	uint32_t mask = alignment - 1;
 	return (value & ~mask) == 0;
 }
 
+static OPAL_INLINE uint64_t isAlignedul(uint64_t value, uint64_t alignment)
+{
+	assert(isPow2ul(alignment));
+
+	uint64_t mask = alignment - 1;
+	return (value & ~mask) == 0;
+}
+
 static OPAL_INLINE uint32_t alignDown(uint32_t value, uint32_t alignment)
 {
-	assert(isPow2(alignment));
+	assert(isPow2u(alignment));
 
 	uint32_t mask = alignment - 1;
 	return value & ~mask;
@@ -69,7 +82,7 @@ static OPAL_INLINE uint32_t alignDown(uint32_t value, uint32_t alignment)
 
 static OPAL_INLINE uint32_t alignUp(uint32_t value, uint32_t alignment)
 {
-	assert(isPow2(alignment));
+	assert(isPow2u(alignment));
 
 	uint32_t mask = alignment - 1;
 	return (value + mask) & ~mask;

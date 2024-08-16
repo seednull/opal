@@ -9,7 +9,7 @@
 static Opal_BinIndex opal_toBinIndexRoundUp(uint32_t value)
 {
 	if (value < OPAL_MANTISSA_MAX)
-		return value;
+		return (Opal_BinIndex)value;
 
 	uint32_t leading_zeroes = lzcnt(value);
 	uint32_t highest_bit = 31 - leading_zeroes;
@@ -49,7 +49,7 @@ static Opal_Result opal_findBinFromIndex(uint32_t bins, uint8_t index, uint8_t *
 	if (masked_bins == 0)
 		return OPAL_NO_MEMORY;
 
-	*value = tzcnt(masked_bins);
+	*value = (uint8_t)tzcnt(masked_bins);
 	return OPAL_SUCCESS;
 }
 
@@ -167,15 +167,15 @@ static Opal_Result opal_heapFindBinForSize(const Opal_Heap *heap, uint32_t size,
 
 	if (used_linear_bins != 0)
 	{
-		uint32_t min_linear_bin = index & OPAL_MANTISSA_BITS;
+		uint8_t min_linear_bin = (uint8_t)(index & OPAL_MANTISSA_BITS);
 		opal_findBinFromIndex(used_linear_bins, min_linear_bin, &linear_bin_index);
 	}
 
 	if (linear_bin_index == OPAL_LINEAR_BIN_INDEX_NULL)
 	{
-		Opal_Result result = opal_findBinFromIndex(heap->used_sparse_bins, sparse_bin_index + 1, &sparse_bin_index);
-		if (result != OPAL_SUCCESS)
-			return result;
+		Opal_Result opal_result = opal_findBinFromIndex(heap->used_sparse_bins, sparse_bin_index + 1, &sparse_bin_index);
+		if (opal_result != OPAL_SUCCESS)
+			return opal_result;
 
 		assert(sparse_bin_index != 0);
 
@@ -258,7 +258,7 @@ Opal_Result opal_heapAllocAligned(Opal_Heap *heap, uint32_t size, uint32_t align
 	assert(heap);
 	assert(allocation);
 	assert(size > 0);
-	assert(isPow2(alignment));
+	assert(isPow2u(alignment));
 
 	Opal_NodeIndex node_index = OPAL_NODE_INDEX_NULL;
 	uint32_t offset = 0;
@@ -308,7 +308,7 @@ Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uin
 	assert(node_index);
 	assert(offset);
 	assert(size > 0);
-	assert(isPow2(alignment));
+	assert(isPow2u(alignment));
 
 	Opal_BinIndex bin_index = 0;
 	

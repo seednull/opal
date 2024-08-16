@@ -50,8 +50,8 @@ message("ABI: ${OPAL_ABI}")
 # General compile flags
 # ==================================================================================================
 if (WIN32)
-	set(CMAKE_C_FLAGS "/wd4996 /D_CRT_SECURE_NO_WARNINGS")
-	set(CMAKE_CXX_FLAGS "/wd4996 /D_CRT_SECURE_NO_WARNINGS /EHsc /GR-")
+	set(CMAKE_C_FLAGS "/W4 /external:W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS")
+	set(CMAKE_CXX_FLAGS "/W4 /external:W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /EHsc /GR-")
 endif()
 
 if (EMSCRIPTEN)

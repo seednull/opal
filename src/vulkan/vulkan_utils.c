@@ -83,7 +83,7 @@ VkImageAspectFlags vulkan_helperToAspectMask(Opal_Format format)
 	if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
 		return VK_IMAGE_ASPECT_COLOR_BIT;
 
-	if (format >= OPAL_FORMAT_DEPTHSTENCIL_BEGIN && format <= OPAL_FORMAT_DEPTHSTENCIL_END)
+	if (format >= OPAL_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_FORMAT_DEPTH_STENCIL_END)
 	{
 		VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
 
@@ -185,7 +185,7 @@ VkFormat vulkan_helperToFormat(Opal_Format format)
 		VK_FORMAT_ASTC_12x12_UNORM_BLOCK,
 		VK_FORMAT_ASTC_12x12_SRGB_BLOCK,
 
-		// depthstencil formats
+		// depth_stencil formats
 		VK_FORMAT_D16_UNORM,
 		VK_FORMAT_D32_SFLOAT,
 		VK_FORMAT_D16_UNORM_S8_UINT,
@@ -245,22 +245,27 @@ VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_F
 		if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
 			result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		
-		if (format >= OPAL_FORMAT_DEPTHSTENCIL_BEGIN && format <= OPAL_FORMAT_DEPTHSTENCIL_END)
+		if (format >= OPAL_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_FORMAT_DEPTH_STENCIL_END)
 			result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
 
 	return result;
 }
 
-VkImageLayout vulkan_helperToInitialImageLayout(Opal_TextureUsageFlags flags, Opal_Format format)
+VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_Format format)
 {
-	if (flags & OPAL_TEXTURE_USAGE_SHADER_SAMPLED)
-		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	VkImageAspectFlags result = 0;
 
-	if (flags & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
-		return VK_IMAGE_LAYOUT_GENERAL;
+	if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
+		result |= VK_IMAGE_ASPECT_COLOR_BIT;
 
-	return VK_IMAGE_LAYOUT_UNDEFINED;
+	if (format >= OPAL_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_FORMAT_DEPTH_STENCIL_END)
+		result |= VK_IMAGE_ASPECT_DEPTH_BIT;
+
+	if (format == OPAL_FORMAT_D16_UNORM_S8_UINT || format == OPAL_FORMAT_D24_UNORM_S8_UINT || format == OPAL_FORMAT_D32_SFLOAT_S8_UINT)
+		result |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+	return result;
 }
 
 /*
@@ -652,10 +657,10 @@ VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state)
 	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
 		result |= all_compute;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_WRITE)
 		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_READ)
 		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
@@ -706,10 +711,10 @@ VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state)
 	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
 		result |= all_compute;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_WRITE)
 		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_READ)
 		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
@@ -738,12 +743,12 @@ VkAccessFlags vulkan_helperToFlushAccessMask(Opal_ResourceState state)
 	VkAccessFlags result = VK_ACCESS_NONE;
 
 	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
-		result |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // depthstencil attachments?
+		result |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // depth_stencil attachments?
 
 	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
 		result |= VK_ACCESS_SHADER_WRITE_BIT;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_WRITE)
 		result |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
@@ -775,12 +780,12 @@ VkAccessFlags vulkan_helperToInvalidateAccessMask(Opal_ResourceState state)
 		result |= VK_ACCESS_INDEX_READ_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT)
-		result |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT; // depthstencil attachments?
+		result |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT; // depth_stencil attachments?
 
 	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
 		result |= VK_ACCESS_SHADER_READ_BIT;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_READ)
 		result |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
@@ -817,10 +822,10 @@ VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkI
 	if (state & OPAL_RESOURCE_STATE_UNORDERED_ACCESS)
 		return VK_IMAGE_LAYOUT_GENERAL;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_WRITE)
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	if (state & OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ)
+	if (state & OPAL_RESOURCE_STATE_DEPTH_STENCIL_READ)
 		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
 	if (state & OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE)
@@ -1227,34 +1232,20 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->driver_version = properties.driverVersion;
 	info->vendor_id = properties.vendorID;
 	info->device_id = properties.deviceID;
-	info->tessellation_shader = features.features.tessellationShader;
-	info->geometry_shader = features.features.geometryShader;
+	info->tessellation_shader = (features.features.tessellationShader == VK_TRUE);
+	info->geometry_shader = (features.features.geometryShader == VK_TRUE);
 	info->compute_pipeline = 1;
-	info->meshlet_pipeline = has_meshlet;
+	info->meshlet_pipeline = (has_meshlet == VK_TRUE);
 	info->raytrace_pipeline = has_raytracing && has_acceleration_structure;
-	info->texture_compression_etc2 = features.features.textureCompressionETC2;
-	info->texture_compression_astc = features.features.textureCompressionASTC_LDR;
-	info->texture_compression_bc = features.features.textureCompressionBC;
+	info->texture_compression_etc2 = (features.features.textureCompressionETC2 == VK_TRUE);
+	info->texture_compression_astc = (features.features.textureCompressionASTC_LDR == VK_TRUE);
+	info->texture_compression_bc = (features.features.textureCompressionBC == VK_TRUE);
 
 	uint64_t offset = properties.limits.minUniformBufferOffsetAlignment;
 	if (offset < properties.limits.minStorageBufferOffsetAlignment)
 		offset = properties.limits.minStorageBufferOffsetAlignment;
 
 	info->max_buffer_alignment = offset;
-
-	VkQueueFlags device_engine_required_masks[] =
-	{
-		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
-		VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
-		VK_QUEUE_TRANSFER_BIT,
-	};
-
-	VkQueueFlags device_engine_exclude_masks[] =
-	{
-		0,
-		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR,
-		VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_DECODE_BIT_KHR,
-	};
 
 	Vulkan_DeviceEnginesInfo device_engines_info = {0};
 	vulkan_helperFillDeviceEnginesInfo(device, &device_engines_info);

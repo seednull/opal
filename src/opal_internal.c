@@ -60,6 +60,9 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 	assert(desc);
 	assert(instance);
 
+	OPAL_UNUSED(desc);
+	OPAL_UNUSED(instance);
+
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -71,6 +74,9 @@ Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 {
 	assert(desc);
 	assert(instance);
+
+	OPAL_UNUSED(desc);
+	OPAL_UNUSED(instance);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -84,6 +90,9 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	assert(desc);
 	assert(instance);
 
+	OPAL_UNUSED(desc);
+	OPAL_UNUSED(instance);
+
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -95,6 +104,9 @@ Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *i
 {
 	assert(desc);
 	assert(instance);
+
+	OPAL_UNUSED(desc);
+	OPAL_UNUSED(instance);
 
 	return OPAL_NOT_SUPPORTED;
 }

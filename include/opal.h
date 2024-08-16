@@ -189,8 +189,8 @@ typedef enum Opal_ResourceState_t
 	OPAL_RESOURCE_STATE_INDEX_BUFFER = 0x00000002,
 	OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT = 0x00000004,
 	OPAL_RESOURCE_STATE_UNORDERED_ACCESS = 0x00000008,
-	OPAL_RESOURCE_STATE_DEPTHSTENCIL_WRITE = 0x00000010,
-	OPAL_RESOURCE_STATE_DEPTHSTENCIL_READ = 0x00000020,
+	OPAL_RESOURCE_STATE_DEPTH_STENCIL_WRITE = 0x00000010,
+	OPAL_RESOURCE_STATE_DEPTH_STENCIL_READ = 0x00000020,
 	OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE = 0x00000040,
 	OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE = 0x00000080,
 	OPAL_RESOURCE_STATE_COPY_DEST = 0x00000100,
@@ -495,8 +495,8 @@ typedef enum Opal_Format_t
 	OPAL_FORMAT_COLOR_BEGIN = OPAL_FORMAT_R8_UNORM,
 	OPAL_FORMAT_COLOR_END = OPAL_FORMAT_ASTC_12x12_SRGB,
 
-	OPAL_FORMAT_DEPTHSTENCIL_BEGIN = OPAL_FORMAT_D16_UNORM,
-	OPAL_FORMAT_DEPTHSTENCIL_END = OPAL_FORMAT_D32_SFLOAT_S8_UINT,
+	OPAL_FORMAT_DEPTH_STENCIL_BEGIN = OPAL_FORMAT_D16_UNORM,
+	OPAL_FORMAT_DEPTH_STENCIL_END = OPAL_FORMAT_D32_SFLOAT_S8_UINT,
 
 	OPAL_FORMAT_ENUM_MAX,
 	OPAL_FORMAT_ENUM_FORCE32 = 0x7FFFFFFF,
@@ -795,19 +795,23 @@ typedef struct Opal_ShaderDesc_t
 	uint64_t size;
 } Opal_ShaderDesc;
 
+typedef union Opal_ClearColor_t
+{
+	float f[4];
+	uint32_t u[4];
+	int32_t i[4];
+} Opal_ClearColor;
+
+typedef struct Opal_ClearDepthStencil_t
+{
+	float depth;
+	uint32_t stencil;
+} Opal_ClearDepthStencil;
+
 typedef union Opal_ClearValue_t
 {
-	union
-	{
-		float f[4];
-		uint32_t u[4];
-		int32_t i[4];
-	} color;
-	struct
-	{
-		float depth;
-		uint32_t stencil;
-	};
+	Opal_ClearColor color;
+	Opal_ClearDepthStencil depth_stencil;
 } Opal_ClearValue;
 
 typedef struct Opal_FramebufferAttachment_t
@@ -851,19 +855,23 @@ typedef struct Opal_BindsetLayoutBinding_t
 	Opal_ShaderStage visibility;
 } Opal_BindsetLayoutBinding;
 
-typedef struct Opal_BindsetBinding_t
+typedef struct Opal_BindsetBindingDataCombinedTextureSampler_t
+{
+	Opal_TextureView texture_view;
+	Opal_Sampler sampler;
+} Opal_BindsetBindingDataCombinedTextureSampler;
+
+typedef union Opal_BindsetBindingData_t
+{
+	Opal_BufferView buffer;
+	Opal_BindsetBindingDataCombinedTextureSampler combined_texture_sampler;
+	// TODO: add more types
+} Opal_BindsetBindingData;
+
+typedef union Opal_BindsetBinding_t
 {
 	uint32_t binding;
-	union
-	{
-		Opal_BufferView buffer;
-		struct
-		{
-			Opal_TextureView texture_view;
-			Opal_Sampler sampler;
-		};
-		// TODO: add more types
-	};
+	Opal_BindsetBindingData data;
 } Opal_BindsetBinding;
 
 typedef struct Opal_Viewport_t {
@@ -902,7 +910,7 @@ typedef struct Opal_AccelerationStructureInstance_t
 	Opal_AccelerationStructure handle;
 } Opal_AccelerationStructureInstance;
 
-typedef struct Opal_AccelerationStructureGeometryTriangles_t
+typedef struct Opal_AccelerationStructureGeometryDataTriangles_t
 {
 	uint32_t num_vertices;
 	uint32_t num_indices;
@@ -912,38 +920,52 @@ typedef struct Opal_AccelerationStructureGeometryTriangles_t
 	Opal_BufferView vertex_buffer;
 	Opal_BufferView index_buffer;
 	Opal_BufferView transform_buffer;
-} Opal_AccelerationStructureGeometryTriangles;
+} Opal_AccelerationStructureGeometryDataTriangles;
 
-typedef struct Opal_AccelerationStructureGeometryAABBs_t
+typedef struct Opal_AccelerationStructureGeometryDataAABBs_t
 {
 	uint32_t num_entries;
 	uint32_t stride;
 	Opal_BufferView entries_buffer;
-} Opal_AccelerationStructureGeometryAABBs;
+} Opal_AccelerationStructureGeometryDataAABBs;
+
+typedef union Opal_AccelerationStructureGeometryData_t
+{
+	Opal_AccelerationStructureGeometryDataTriangles triangles;
+	Opal_AccelerationStructureGeometryDataAABBs aabbs;
+} Opal_AccelerationStructureGeometryData;
 
 typedef struct Opal_AccelerationStructureGeometry_t
 {
 	Opal_AccelerationStructureGeometryType type;
 	Opal_AccelerationStructureGeometryFlags flags;
-	union
-	{
-		Opal_AccelerationStructureGeometryTriangles triangles;
-		Opal_AccelerationStructureGeometryAABBs aabbs;
-	};
+	Opal_AccelerationStructureGeometryData data;
 } Opal_AccelerationStructureGeometry;
+
+typedef struct Opal_AccelerationStructureBuildInputBottomLevel_t
+{
+	uint32_t num_geometries;
+	const Opal_AccelerationStructureGeometry *geometries;
+} Opal_AccelerationStructureBuildInputBottomLevel;
+
+typedef struct Opal_AccelerationStructureBuildInputTopLevel_t
+{
+	uint32_t num_instances;
+	Opal_BufferView instance_buffer;
+} Opal_AccelerationStructureBuildInputTopLevel;
+
+typedef union Opal_AccelerationStructureBuildInput_t
+{
+	Opal_AccelerationStructureBuildInputBottomLevel bottom_level;
+	Opal_AccelerationStructureBuildInputTopLevel top_level;
+} Opal_AccelerationStructureBuildInput;
 
 typedef struct Opal_AccelerationStructureBuildDesc_t
 {
 	Opal_AccelerationStructureType type;
 	Opal_AccelerationStructureBuildFlags build_flags;
 	Opal_AccelerationStructureBuildMode build_mode;
-
-	uint32_t num_entries;
-	union
-	{
-		const Opal_AccelerationStructureGeometry *geometries;
-		Opal_BufferView instances_buffer;
-	};
+	Opal_AccelerationStructureBuildInput input;
 
 	Opal_AccelerationStructure src_acceleration_structure;
 	Opal_AccelerationStructure dst_acceleration_structure;
@@ -1028,7 +1050,7 @@ typedef struct Opal_GraphicsPipelineDesc_t
 	Opal_Format color_attachment_formats[8];
 	Opal_BlendState color_blend_states[8];
 
-	Opal_Format *depthstencil_attachment_format;
+	Opal_Format *depth_stencil_attachment_format;
 } Opal_GraphicsPipelineDesc;
 
 typedef struct Opal_MeshletPipelineDesc_t
@@ -1057,7 +1079,7 @@ typedef struct Opal_MeshletPipelineDesc_t
 	Opal_Format color_attachment_formats[8];
 	Opal_BlendState color_blend_states[8];
 
-	Opal_Format *depthstencil_attachment_format;
+	Opal_Format *depth_stencil_attachment_format;
 } Opal_MeshletPipelineDesc;
 
 typedef struct Opal_ComputePipelineDesc_t
@@ -1184,7 +1206,7 @@ typedef Opal_Result (*PFN_opalSubmit)(Opal_Device device, Opal_Queue queue, cons
 typedef Opal_Result (*PFN_opalAcquire)(Opal_Device device, Opal_Swapchain swapchain, Opal_TextureView *texture_view);
 typedef Opal_Result (*PFN_opalPresent)(Opal_Device device, Opal_Swapchain swapchain);
 
-typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment);
+typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment);
 typedef Opal_Result (*PFN_opalCmdEndGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdBeginComputePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdEndComputePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
@@ -1390,7 +1412,7 @@ OPAL_APIENTRY Opal_Result opalSubmit(Opal_Device device, Opal_Queue queue, const
 OPAL_APIENTRY Opal_Result opalAcquire(Opal_Device device, Opal_Swapchain swapchain, Opal_TextureView *texture_view);
 OPAL_APIENTRY Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain);
 
-OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depthstencil_attachment);
+OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment);
 OPAL_APIENTRY Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdBeginComputePass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_CommandBuffer command_buffer);
