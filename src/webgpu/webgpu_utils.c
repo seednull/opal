@@ -10,19 +10,22 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	assert(adapter);
 	assert(info);
 
-	WGPUAdapterProperties properties = {0};
-	wgpuAdapterGetProperties(adapter, &properties);
+	WGPUAdapterInfo adapter_info = {0};
+	wgpuAdapterGetInfo(adapter, &adapter_info);
+
+	WGPUSupportedLimits adapter_limits = {0};
+	wgpuAdapterGetLimits(adapter, &adapter_limits);
 
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
-	if (properties.name)
-		strncpy(info->name, properties.name, 256);
+	if (adapter_info.description)
+		strncpy(info->name, adapter_info.description, 256);
 
 	info->driver_version = 0; // FIXME: is it possible to get uint32 / uint64 driver version for WGPU adapter?
-	info->device_id = properties.deviceID;
-	info->vendor_id = properties.vendorID;
+	info->device_id = adapter_info.deviceID;
+	info->vendor_id = adapter_info.vendorID;
 
-	switch (properties.adapterType)
+	switch (adapter_info.adapterType)
 	{
 		case WGPUAdapterType_DiscreteGPU: info->device_type = OPAL_DEVICE_TYPE_DISCRETE; break;
 		case WGPUAdapterType_IntegratedGPU: info->device_type = OPAL_DEVICE_TYPE_INTEGRATED; break;
@@ -34,10 +37,8 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	info->texture_compression_etc2 = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionETC2) != 0;
 	info->texture_compression_astc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionASTC) != 0;
 	info->texture_compression_bc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionBC) != 0;
-	info->max_buffer_alignment = 256;  // FIXME: not sure if this is good default
+	info->max_buffer_alignment = 256; // FIXME: not sure if this is good default
 	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
-
-	// TODO: use wgpuAdapterGetLimits when it'll be implemented
 
 	return OPAL_SUCCESS;
 }
