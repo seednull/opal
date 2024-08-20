@@ -87,7 +87,7 @@ typedef struct Vulkan_DeviceEnginesInfo_t
 typedef struct Vulkan_Instance_t
 {
 	Opal_InstanceTable *vtbl;
-	// TODO: add Vulkan_Device intrusive list head here, so Vulkan_Instance will be able to delete all of them
+	// TODO: add head for Vulkan_Device intrusive list
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
@@ -100,7 +100,7 @@ typedef struct Vulkan_Device_t
 {
 	Opal_DeviceTable *vtbl;
 	Vulkan_Instance *instance;
-	// TODO: organize all heap allocated devices into intrusive list
+	// TODO: add Vulkan_Device intrusive list head here, so Vulkan_Instance will be able to delete all of them
 	VolkDeviceTable vk;
 	VkPhysicalDevice physical_device;
 	VkDevice device;

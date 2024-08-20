@@ -707,6 +707,7 @@ typedef struct Opal_DeviceInfo_t
 	uint8_t texture_compression_astc : 1;
 	uint8_t texture_compression_bc : 1;
 	uint64_t max_buffer_alignment;
+	// TODO: separate min buffer offset alignment for storage & uniform buffers
 	uint32_t queue_count[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 } Opal_DeviceInfo;
 

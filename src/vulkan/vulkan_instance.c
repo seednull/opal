@@ -259,7 +259,15 @@ static Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 
 	Vulkan_Instance *ptr = (Vulkan_Instance *)this;
 
-	// TODO: proper cleanup for all pooled resources
+	uint32_t head = opal_poolGetHeadIndex(&ptr->surfaces);
+	while (head != OPAL_POOL_HANDLE_NULL)
+	{
+		Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElementByIndex(&ptr->surfaces, head);
+		vkDestroySurfaceKHR(ptr, surface_ptr->surface, NULL);
+
+		head = opal_poolGetNextIndex(&ptr->surfaces, head);
+	}
+
 	opal_poolShutdown(&ptr->surfaces);
 
 	vkDestroyInstance(ptr->instance, NULL);
