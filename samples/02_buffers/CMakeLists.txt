@@ -44,12 +44,22 @@ target_link_libraries(${TARGET} PUBLIC opal)
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-install(
-	TARGETS ${TARGET}
-	EXPORT ${TARGET}
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib
-	INCLUDES DESTINATION include
-	PUBLIC_HEADER DESTINATION include
-)
+if (EMSCRIPTEN)
+	install(
+		FILES
+		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.js"
+		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.wasm"
+		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.html"
+		DESTINATION bin
+	)
+else()
+	install(
+		TARGETS ${TARGET}
+		EXPORT ${TARGET}
+		RUNTIME DESTINATION bin
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib
+		INCLUDES DESTINATION include
+		PUBLIC_HEADER DESTINATION include
+	)
+endif()

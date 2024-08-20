@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(opal VERSION 1.0.0 LANGUAGES C CXX OBJC)
+project(opal VERSION 1.0.0)
 
 # ==================================================================================================
 # Global options
@@ -17,6 +17,11 @@ option(OPAL_BUILD_WITH_VMA "Build with Vulkan Memory Allocator along with built-
 # ==================================================================================================
 # Global Variables
 # ==================================================================================================
+enable_language(C)
+if (OPAL_BUILD_WITH_VMA)
+	enable_language(CXX)
+endif()
+
 set(OPAL_DIR_THIRDPARTY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty)
 set(OPAL_DIR_API ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPAL_DIR_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -32,6 +37,7 @@ endif()
 if (APPLE)
 	set(OPAL_PLATFORM macos)
 	set(OPAL_ABI x64) # FIXME: Is it always x64?
+	enable_language(OBJC)
 endif()
 
 if (EMSCRIPTEN)

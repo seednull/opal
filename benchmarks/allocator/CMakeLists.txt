@@ -45,3 +45,14 @@ target_link_libraries(${TARGET} PUBLIC opal benchmark::benchmark)
 # ==================================================================================================
 # Custom commands
 # ==================================================================================================
+if (NOT EMSCRIPTEN)
+	install(
+		TARGETS ${TARGET}
+		EXPORT ${TARGET}
+		RUNTIME DESTINATION bin
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib
+		INCLUDES DESTINATION include
+		PUBLIC_HEADER DESTINATION include
+	)
+endif()

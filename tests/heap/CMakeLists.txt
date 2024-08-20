@@ -47,12 +47,14 @@ target_link_libraries(${TARGET} PUBLIC gtest)
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-install(
-	TARGETS ${TARGET}
-	EXPORT ${TARGET}
-	RUNTIME DESTINATION bin
-	LIBRARY DESTINATION lib
-	ARCHIVE DESTINATION lib
-	INCLUDES DESTINATION include
-	PUBLIC_HEADER DESTINATION include
-)
+if (NOT EMSCRIPTEN)
+	install(
+		TARGETS ${TARGET}
+		EXPORT ${TARGET}
+		RUNTIME DESTINATION bin
+		LIBRARY DESTINATION lib
+		ARCHIVE DESTINATION lib
+		INCLUDES DESTINATION include
+		PUBLIC_HEADER DESTINATION include
+	)
+endif()

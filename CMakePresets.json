@@ -14,22 +14,36 @@
             "hidden": false,
             "architecture": "x64",
             "displayName": "Visual Studio 2022 | x64"
+        },
+        {
+            "name": "emscripten-ninja",
+            "hidden": false,
+            "generator": "Ninja",
+            "binaryDir": "${workspaceFolder}/build",
+            "installDir": "${workspaceFolder}/build",
+            "toolchainFile": "${env:EMROOT}/cmake/Modules/Platform/Emscripten.cmake"
         }
     ],
     "buildPresets": [
         {
-            "name": "build-debug",
+            "name": "build-windows-debug",
             "hidden": false,
             "configurePreset": "msvc2022-x64",
             "configuration": "Debug",
             "targets": ["all_build", "install"]
         },
         {
-            "name": "build-release",
+            "name": "build-windows-release",
             "hidden": false,
             "configurePreset": "msvc2022-x64",
             "configuration": "Release",
             "targets": ["all_build", "install"]
+        },
+        {
+            "name": "build-emscripten-debug",
+            "hidden": false,
+            "configurePreset": "emscripten-ninja",
+            "targets": ["all", "install"]
         }
     ]
 }
