@@ -7,7 +7,7 @@
 #include <cassert>
 #include <iostream>
 
-#define UNUSED(x) (x)
+#define UNUSED(x) do { (void)(x); } while(0)
 
 bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 {

@@ -2,7 +2,7 @@
 
 #include <opal.h>
 
-#define OPAL_UNUSED(x) (x)
+#define OPAL_UNUSED(x) do { (void)(x); } while(0)
 
 Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
