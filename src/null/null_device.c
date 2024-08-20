@@ -17,7 +17,6 @@ static Opal_Result null_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 	return OPAL_SUCCESS;
 }
 
-
 static Opal_Result null_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	OPAL_UNUSED(this);
