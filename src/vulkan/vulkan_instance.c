@@ -263,7 +263,7 @@ static Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 	while (head != OPAL_POOL_HANDLE_NULL)
 	{
 		Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElementByIndex(&ptr->surfaces, head);
-		vkDestroySurfaceKHR(ptr, surface_ptr->surface, NULL);
+		vkDestroySurfaceKHR(ptr->instance, surface_ptr->surface, NULL);
 
 		head = opal_poolGetNextIndex(&ptr->surfaces, head);
 	}
