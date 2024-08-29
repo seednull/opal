@@ -1,6 +1,9 @@
 #ifdef OPAL_PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#elif OPAL_PLATFORM_WEB
+#include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 
 #include <opal.h>
@@ -542,7 +545,7 @@ void destroyWindow(HWND handle)
 	DestroyWindow(handle);
 }
 
-void mainloop()
+int main()
 {
 	const char *title = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
 	const uint32_t width = 800;
@@ -590,21 +593,45 @@ void mainloop()
 	app.shutdown();
 
 	destroyWindow(handle);
+	return 0;
+}
+
+#elif OPAL_PLATFORM_WEB
+
+void update(void *user_data)
+{
+	Application *app = reinterpret_cast<Application *>(user_data);
+	assert(app);
+
+	float dt = 1.0f / 60.0f;
+
+	app->update(dt);
+	app->render();
+	app->present();
+}
+
+int main()
+{
+	int width = 0;
+	int height = 0;
+	char handle[] = "#canvas";
+
+	emscripten_get_canvas_element_size(handle, &width, &height);
+
+	Application app;
+	app.init(handle, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+
+	emscripten_set_main_loop_arg(update, &app, 0, 1);
+
+	app.shutdown();
+	return 0;
 }
 
 #else
 
-void mainloop()
+int main()
 {
-
+	return 0;
 }
 
 #endif
-
-/*
- */
-int main()
-{
-	mainloop();
-	return 0;
-}
