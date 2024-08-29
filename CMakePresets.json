@@ -21,7 +21,7 @@
             "generator": "Ninja",
             "binaryDir": "${workspaceFolder}/build",
             "installDir": "${workspaceFolder}/build",
-            "toolchainFile": "${env:EMROOT}/cmake/Modules/Platform/Emscripten.cmake"
+            "toolchainFile": "$penv{EMROOT}/cmake/Modules/Platform/Emscripten.cmake"
         }
     ],
     "buildPresets": [
