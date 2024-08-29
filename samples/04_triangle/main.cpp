@@ -112,7 +112,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		OPAL_INSTANCE_CREATION_FLAGS_USE_VULKAN_VALIDATION_LAYERS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_AUTO, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCreateSurface(instance, handle, &surface);

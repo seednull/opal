@@ -27,6 +27,33 @@ Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal
 		case OPAL_API_WEBGPU: return webgpu_createInstance(desc, instance);
 		case OPAL_API_NULL: return null_createInstance(desc, instance);
 
+		case OPAL_API_AUTO:
+		{
+			Opal_Result result = OPAL_NOT_SUPPORTED;
+
+#if OPAL_BACKEND_VULKAN
+			if (result != OPAL_SUCCESS)
+				result = vulkan_createInstance(desc, instance);
+#endif
+
+#if OPAL_BACKEND_DIRECTX12
+			if (result != OPAL_SUCCESS)
+				result = directx12_createInstance(desc, instance);
+#endif
+
+#if OPAL_BACKEND_METAL
+			if (result != OPAL_SUCCESS)
+				result = metal_createInstance(desc, instance);
+#endif
+
+#if OPAL_BACKEND_WEBGPU
+			if (result != OPAL_SUCCESS)
+				result = webgpu_createInstance(desc, instance);
+#endif
+
+			return result;
+		}
+
 		default: return OPAL_NOT_SUPPORTED;
 	}
 }

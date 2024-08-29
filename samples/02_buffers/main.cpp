@@ -9,7 +9,7 @@ void testBuffers(Opal_Device device)
 
 	Opal_BufferDesc desc =
 	{
-		OPAL_BUFFER_USAGE_UNIFORM,
+		OPAL_BUFFER_USAGE_TRANSFER_SRC,
 		16,
 		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 		OPAL_ALLOCATION_HINT_AUTO,
@@ -54,7 +54,7 @@ int main()
 		OPAL_DEFAULT_HEAPS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_AUTO, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_Device device = OPAL_NULL_HANDLE;

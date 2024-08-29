@@ -48,7 +48,7 @@ int main()
 		OPAL_DEFAULT_HEAPS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_AUTO, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_Device device = OPAL_NULL_HANDLE;

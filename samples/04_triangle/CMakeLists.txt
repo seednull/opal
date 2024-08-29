@@ -45,6 +45,17 @@ target_include_directories(${TARGET} PUBLIC ${OPAL_API_DIR})
 target_compile_definitions(${TARGET} PRIVATE ${OPAL_PLATFORM_DEFINES})
 
 # ==================================================================================================
+# Linker
+# ==================================================================================================
+if (EMSCRIPTEN)
+	# TODO: could be better
+	set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/vulkan/main.vert.spv@samples/04_triangle/shaders/vulkan/main.vert.spv
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/vulkan/main.frag.spv@samples/04_triangle/shaders/vulkan/main.frag.spv
+	")
+endif()
+
+# ==================================================================================================
 # Libraries
 # ==================================================================================================
 target_link_libraries(${TARGET} PUBLIC opal)
@@ -62,6 +73,7 @@ if (EMSCRIPTEN)
 		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.js"
 		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.wasm"
 		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.html"
+		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.data"
 		DESTINATION bin
 	)
 else()

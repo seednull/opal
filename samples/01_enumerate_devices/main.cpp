@@ -64,7 +64,8 @@ void testCreateDevice(Opal_Instance instance, uint32_t index)
 {
 	Opal_Device device = OPAL_NULL_HANDLE;
 	Opal_Result result = opalCreateDevice(instance, index, &device);
-	assert(result == OPAL_SUCCESS);
+	if (result != OPAL_SUCCESS)
+		return;
 
 	Opal_DeviceInfo info = {};
 	result = opalGetDeviceInfo(device, &info);
@@ -80,7 +81,8 @@ void testCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint)
 {
 	Opal_Device device = OPAL_NULL_HANDLE;
 	Opal_Result result = opalCreateDefaultDevice(instance, hint, &device);
-	assert(result == OPAL_SUCCESS);
+	if (result != OPAL_SUCCESS)
+		return;
 
 	Opal_DeviceInfo info = {};
 	result = opalGetDeviceInfo(device, &info);
@@ -107,7 +109,7 @@ int main()
 		OPAL_DEFAULT_HEAPS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_VULKAN, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(OPAL_API_AUTO, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	testEnumerateDevices(instance);
