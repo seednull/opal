@@ -659,8 +659,25 @@ typedef enum Opal_ShaderStage_t
 typedef enum Opal_BindingType_t
 {
 	OPAL_BINDING_TYPE_UNIFORM_BUFFER = 0,
-	OPAL_BINDING_TYPE_COMBINED_TEXTURE_SAMPLER,
+	OPAL_BINDING_TYPE_UNIFORM_BUFFER_DYNAMIC,
 	OPAL_BINDING_TYPE_STORAGE_BUFFER,
+	OPAL_BINDING_TYPE_STORAGE_BUFFER_DYNAMIC,
+	OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY,
+	OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC,
+	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_1D,
+	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D,
+	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D_ARRAY,
+	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE,
+	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY,
+	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_3D,
+	OPAL_BINDING_TYPE_MULTISAMPLED_TEXTURE_2D,
+	OPAL_BINDING_TYPE_STORAGE_TEXTURE_1D,
+	OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D,
+	OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D_ARRAY,
+	OPAL_BINDING_TYPE_STORAGE_TEXTURE_3D,
+	OPAL_BINDING_TYPE_SAMPLER,
+	OPAL_BINDING_TYPE_COMPARE_SAMPLER,
+	OPAL_BINDING_TYPE_ACCELERATION_STRUCTURE,
 
 	OPAL_BINDING_TYPE_ENUM_MAX,
 	OPAL_BINDING_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
@@ -859,19 +876,15 @@ typedef struct Opal_BindsetLayoutBinding_t
 	uint32_t binding;
 	Opal_BindingType type;
 	Opal_ShaderStage visibility;
+	Opal_Format texture_format;
 } Opal_BindsetLayoutBinding;
-
-typedef struct Opal_BindsetBindingDataCombinedTextureSampler_t
-{
-	Opal_TextureView texture_view;
-	Opal_Sampler sampler;
-} Opal_BindsetBindingDataCombinedTextureSampler;
 
 typedef union Opal_BindsetBindingData_t
 {
-	Opal_BufferView buffer;
-	Opal_BindsetBindingDataCombinedTextureSampler combined_texture_sampler;
-	// TODO: add more types
+	Opal_BufferView buffer_view;
+	Opal_TextureView texture_view;
+	Opal_Sampler sampler;
+	Opal_AccelerationStructure acceleration_structure;
 } Opal_BindsetBindingData;
 
 typedef struct Opal_BindsetBinding_t
@@ -1373,7 +1386,10 @@ OPAL_APIENTRY Opal_Result opalCreateAccelerationStructure(Opal_Device device, co
 OPAL_APIENTRY Opal_Result opalCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool);
 OPAL_APIENTRY Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 OPAL_APIENTRY Opal_Result opalCreateBindsetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout);
+
+// TODO: redesign this (get rid of bindset layout dependency, provide direct binding type & count arrays)
 OPAL_APIENTRY Opal_Result opalCreateBindsetPool(Opal_Device device, Opal_BindsetLayout bindset_layout, uint32_t max_bindsets, Opal_BindsetPool *bindset_pool);
+
 OPAL_APIENTRY Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout);
 OPAL_APIENTRY Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline);
 OPAL_APIENTRY Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline);
@@ -1401,7 +1417,10 @@ OPAL_APIENTRY Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_Com
 OPAL_APIENTRY Opal_Result opalFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalResetCommandPool(Opal_Device device, Opal_CommandPool command_pool);
 OPAL_APIENTRY Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
+
+// TODO: redesign this (pass bindset layout & pool directly)
 OPAL_APIENTRY Opal_Result opalAllocateBindset(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset);
+
 OPAL_APIENTRY Opal_Result opalFreeBindset(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);
 OPAL_APIENTRY Opal_Result opalResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool);
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);

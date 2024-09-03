@@ -278,6 +278,180 @@ WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op)
 	return wgpu_compare_functions[op];
 }
 
+WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage)
+{
+	WGPUShaderStageFlags result = 0;
+	
+	if (stage & OPAL_SHADER_STAGE_VERTEX)
+		result |= WGPUShaderStage_Vertex;
+
+	if (stage & OPAL_SHADER_STAGE_FRAGMENT)
+		result |= WGPUShaderStage_Fragment;
+
+	if (stage & OPAL_SHADER_STAGE_COMPUTE)
+		result |= WGPUShaderStage_Compute;
+
+	return result;
+}
+
+WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type)
+{
+	static WGPUBufferBindingType wgpu_buffer_binding_types[] =
+	{
+		WGPUBufferBindingType_Uniform,
+		WGPUBufferBindingType_Uniform,
+		WGPUBufferBindingType_Storage,
+		WGPUBufferBindingType_Storage,
+		WGPUBufferBindingType_ReadOnlyStorage,
+		WGPUBufferBindingType_ReadOnlyStorage,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+		WGPUBufferBindingType_Undefined,
+	};
+
+	return wgpu_buffer_binding_types[type];
+}
+
+WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_Format format)
+{
+	static WGPUTextureSampleType wgpu_texture_sample_types[] =
+	{
+		WGPUTextureSampleType_Undefined,
+
+		// 8-bit formats
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Float,
+
+		// 16-bit formats
+		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+
+		// 32-bit formats
+		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+
+		// hdr 32-bit formats
+		WGPUTextureSampleType_UnfilterableFloat,
+		WGPUTextureSampleType_UnfilterableFloat,
+
+		// bc formats
+		WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+
+		// etc formats
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+
+		// astc formats
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+
+		// depth_stencil formats
+		WGPUTextureSampleType_Depth,
+		WGPUTextureSampleType_Depth,
+		WGPUTextureSampleType_Undefined,
+		WGPUTextureSampleType_Depth,
+		WGPUTextureSampleType_Depth,
+	};
+
+	return wgpu_texture_sample_types[format];
+}
+
+WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType type)
+{
+	static WGPUTextureViewDimension wgpu_texture_view_dimensions[] =
+	{
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_1D,
+		WGPUTextureViewDimension_2D,
+		WGPUTextureViewDimension_2DArray,
+		WGPUTextureViewDimension_Cube,
+		WGPUTextureViewDimension_CubeArray,
+		WGPUTextureViewDimension_3D,
+		WGPUTextureViewDimension_2D,
+		WGPUTextureViewDimension_1D,
+		WGPUTextureViewDimension_2D,
+		WGPUTextureViewDimension_2DArray,
+		WGPUTextureViewDimension_3D,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+		WGPUTextureViewDimension_Undefined,
+	};
+
+	return wgpu_texture_view_dimensions[type];
+}
+
 /*
  */
 Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)

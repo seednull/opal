@@ -2413,6 +2413,8 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 	uint32_t images_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorImageInfo) * num_bindings);
 	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_bindings);
 
+	// TODO: VkWriteDescriptorSetAccelerationStructureKHR for acceleration structures
+
 	VkWriteDescriptorSet *vulkan_descriptor_writes = (VkWriteDescriptorSet *)(device_ptr->bump.data + descriptors_offset);
 	memset(vulkan_descriptor_writes, 0, sizeof(VkWriteDescriptorSet) * num_bindings);
 
@@ -2440,21 +2442,33 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 		{
 			case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
 			case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-			case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 			{
 				VkDescriptorImageInfo *image_write = &vulkan_image_writes[current_image];
-				const Opal_BindsetBindingDataCombinedTextureSampler *data = &bindings[i].data.combined_texture_sampler;
+				Opal_TextureView data = bindings[i].data.texture_view;
 
-
-				Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)data->texture_view);
+				Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)data);
 				assert(image_view_ptr);
 
-				Vulkan_Sampler *sampler_ptr = (Vulkan_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)data->sampler);
+				image_write->imageView = image_view_ptr->image_view;
+				image_write->sampler = NULL;
+				image_write->imageLayout = vulkan_helperToImageLayout(type);
+
+				write->pImageInfo = image_write;
+				current_image++;
+			}
+			break;
+
+			case VK_DESCRIPTOR_TYPE_SAMPLER:
+			{
+				VkDescriptorImageInfo *image_write = &vulkan_image_writes[current_image];
+				Opal_Sampler data = bindings[i].data.sampler;
+
+				Vulkan_Sampler *sampler_ptr = (Vulkan_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)data);
 				assert(sampler_ptr);
 
-				image_write->imageView = image_view_ptr->image_view;
+				image_write->imageView = NULL;
 				image_write->sampler = sampler_ptr->sampler;
-				image_write->imageLayout = vulkan_helperToImageLayout(type);
+				image_write->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 				write->pImageInfo = image_write;
 				current_image++;
@@ -2467,14 +2481,14 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
 			{
 				VkDescriptorBufferInfo *buffer_write = &vulkan_buffer_writes[current_buffer];
+				Opal_BufferView data = bindings[i].data.buffer_view;
 
-				const Opal_BufferView *data = &bindings[i].data.buffer;
-				Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)data->buffer);
+				Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)data.buffer);
 				assert(buffer_ptr);
 
 				buffer_write->buffer = buffer_ptr->buffer;
-				buffer_write->offset = data->offset;
-				buffer_write->range = data->size;
+				buffer_write->offset = data.offset;
+				buffer_write->range = data.size;
 
 				write->pBufferInfo = buffer_write;
 				current_buffer++;

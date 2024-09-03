@@ -4,6 +4,7 @@
 
 #include <webgpu/webgpu.h>
 
+#include "common/bump.h"
 #include "common/pool.h"
 
 typedef struct WebGPU_Instance_t
@@ -20,16 +21,18 @@ typedef struct WebGPU_Device_t
 	WGPUDevice device;
 	WGPUQueue queue;
 
+	Opal_Bump bump;
+
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
-	// Opal_Pool command_pools;
-	// Opal_Pool command_buffers;
 	Opal_Pool shaders;
-	// Opal_Pool bindset_layouts;
+	Opal_Pool bindset_layouts;
 	// Opal_Pool bindset_pools;
 	// Opal_Pool bindsets;
+	// Opal_Pool command_pools;
+	// Opal_Pool command_buffers;
 	// Opal_Pool pipeline_layouts;
 	// Opal_Pool pipelines;
 	// Opal_Pool swapchains;
@@ -70,6 +73,11 @@ typedef struct WebGPU_Shader_t
 	WGPUShaderModule shader;
 } WebGPU_Shader;
 
+typedef struct WebGPU_BindsetLayout_t
+{
+	WGPUBindGroupLayout layout;
+} WebGPU_BindsetLayout;
+
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type);
 
 WGPUTextureUsageFlags webgpu_helperToTextureUsage(Opal_TextureUsageFlags flags);
@@ -84,6 +92,12 @@ WGPUFilterMode webgpu_helperToFilterMode(Opal_SamplerFilterMode mode);
 WGPUMipmapFilterMode webgpu_helperToMipmapFilterMode(Opal_SamplerFilterMode mode);
 
 WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op);
+
+WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage);
+
+WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type);
+WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_Format format);
+WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType type);
 
 Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *instance_ptr, WGPUAdapter adapter, WGPUDevice device, WGPUQueue queue);
 Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info);
