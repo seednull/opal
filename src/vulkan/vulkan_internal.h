@@ -221,7 +221,6 @@ typedef struct Vulkan_BindsetLayout_t
 typedef struct Vulkan_BindsetPool_t
 {
 	VkDescriptorPool pool;
-	Opal_BindsetLayout bindset_layout;
 } Vulkan_BindsetPool;
 
 typedef struct Vulkan_Bindset_t

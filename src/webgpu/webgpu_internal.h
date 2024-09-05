@@ -27,13 +27,13 @@ typedef struct WebGPU_Device_t
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
-	Opal_Pool shaders;
-	Opal_Pool bindset_layouts;
-	// Opal_Pool bindset_pools;
-	// Opal_Pool bindsets;
 	// Opal_Pool command_pools;
 	// Opal_Pool command_buffers;
-	// Opal_Pool pipeline_layouts;
+	Opal_Pool shaders;
+	Opal_Pool bindset_layouts;
+	Opal_Pool bindset_pools;
+	Opal_Pool bindsets;
+	Opal_Pool pipeline_layouts;
 	// Opal_Pool pipelines;
 	// Opal_Pool swapchains;
 } WebGPU_Device;
@@ -73,10 +73,38 @@ typedef struct WebGPU_Shader_t
 	WGPUShaderModule shader;
 } WebGPU_Shader;
 
+typedef struct WebGPU_BindsetLayoutBinding_t
+{
+	uint32_t binding;
+	Opal_BindingType type;
+} WebGPU_BindsetLayoutBinding;
+
 typedef struct WebGPU_BindsetLayout_t
 {
 	WGPUBindGroupLayout layout;
+	uint32_t num_bindings;
+	WebGPU_BindsetLayoutBinding *bindings;
+	uint32_t bindings_requirements[OPAL_BINDING_TYPE_ENUM_MAX];
 } WebGPU_BindsetLayout;
+
+typedef struct WebGPU_BindsetPool_t
+{
+	uint32_t bindset_usage;
+	uint32_t bindset_limit;
+	uint32_t bindings_usages[OPAL_BINDING_TYPE_ENUM_MAX];
+	uint32_t bindings_limits[OPAL_BINDING_TYPE_ENUM_MAX];
+} WebGPU_BindsetPool;
+
+typedef struct WebGPU_Bindset_t
+{
+	WGPUBindGroup bindset;
+	Opal_BindsetLayout layout;
+} WebGPU_Bindset;
+
+typedef struct WebGPU_PipelineLayout_t
+{
+	WGPUPipelineLayout layout;
+} WebGPU_PipelineLayout;
 
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type);
 

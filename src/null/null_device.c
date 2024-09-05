@@ -6,6 +6,11 @@
 
 /*
  */
+static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);
+static Opal_Result null_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+
+/*
+ */
 static Opal_Result null_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 {
 	assert(this);
@@ -127,11 +132,10 @@ static Opal_Result null_deviceCreateBindsetLayout(Opal_Device this, uint32_t num
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateBindsetPool(Opal_Device this, Opal_BindsetLayout bindset_layout, uint32_t max_bindsets, Opal_BindsetPool *bindset_pool)
+static Opal_Result null_deviceCreateBindsetPool(Opal_Device this, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_layout);
-	OPAL_UNUSED(max_bindsets);
+	OPAL_UNUSED(desc);
 	OPAL_UNUSED(bindset_pool);
 
 	return OPAL_NOT_SUPPORTED;
@@ -348,13 +352,32 @@ static Opal_Result null_deviceResetCommandBuffer(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocateBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
+static Opal_Result null_deviceAllocateEmptyBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
 {
 	OPAL_UNUSED(this);
+	OPAL_UNUSED(bindset_layout);
 	OPAL_UNUSED(bindset_pool);
 	OPAL_UNUSED(bindset);
 
 	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceAllocatePrefilledBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+{
+	Opal_Result result = null_deviceAllocateEmptyBindset(this, bindset_layout, bindset_pool, bindset);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	assert(bindset);
+	result = null_deviceUpdateBindset(this, *bindset, num_bindings, bindings);
+	if (result != OPAL_SUCCESS)
+	{
+		null_deviceFreeBindset(this, bindset_pool, *bindset);
+		*bindset = OPAL_NULL_HANDLE;
+		return result;
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
@@ -817,7 +840,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceFreeCommandBuffer,
 	null_deviceResetCommandPool,
 	null_deviceResetCommandBuffer,
-	null_deviceAllocateBindset,
+	null_deviceAllocateEmptyBindset,
+	null_deviceAllocatePrefilledBindset,
 	null_deviceFreeBindset,
 	null_deviceResetBindsetPool,
 	null_deviceMapBuffer,
