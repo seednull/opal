@@ -17,6 +17,8 @@ typedef struct WebGPU_Instance_t
 typedef struct WebGPU_Device_t
 {
 	Opal_DeviceTable *vtbl;
+	WebGPU_Instance *instance;
+
 	WGPUAdapter adapter;
 	WGPUDevice device;
 	WGPUQueue queue;
@@ -27,15 +29,15 @@ typedef struct WebGPU_Device_t
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
-	// Opal_Pool command_pools;
-	// Opal_Pool command_buffers;
+	Opal_Pool command_pools;
+	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool bindset_layouts;
 	Opal_Pool bindset_pools;
 	Opal_Pool bindsets;
 	Opal_Pool pipeline_layouts;
-	// Opal_Pool pipelines;
-	// Opal_Pool swapchains;
+	Opal_Pool pipelines;
+	Opal_Pool swapchains;
 } WebGPU_Device;
 
 typedef struct WebGPU_Surface_t
@@ -67,6 +69,20 @@ typedef struct WebGPU_Sampler_t
 {
 	WGPUSampler sampler;
 } WebGPU_Sampler;
+
+typedef struct WebGPU_CommandPool_t
+{
+	WGPUQueue queue;
+	uint32_t command_buffer_usage;
+} WebGPU_CommandPool;
+
+typedef struct WebGPU_CommandBuffer_t
+{
+	WGPUCommandEncoder command_encoder;
+	WGPURenderPassEncoder render_pass_encoder;
+	WGPUComputePassEncoder compute_pass_encoder;
+	WGPUCommandBuffer command_buffer;
+} WebGPU_CommandBuffer;
 
 typedef struct WebGPU_Shader_t
 {
@@ -106,6 +122,18 @@ typedef struct WebGPU_PipelineLayout_t
 	WGPUPipelineLayout layout;
 } WebGPU_PipelineLayout;
 
+typedef struct WebGPU_Pipeline_t
+{
+	WGPURenderPipeline render_pipeline;
+	WGPUComputePipeline compute_pipeline;
+} WebGPU_Pipeline;
+
+typedef struct WebGPU_Swapchain_t
+{
+	WGPUSwapChain swapchain;
+	Opal_TextureView current_texture_view;
+} WebGPU_Swapchain;
+
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type);
 
 WGPUTextureUsageFlags webgpu_helperToTextureUsage(Opal_TextureUsageFlags flags);
@@ -119,7 +147,20 @@ WGPUAddressMode webgpu_helperToAddressMode(Opal_SamplerAddressMode mode);
 WGPUFilterMode webgpu_helperToFilterMode(Opal_SamplerFilterMode mode);
 WGPUMipmapFilterMode webgpu_helperToMipmapFilterMode(Opal_SamplerFilterMode mode);
 
+WGPUVertexStepMode webgpu_helperToVertexStepMode(Opal_VertexInputRate rate);
+WGPUVertexFormat webgpu_helperToVertexFormat(Opal_Format format);
+
 WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op);
+WGPUStencilOperation webgpu_helperToStencilOperation(Opal_StencilOp op);
+
+WGPUBlendOperation webgpu_helperToBlendOperation(Opal_BlendOp op);
+WGPUBlendFactor webgpu_helperToBlendFactor(Opal_BlendFactor factor);
+
+WGPUPrimitiveTopology webgpu_helperToPrimitiveTopology(Opal_PrimitiveType type);
+WGPUFrontFace webgpu_helperToFrontFace(Opal_FrontFace face);
+WGPUCullMode webgpu_helperToCullMode(Opal_CullMode mode);
+
+WGPUPresentMode webgpu_helperToPresentMode(Opal_PresentMode mode);
 
 WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage);
 

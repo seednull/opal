@@ -261,6 +261,118 @@ WGPUMipmapFilterMode webgpu_helperToMipmapFilterMode(Opal_SamplerFilterMode mode
 	return wgpu_mipmap_filter_modes[mode];
 }
 
+WGPUVertexStepMode webgpu_helperToVertexStepMode(Opal_VertexInputRate rate)
+{
+	static WGPUVertexStepMode wgpu_vertex_step_modes[] =
+	{
+		WGPUVertexStepMode_Vertex,
+		WGPUVertexStepMode_Instance,
+	};
+
+	return wgpu_vertex_step_modes[rate];
+}
+
+WGPUVertexFormat webgpu_helperToVertexFormat(Opal_Format format)
+{
+	static WGPUVertexFormat wgpu_formats[] =
+	{
+		WGPUVertexFormat_Undefined,
+
+		// 8-bit formats
+		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Unorm8x2, WGPUVertexFormat_Snorm8x2, WGPUVertexFormat_Uint8x2, WGPUVertexFormat_Sint8x2, WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Unorm8x4, WGPUVertexFormat_Snorm8x4, WGPUVertexFormat_Uint8x4, WGPUVertexFormat_Sint8x4, WGPUVertexFormat_Undefined,
+
+		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
+
+		// 16-bit formats
+		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Unorm16x2, WGPUVertexFormat_Snorm16x2, WGPUVertexFormat_Uint16x2, WGPUVertexFormat_Sint16x2, WGPUVertexFormat_Float16x2,
+		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Unorm16x4, WGPUVertexFormat_Snorm16x4, WGPUVertexFormat_Uint16x4, WGPUVertexFormat_Sint16x4, WGPUVertexFormat_Float16x4,
+
+		// 32-bit formats
+		WGPUVertexFormat_Uint32, WGPUVertexFormat_Sint32, WGPUVertexFormat_Float32,
+		WGPUVertexFormat_Uint32x2, WGPUVertexFormat_Sint32x2, WGPUVertexFormat_Float32x2,
+		WGPUVertexFormat_Uint32x3, WGPUVertexFormat_Sint32x3, WGPUVertexFormat_Float32x3,
+		WGPUVertexFormat_Uint32x4, WGPUVertexFormat_Sint32x4, WGPUVertexFormat_Float32x4,
+
+		// hdr 32-bit formats
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+
+		// bc formats
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+
+		// etc formats
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+
+		// astc formats
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+
+		// depth_stencil formats
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Undefined,
+	};
+
+	return wgpu_formats[format];
+}
+
+
 WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op)
 {
 	static WGPUCompareFunction wgpu_compare_functions[] =
@@ -276,6 +388,105 @@ WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op)
 	};
 
 	return wgpu_compare_functions[op];
+}
+
+WGPUStencilOperation webgpu_helperToStencilOperation(Opal_StencilOp op)
+{
+	static WGPUStencilOperation wgpu_stencil_operations[] =
+	{
+		WGPUStencilOperation_Keep,
+		WGPUStencilOperation_Zero,
+		WGPUStencilOperation_Replace,
+		WGPUStencilOperation_Invert,
+		WGPUStencilOperation_IncrementClamp,
+		WGPUStencilOperation_DecrementClamp,
+		WGPUStencilOperation_IncrementWrap,
+		WGPUStencilOperation_DecrementWrap,
+	};
+
+	return wgpu_stencil_operations[op];
+}
+
+WGPUBlendOperation webgpu_helperToBlendOperation(Opal_BlendOp op)
+{
+	static WGPUBlendOperation wgpu_blend_operations[] =
+	{
+		WGPUBlendOperation_Add,
+		WGPUBlendOperation_Subtract,
+		WGPUBlendOperation_ReverseSubtract,
+		WGPUBlendOperation_Min,
+		WGPUBlendOperation_Max,
+	};
+
+	return wgpu_blend_operations[op];
+}
+
+WGPUBlendFactor webgpu_helperToBlendFactor(Opal_BlendFactor factor)
+{
+	static WGPUBlendFactor wgpu_blend_factors[] =
+	{
+		WGPUBlendFactor_Zero,
+		WGPUBlendFactor_One,
+		WGPUBlendFactor_Src,
+		WGPUBlendFactor_OneMinusSrc,
+		WGPUBlendFactor_Dst,
+		WGPUBlendFactor_OneMinusDst,
+		WGPUBlendFactor_SrcAlpha,
+		WGPUBlendFactor_OneMinusSrcAlpha,
+		WGPUBlendFactor_DstAlpha,
+		WGPUBlendFactor_OneMinusDstAlpha,
+	};
+
+	return wgpu_blend_factors[factor];
+}
+
+WGPUPrimitiveTopology webgpu_helperToPrimitiveTopology(Opal_PrimitiveType type)
+{
+	static WGPUPrimitiveTopology wgpu_primitive_topologies[] =
+	{
+		WGPUPrimitiveTopology_PointList,
+		WGPUPrimitiveTopology_LineList,
+		WGPUPrimitiveTopology_TriangleList,
+		WGPUPrimitiveTopology_Undefined,
+		WGPUPrimitiveTopology_Undefined,
+	};
+
+	return wgpu_primitive_topologies[type];
+}
+
+WGPUFrontFace webgpu_helperToFrontFace(Opal_FrontFace face)
+{
+	static WGPUFrontFace wgpu_front_faces[] =
+	{
+		WGPUFrontFace_CCW,
+		WGPUFrontFace_CW,
+	};
+
+	return wgpu_front_faces[face];
+}
+
+WGPUCullMode webgpu_helperToCullMode(Opal_CullMode mode)
+{
+	static WGPUCullMode wgpu_cull_modes[] =
+	{
+		WGPUCullMode_None,
+		WGPUCullMode_Front,
+		WGPUCullMode_Back,
+	};
+
+	return wgpu_cull_modes[mode];
+}
+
+WGPUPresentMode webgpu_helperToPresentMode(Opal_PresentMode mode)
+{
+	static WGPUPresentMode wgpu_present_modes[] =
+	{
+		WGPUPresentMode_Immediate,
+		WGPUPresentMode_Fifo,
+		WGPUPresentMode_Mailbox,
+	};
+
+	return wgpu_present_modes[mode];
 }
 
 WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage)

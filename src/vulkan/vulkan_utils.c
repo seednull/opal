@@ -556,7 +556,6 @@ VkCullModeFlags vulkan_helperToCullMode(Opal_CullMode mode)
 		VK_CULL_MODE_NONE,
 		VK_CULL_MODE_FRONT_BIT,
 		VK_CULL_MODE_BACK_BIT,
-		VK_CULL_MODE_FRONT_AND_BACK,
 	};
 
 	return vk_cull_mode_flags[mode];

@@ -82,6 +82,7 @@ typedef enum Opal_Result_t
 	OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED,
+	OPAL_SWAPCHAIN_COLORSPACE_NOT_SUPPORTED,
 	OPAL_BUFFER_USAGE_NOT_SUPPORTED,
 	OPAL_BUFFER_UNMAPPABLE,
 	OPAL_TEXTURE_FORMAT_NOT_SUPPORTED,
@@ -358,6 +359,8 @@ typedef enum Opal_Colorspace_t
 	OPAL_COLORSPACE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_Colorspace;
 
+// TODO: rename to TextureFormat
+// TODO: add VertexFormat
 typedef enum Opal_Format_t
 {
 	OPAL_FORMAT_UNDEFINED = 0,
@@ -699,7 +702,6 @@ typedef enum Opal_CullMode_t {
 	OPAL_CULL_MODE_NONE = 0,
 	OPAL_CULL_MODE_FRONT,
 	OPAL_CULL_MODE_BACK,
-	OPAL_CULL_MODE_FRONT_AND_BACK,
 
 	OPAL_CULL_MODE_ENUM_MAX,
 	OPAL_CULL_MODE_ENUM_FORCE32 = 0x7FFFFFFF,
@@ -1111,6 +1113,7 @@ typedef struct Opal_MeshletPipelineDesc_t
 	uint32_t num_color_attachments;
 	Opal_Format color_attachment_formats[8];
 	Opal_BlendState color_blend_states[8];
+	// TODO: color write masks
 
 	Opal_Format *depth_stencil_attachment_format;
 } Opal_MeshletPipelineDesc;
