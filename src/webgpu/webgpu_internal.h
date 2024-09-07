@@ -6,6 +6,7 @@
 
 #include "common/bump.h"
 #include "common/pool.h"
+#include "common/ring.h"
 
 typedef struct WebGPU_Instance_t
 {
@@ -21,10 +22,12 @@ typedef struct WebGPU_Device_t
 
 	WGPUAdapter adapter;
 	WGPUDevice device;
-	WGPUQueue queue;
+	Opal_Queue queue;
 
 	Opal_Bump bump;
 
+	Opal_Pool queues;
+	Opal_Pool semaphores;
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
@@ -45,6 +48,18 @@ typedef struct WebGPU_Surface_t
 	WGPUSurface surface;
 } WebGPU_Surface;
 
+typedef struct WebGPU_Queue_t
+{
+	WGPUQueue queue;
+	Opal_Ring submit_ring;
+	void *submit_info;
+} WebGPU_Queue;
+
+typedef struct WebGPU_Semaphore_t
+{
+	uint64_t value;
+} WebGPU_Semaphore;
+
 typedef struct WebGPU_Buffer_t
 {
 	WGPUBuffer buffer;
@@ -58,6 +73,8 @@ typedef struct WebGPU_Texture_t
 {
 	WGPUTexture texture;
 	Opal_Format format;
+	WGPUTextureAspect aspect;
+	WGPUTextureDimension dimension;
 } WebGPU_Texture;
 
 typedef struct WebGPU_TextureView_t
@@ -72,7 +89,6 @@ typedef struct WebGPU_Sampler_t
 
 typedef struct WebGPU_CommandPool_t
 {
-	WGPUQueue queue;
 	uint32_t command_buffer_usage;
 } WebGPU_CommandPool;
 
@@ -132,6 +148,7 @@ typedef struct WebGPU_Swapchain_t
 {
 	WGPUSwapChain swapchain;
 	Opal_TextureView current_texture_view;
+	uint32_t current_semaphore;
 } WebGPU_Swapchain;
 
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type);
@@ -167,6 +184,11 @@ WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage);
 WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type);
 WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_Format format);
 WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType type);
+
+WGPULoadOp webgpu_helperToLoadOp(Opal_LoadOp op);
+WGPUStoreOp webgpu_helperToStoreOp(Opal_StoreOp op);
+
+WGPUIndexFormat webgpu_helperToIndexFormat(Opal_IndexFormat format);
 
 Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *instance_ptr, WGPUAdapter adapter, WGPUDevice device, WGPUQueue queue);
 Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info);

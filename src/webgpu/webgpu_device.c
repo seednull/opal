@@ -8,15 +8,15 @@
 
 /*
  */
-typedef struct WebGPU_AsyncRequest_t
+typedef struct WebGPU_BufferMapRequest_t
 {
 	uint32_t finished;
 	uint32_t status;
-} WebGPU_AsyncRequest;
+} WebGPU_BufferMapRequest;
 
 static void webgpu_bufferMapCallback(WGPUBufferMapAsyncStatus status, void *user_data)
 {
-	WebGPU_AsyncRequest *request = (WebGPU_AsyncRequest*)user_data;
+	WebGPU_BufferMapRequest *request = (WebGPU_BufferMapRequest*)user_data;
 
 	request->status = status;
 	request->finished = 1;
@@ -25,7 +25,7 @@ static void webgpu_bufferMapCallback(WGPUBufferMapAsyncStatus status, void *user
 static Opal_Result webgpu_mapBufferSync(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size, void **result)
 {
 	assert(result);
-	WebGPU_AsyncRequest request = {0};
+	WebGPU_BufferMapRequest request = {0};
 
 	wgpuBufferMapAsync(buffer, mode, offset, size, webgpu_bufferMapCallback, &request);
 
@@ -45,6 +45,74 @@ static Opal_Result webgpu_mapBufferSync(WGPUBuffer buffer, WGPUMapMode mode, siz
 
 /*
  */
+typedef struct WebGPU_QueueSubmitRequest_t
+{
+	Opal_Device device;
+	Opal_Queue queue;
+} WebGPU_QueueSubmitRequest;
+
+static void webgpu_deviceOnSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus status, void *user_data)
+{
+	assert(user_data);
+
+	WebGPU_QueueSubmitRequest *submit_info = (WebGPU_QueueSubmitRequest *)user_data;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)submit_info->device;
+	assert(device_ptr);
+
+	WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)submit_info->queue);
+	assert(queue_ptr);
+
+	uint32_t num_signal_semaphores = 0;
+	opal_ringRead(&queue_ptr->submit_ring, &num_signal_semaphores, sizeof(uint32_t));
+
+	uint32_t num_signal_swapchains = 0;
+	opal_ringRead(&queue_ptr->submit_ring, &num_signal_swapchains, sizeof(uint32_t));
+
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t semaphores_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(Opal_Semaphore) * num_signal_semaphores);
+	uint32_t values_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(uint64_t) * num_signal_semaphores);
+	uint32_t swapchains_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(Opal_Swapchain) * num_signal_swapchains);
+
+	Opal_Semaphore *signal_semaphores = (Opal_Semaphore *)(device_ptr->bump.data + semaphores_offset);
+	uint64_t *signal_values = (uint64_t *)(device_ptr->bump.data + values_offset);
+	Opal_Swapchain *signal_swapchains = (Opal_Swapchain *)(device_ptr->bump.data + swapchains_offset);
+
+	opal_ringRead(&queue_ptr->submit_ring, signal_semaphores, sizeof(Opal_Semaphore) * num_signal_semaphores);
+	opal_ringRead(&queue_ptr->submit_ring, signal_values, sizeof(uint64_t) * num_signal_semaphores);
+	opal_ringRead(&queue_ptr->submit_ring, signal_swapchains, sizeof(Opal_Swapchain) * num_signal_swapchains);
+
+	for (uint32_t i = 0; i < num_signal_semaphores; ++i)
+	{
+		WebGPU_Semaphore *semaphore_ptr = (WebGPU_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)signal_semaphores[i]);
+		assert(semaphore_ptr);
+		assert(semaphore_ptr->value <= signal_values[i]);
+
+		semaphore_ptr->value = signal_values[i];
+	}
+
+	for (uint32_t i = 0; i < num_signal_swapchains; ++i)
+	{
+		WebGPU_Swapchain *swapchain_ptr = (WebGPU_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)signal_swapchains[i]);
+		assert(swapchain_ptr);
+		assert(swapchain_ptr->current_semaphore == 0);
+
+		swapchain_ptr->current_semaphore = 1;
+	}
+}
+
+/*
+ */
+static void webgpu_destroyQueue(WebGPU_Queue *queue_ptr)
+{
+	assert(queue_ptr);
+
+	wgpuQueueOnSubmittedWorkDone(queue_ptr->queue, NULL, NULL);
+	wgpuQueueRelease(queue_ptr->queue);
+
+	opal_ringShutdown(&queue_ptr->submit_ring);
+	free(queue_ptr->submit_info);
+}
+
 static void webgpu_destroyBuffer(WebGPU_Buffer *buffer_ptr)
 {
 	assert(buffer_ptr);
@@ -82,10 +150,17 @@ static void webgpu_destroyCommandBuffer(WebGPU_CommandBuffer *buffer_ptr)
 {
 	assert(buffer_ptr);
 
-	wgpuCommandEncoderRelease(buffer_ptr->command_encoder);
-	wgpuRenderPassEncoderRelease(buffer_ptr->render_pass_encoder);
-	wgpuComputePassEncoderRelease(buffer_ptr->compute_pass_encoder);
-	wgpuCommandBufferRelease(buffer_ptr->command_buffer);
+	if (buffer_ptr->command_encoder)
+		wgpuCommandEncoderRelease(buffer_ptr->command_encoder);
+
+	if (buffer_ptr->render_pass_encoder)
+		wgpuRenderPassEncoderRelease(buffer_ptr->render_pass_encoder);
+
+	if (buffer_ptr->compute_pass_encoder)
+		wgpuComputePassEncoderRelease(buffer_ptr->compute_pass_encoder);
+
+	if (buffer_ptr->command_buffer)
+		wgpuCommandBufferRelease(buffer_ptr->command_buffer);
 }
 
 static void webgpu_destroyShader(WebGPU_Shader *shader_ptr)
@@ -157,7 +232,7 @@ static Opal_Result webgpu_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 
-	*queue = (Opal_Queue)device_ptr->queue;
+	*queue = device_ptr->queue;
 	return OPAL_SUCCESS;
 }
 
@@ -181,11 +256,16 @@ static Opal_Result webgpu_deviceGetShaderBindingTablePrebuildInfo(Opal_Device th
 
 static Opal_Result webgpu_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(semaphore);
+	assert(this);
+	assert(desc);
+	assert(semaphore);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Semaphore result = {0};
+	result.value = desc->initial_value;
+
+	*semaphore = (Opal_Semaphore)opal_poolAddElement(&device_ptr->semaphores, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
@@ -273,6 +353,8 @@ static Opal_Result webgpu_deviceCreateTexture(Opal_Device this, const Opal_Textu
 	WebGPU_Texture result = {0};
 	result.texture = webgpu_texture;
 	result.format = desc->format;
+	result.aspect = webgpu_helperToTextureAspect(desc->format);
+	result.dimension = texture_info.dimension;
 
 	*texture = (Opal_Texture)opal_poolAddElement(&device_ptr->textures, &result);
 	return OPAL_SUCCESS;
@@ -359,11 +441,9 @@ static Opal_Result webgpu_deviceCreateCommandPool(Opal_Device this, Opal_Queue q
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
-	WGPUQueue webgpu_queue = (WGPUQueue)queue;
-	assert(webgpu_queue == device_ptr->queue);
+	assert(queue == device_ptr->queue);
 
 	WebGPU_CommandPool result = {0};
-	result.queue = webgpu_queue;
 	
 	*command_pool = (Opal_CommandPool)opal_poolAddElement(&device_ptr->command_pools, &result);
 	return OPAL_SUCCESS;
@@ -393,10 +473,15 @@ static Opal_Result webgpu_deviceCreateShader(Opal_Device this, const Opal_Shader
 	WGPUShaderModuleDescriptor shader_info = {0};
 	
 	if (desc->type == OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY)
+	{
+		assert(desc->size % 4 == 0);
 		shader_info.nextInChain = &shader_spirv_info.chain;
-
+	}
 	else if (desc->type == OPAL_SHADER_SOURCE_TYPE_WGSL)
+	{
+		assert(((const char *)desc->data)[desc->size - 1] == 0);
 		shader_info.nextInChain = &shader_wgsl_info.chain;
+	}
 
 	assert(shader_info.nextInChain);
 
@@ -556,8 +641,6 @@ static Opal_Result webgpu_deviceCreateBindsetPool(Opal_Device this, const Opal_B
 static Opal_Result webgpu_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
 {
 	assert(this);
-	assert(num_bindset_layouts > 0);
-	assert(bindset_layouts);
 	assert(pipeline_layout);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
@@ -620,8 +703,8 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	uint32_t buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(WGPUVertexBufferLayout) * num_vertex_streams);
 	uint32_t attributes_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(WGPUVertexAttribute) * num_total_vertex_attributes);
 
-	WGPUVertexBufferLayout *vertex_buffers = (WGPUVertexBufferLayout *)(&device_ptr->bump.data + buffers_offset);
-	WGPUVertexAttribute *vertex_attributes = (WGPUVertexAttribute *)(&device_ptr->bump.data + buffers_offset);
+	WGPUVertexBufferLayout *vertex_buffers = (WGPUVertexBufferLayout *)(device_ptr->bump.data + buffers_offset);
+	WGPUVertexAttribute *vertex_attributes = (WGPUVertexAttribute *)(device_ptr->bump.data + attributes_offset);
 
 	uint32_t attribute_offset = 0;
 	for (uint32_t i = 0; i < num_vertex_streams; ++i)
@@ -638,7 +721,7 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 		{
 			vertex_attributes[attribute_offset].format = webgpu_helperToVertexFormat(opal_vertex_attributes[j].format);
 			vertex_attributes[attribute_offset].offset = opal_vertex_attributes[j].offset;
-			vertex_attributes[attribute_offset].shaderLocation = j;
+			vertex_attributes[attribute_offset].shaderLocation = attribute_offset;
 			attribute_offset++;
 		}
 	}
@@ -835,10 +918,16 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 
 static Opal_Result webgpu_deviceDestroySemaphore(Opal_Device this, Opal_Semaphore semaphore)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
+	assert(this);
+	assert(semaphore);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)semaphore;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	opal_poolRemoveElement(&device_ptr->semaphores, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
@@ -1190,6 +1279,21 @@ static Opal_Result webgpu_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->buffers);
+	}
+
+	opal_poolShutdown(&ptr->semaphores);
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->queues);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElementByIndex(&ptr->queues, head);
+			webgpu_destroyQueue(queue_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->queues, head);
+		}
+
+		opal_poolShutdown(&ptr->queues);
 	}
 
 	opal_bumpShutdown(&ptr->bump);
@@ -1580,7 +1684,7 @@ static Opal_Result webgpu_deviceEndCommandBuffer(Opal_Device this, Opal_CommandB
 
 	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
-	assert(command_buffer_ptr->command_encoder == NULL);
+	assert(command_buffer_ptr->command_encoder);
 	
 	WGPUCommandBuffer webgpu_command_buffer = wgpuCommandEncoderFinish(command_buffer_ptr->command_encoder, NULL);
 	if (webgpu_command_buffer == NULL)
@@ -1596,54 +1700,119 @@ static Opal_Result webgpu_deviceEndCommandBuffer(Opal_Device this, Opal_CommandB
 
 static Opal_Result webgpu_deviceQuerySemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t *value)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
-	OPAL_UNUSED(value);
+	assert(this);
+	assert(semaphore);
+	assert(value);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Semaphore *semaphore_ptr = (WebGPU_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
+	assert(semaphore_ptr);
+
+	*value = semaphore_ptr->value;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceSignalSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
-	OPAL_UNUSED(value);
+	assert(this);
+	assert(semaphore);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Semaphore *semaphore_ptr = (WebGPU_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
+	assert(semaphore_ptr);
+	assert(semaphore_ptr->value <= value);
+
+	semaphore_ptr->value = value;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
-	OPAL_UNUSED(value);
-	OPAL_UNUSED(timeout_milliseconds);
+	assert(this);
+	assert(semaphore);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+
+	uint64_t current_timeout = timeout_milliseconds;
+	while (current_timeout > 0)
+	{
+		WebGPU_Semaphore *semaphore_ptr = (WebGPU_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
+		assert(semaphore_ptr);
+
+		if (semaphore_ptr->value >= value)
+			return OPAL_SUCCESS;
+
+		emscripten_sleep(1);
+		current_timeout--;
+	}
+
+	return OPAL_WAIT_TIMEOUT;
 }
 
 static Opal_Result webgpu_deviceWaitQueue(Opal_Device this, Opal_Queue queue)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(queue);
+	assert(this);
+	assert(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	while (opal_ringGetSize(&queue_ptr->submit_ring) != 0)
+		emscripten_sleep(0);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceWaitIdle(Opal_Device this)
 {
-	OPAL_UNUSED(this);
+	assert(this);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	return webgpu_deviceWaitQueue(this, device_ptr->queue);
 }
 
 static Opal_Result webgpu_deviceSubmit(Opal_Device this, Opal_Queue queue, const Opal_SubmitDesc *desc)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(queue);
-	OPAL_UNUSED(desc);
+	assert(this);
+	assert(queue);
+	assert(desc);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	assert(queue == device_ptr->queue);
+
+	WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	WGPUQueue webgpu_queue = queue_ptr->queue;
+
+	// ignore wait semaphores?
+
+	opal_ringWrite(&queue_ptr->submit_ring, &desc->num_signal_semaphores, sizeof(uint32_t));
+	opal_ringWrite(&queue_ptr->submit_ring, &desc->num_signal_swapchains, sizeof(uint32_t));
+	opal_ringWrite(&queue_ptr->submit_ring, desc->signal_semaphores, sizeof(Opal_Semaphore) * desc->num_signal_semaphores);
+	opal_ringWrite(&queue_ptr->submit_ring, desc->signal_values, sizeof(uint64_t) * desc->num_signal_semaphores);
+	opal_ringWrite(&queue_ptr->submit_ring, desc->signal_swapchains, sizeof(Opal_Swapchain) * desc->num_signal_swapchains);
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(WGPUCommandBuffer) * desc->num_command_buffers);
+
+	WGPUCommandBuffer *command_buffers = (WGPUCommandBuffer *)device_ptr->bump.data;
+	for (uint32_t i = 0; i < desc->num_command_buffers; ++i)
+	{
+		WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)desc->command_buffers[i]);
+		assert(command_buffer_ptr);
+		assert(command_buffer_ptr->command_buffer);
+
+		command_buffers[i] = command_buffer_ptr->command_buffer;
+	}
+
+	wgpuQueueSubmit(webgpu_queue, desc->num_command_buffers, command_buffers);
+	wgpuQueueOnSubmittedWorkDone(webgpu_queue, webgpu_deviceOnSubmittedWorkDoneCallback, queue_ptr->submit_info);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceAcquire(Opal_Device this, Opal_Swapchain swapchain, Opal_TextureView *texture_view)
@@ -1658,15 +1827,6 @@ static Opal_Result webgpu_deviceAcquire(Opal_Device this, Opal_Swapchain swapcha
 	WebGPU_Swapchain *swapchain_ptr = (WebGPU_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
 	assert(swapchain_ptr);
 
-	if (swapchain_ptr->current_texture_view != OPAL_NULL_HANDLE)
-	{
-		Opal_Result result = webgpu_deviceDestroyTextureView(this, swapchain_ptr->current_texture_view);
-		swapchain_ptr->current_texture_view = OPAL_NULL_HANDLE;
-
-		if (result != OPAL_SUCCESS)
-			return result;
-	}
-
 	WGPUTextureView webgpu_texture_view = wgpuSwapChainGetCurrentTextureView(swapchain_ptr->swapchain);
 	if (webgpu_texture_view == NULL)
 		return OPAL_WEBGPU_ERROR;
@@ -1676,6 +1836,7 @@ static Opal_Result webgpu_deviceAcquire(Opal_Device this, Opal_Swapchain swapcha
 
 	Opal_TextureView handle = (Opal_TextureView)opal_poolAddElement(&device_ptr->texture_views, &result);
 	swapchain_ptr->current_texture_view = handle;
+	swapchain_ptr->current_semaphore = 0;
 
 	*texture_view = handle;
 	return OPAL_SUCCESS;
@@ -1689,46 +1850,168 @@ static Opal_Result webgpu_devicePresent(Opal_Device this, Opal_Swapchain swapcha
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
 
-	WebGPU_Swapchain *swapchain_ptr = (WebGPU_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
-	assert(swapchain_ptr);
+	uint64_t max_timeout_ms = 1000;
+	while (max_timeout_ms > 0)
+	{
+		WebGPU_Swapchain *swapchain_ptr = (WebGPU_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
+		assert(swapchain_ptr);
 
-	wgpuSwapChainPresent(swapchain_ptr->swapchain);
-	return OPAL_SUCCESS;
+		if (swapchain_ptr->current_semaphore == 1)
+		{
+			assert(swapchain_ptr->current_texture_view != OPAL_NULL_HANDLE);
+
+			Opal_Result result = webgpu_deviceDestroyTextureView(this, swapchain_ptr->current_texture_view);
+			swapchain_ptr->current_texture_view = OPAL_NULL_HANDLE;
+
+			return result;
+		}
+
+		emscripten_sleep(1);
+		max_timeout_ms--;
+	}
+
+	return OPAL_WAIT_TIMEOUT;
 }
 
 static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_color_attachments);
-	OPAL_UNUSED(color_attachments);
-	OPAL_UNUSED(depth_stencil_attachment);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WGPURenderPassColorAttachment *webgpu_colors = NULL;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(WGPURenderPassColorAttachment) * num_color_attachments);
+
+	if (num_color_attachments > 0)
+		webgpu_colors = (WGPURenderPassColorAttachment *)device_ptr->bump.data;
+
+	for (uint32_t i = 0; i < num_color_attachments; ++i)
+	{
+		const Opal_FramebufferAttachment *opal_attachment = &color_attachments[i];
+
+		WebGPU_TextureView *texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
+		assert(texture_view_ptr);
+
+		WGPURenderPassColorAttachment *webgpu_color = &webgpu_colors[i];
+
+		WebGPU_TextureView *resolve_texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
+
+		webgpu_color->view = texture_view_ptr->texture_view;
+		webgpu_color->resolveTarget = (resolve_texture_view_ptr) ? resolve_texture_view_ptr->texture_view : NULL;
+		webgpu_color->depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+		webgpu_color->loadOp = webgpu_helperToLoadOp(opal_attachment->load_op);
+		webgpu_color->storeOp = webgpu_helperToStoreOp(opal_attachment->store_op);
+		webgpu_color->clearValue.r = opal_attachment->clear_value.color.f[0];
+		webgpu_color->clearValue.g = opal_attachment->clear_value.color.f[1];
+		webgpu_color->clearValue.b = opal_attachment->clear_value.color.f[2];
+		webgpu_color->clearValue.a = opal_attachment->clear_value.color.f[3];
+	}
+
+	WGPURenderPassDepthStencilAttachment webgpu_depthstencil = {0};
+
+	if (depth_stencil_attachment)
+	{
+		const Opal_FramebufferAttachment *opal_attachment = depth_stencil_attachment;
+
+		WebGPU_TextureView *texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
+		assert(texture_view_ptr);
+
+		webgpu_depthstencil.view = texture_view_ptr->texture_view;
+		webgpu_depthstencil.depthLoadOp = webgpu_helperToLoadOp(opal_attachment->load_op);
+		webgpu_depthstencil.depthStoreOp = webgpu_helperToStoreOp(opal_attachment->store_op);
+		webgpu_depthstencil.depthClearValue = opal_attachment->clear_value.depth_stencil.depth;
+		webgpu_depthstencil.stencilLoadOp = webgpu_helperToLoadOp(opal_attachment->load_op);
+		webgpu_depthstencil.stencilStoreOp = webgpu_helperToStoreOp(opal_attachment->store_op);
+		webgpu_depthstencil.stencilClearValue = opal_attachment->clear_value.depth_stencil.stencil;
+	}
+
+	WGPURenderPassDescriptor pass_info = {0};
+	pass_info.colorAttachmentCount = num_color_attachments;
+	pass_info.colorAttachments = webgpu_colors;
+
+	if (depth_stencil_attachment)
+		pass_info.depthStencilAttachment = &webgpu_depthstencil;
+
+	WGPURenderPassEncoder pass_encoder = wgpuCommandEncoderBeginRenderPass(webgpu_encoder, &pass_info);
+	if (pass_encoder == NULL)
+		return OPAL_WEBGPU_ERROR;
+
+	command_buffer_ptr->render_pass_encoder = pass_encoder;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_encoder = command_buffer_ptr->render_pass_encoder;
+
+	wgpuRenderPassEncoderEnd(webgpu_encoder);
+	wgpuRenderPassEncoderRelease(webgpu_encoder);
+
+	command_buffer_ptr->render_pass_encoder = NULL;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WGPUComputePassEncoder pass_encoder = wgpuCommandEncoderBeginComputePass(webgpu_encoder, NULL);
+	if (pass_encoder == NULL)
+		return OPAL_WEBGPU_ERROR;
+
+	command_buffer_ptr->compute_pass_encoder = pass_encoder;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->compute_pass_encoder);
+
+	WGPUComputePassEncoder webgpu_encoder = command_buffer_ptr->compute_pass_encoder;
+
+	wgpuComputePassEncoderEnd(webgpu_encoder);
+	wgpuComputePassEncoderRelease(webgpu_encoder);
+
+	command_buffer_ptr->compute_pass_encoder = NULL;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
@@ -1749,75 +2032,184 @@ static Opal_Result webgpu_deviceCmdEndRaytracePass(Opal_Device this, Opal_Comman
 
 static Opal_Result webgpu_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(pipeline);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder || command_buffer_ptr->compute_pass_encoder);
+
+	WebGPU_Pipeline *pipeline_ptr = (WebGPU_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
+	assert(pipeline_ptr);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+	if (webgpu_render_encoder)
+	{
+		assert(pipeline_ptr->render_pipeline);
+		wgpuRenderPassEncoderSetPipeline(webgpu_render_encoder, pipeline_ptr->render_pipeline);
+	}
+
+	WGPUComputePassEncoder webgpu_compute_encoder = command_buffer_ptr->compute_pass_encoder;
+	if (webgpu_compute_encoder)
+	{
+		assert(pipeline_ptr->compute_pipeline);
+		wgpuComputePassEncoderSetPipeline(webgpu_compute_encoder, pipeline_ptr->compute_pipeline);
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(pipeline_layout);
-	OPAL_UNUSED(num_bindsets);
-	OPAL_UNUSED(bindsets);
+	assert(this);
+	assert(command_buffer);
+	assert(pipeline_layout);
+	assert(num_bindsets > 0);
+	assert(bindsets);
 
-	return OPAL_NOT_SUPPORTED;
+	OPAL_UNUSED(pipeline_layout);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder || command_buffer_ptr->compute_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+	if (webgpu_render_encoder)
+	{
+		for (uint32_t i = 0; i < num_bindsets; ++i)
+		{
+			WebGPU_Bindset *bindset_ptr = (WebGPU_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindsets[i]);
+			assert(bindset_ptr);
+
+			wgpuRenderPassEncoderSetBindGroup(webgpu_render_encoder, i, bindset_ptr->bindset, 0, NULL);
+		}
+	}
+
+	WGPUComputePassEncoder webgpu_compute_encoder = command_buffer_ptr->compute_pass_encoder;
+	if (webgpu_compute_encoder)
+	{
+		for (uint32_t i = 0; i < num_bindsets; ++i)
+		{
+			WebGPU_Bindset *bindset_ptr = (WebGPU_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindsets[i]);
+			assert(bindset_ptr);
+
+			wgpuComputePassEncoderSetBindGroup(webgpu_compute_encoder, i, bindset_ptr->bindset, 0, NULL);
+		}
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_vertex_buffers);
-	OPAL_UNUSED(vertex_buffers);
+	assert(this);
+	assert(command_buffer);
+	assert(num_vertex_buffers > 0);
+	assert(vertex_buffers);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+	for (uint32_t i = 0; i < num_vertex_buffers; ++i)
+	{
+		Opal_BufferView view = vertex_buffers[i];
+
+		WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)view.buffer);
+		assert(buffer_ptr);
+
+		wgpuRenderPassEncoderSetVertexBuffer(webgpu_render_encoder, i, buffer_ptr->buffer, view.offset, view.size);
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(index_buffer);
-	OPAL_UNUSED(index_format);
+	assert(this);
+	assert(command_buffer);
+	assert(index_buffer.buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+
+	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)index_buffer.buffer);
+	assert(buffer_ptr);
+
+	WGPUIndexFormat webgpu_index_format = webgpu_helperToIndexFormat(index_format);
+
+	wgpuRenderPassEncoderSetIndexBuffer(webgpu_render_encoder, buffer_ptr->buffer, webgpu_index_format, index_buffer.offset, index_buffer.size);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdSetViewport(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(viewport);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+
+	wgpuRenderPassEncoderSetViewport(webgpu_render_encoder, viewport.x, viewport.y, viewport.width, viewport.height, viewport.min_depth, viewport.max_depth);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(x);
-	OPAL_UNUSED(y);
-	OPAL_UNUSED(width);
-	OPAL_UNUSED(height);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+
+	wgpuRenderPassEncoderSetScissorRect(webgpu_render_encoder, x, y, width, height);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_indices);
-	OPAL_UNUSED(base_index);
-	OPAL_UNUSED(num_instances);
-	OPAL_UNUSED(base_instance);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+
+	wgpuRenderPassEncoderDrawIndexed(webgpu_render_encoder, num_indices, num_instances, base_index, 0, base_instance);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
@@ -1833,13 +2225,20 @@ static Opal_Result webgpu_deviceCmdMeshletDispatch(Opal_Device this, Opal_Comman
 
 static Opal_Result webgpu_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->compute_pass_encoder);
+
+	WGPUComputePassEncoder webgpu_compute_encoder = command_buffer_ptr->compute_pass_encoder;
+
+	wgpuComputePassEncoderDispatchWorkgroups(webgpu_compute_encoder, num_groups_x, num_groups_y, num_groups_z);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
@@ -1890,33 +2289,118 @@ static Opal_Result webgpu_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_
 
 static Opal_Result webgpu_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(command_buffer);
+	assert(src.buffer);
+	assert(dst.buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WebGPU_Buffer *src_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
+	assert(src_buffer_ptr);
+
+	WebGPU_Buffer *dst_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
+	assert(dst_buffer_ptr);
+
+	wgpuCommandEncoderCopyBufferToBuffer(webgpu_encoder, src_buffer_ptr->buffer, src.offset, dst_buffer_ptr->buffer, dst.offset, size);
+	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst)
+static Opal_Result webgpu_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
+	assert(this);
+	assert(command_buffer);
+	assert(src.buffer);
+	assert(dst.texture);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
+	assert(buffer_ptr);
+
+	WebGPU_Texture *texture_ptr = (WebGPU_Texture *)opal_poolGetElement(&device_ptr->textures, (Opal_PoolHandle)dst.texture);
+	assert(texture_ptr);
+
+	WGPUImageCopyBuffer buffer_info = {0};
+	buffer_info.layout.offset = src.offset;
+	buffer_info.layout.bytesPerRow = src.row_size;
+	buffer_info.layout.rowsPerImage = src.num_rows;
+	buffer_info.buffer = buffer_ptr->buffer;
+
+	WGPUImageCopyTexture texture_info = {0};
+	texture_info.texture = texture_ptr->texture;
+	texture_info.mipLevel = dst.base_mip;
+	texture_info.origin.x = dst.offset_x;
+	texture_info.origin.y = dst.offset_y;
+	texture_info.origin.z = dst.offset_z;
+	texture_info.aspect = texture_ptr->aspect;
+
+	WGPUExtent3D copy_info = {0};
+	copy_info.width = dst.width;
+	copy_info.height = dst.height;
+	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? dst.depth : dst.base_layer;
+
+	wgpuCommandEncoderCopyBufferToTexture(webgpu_encoder, &buffer_info, &texture_info, &copy_info);
+	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
+static Opal_Result webgpu_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
+	assert(this);
+	assert(command_buffer);
+	assert(src.texture);
+	assert(dst.buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WebGPU_Texture *texture_ptr = (WebGPU_Texture *)opal_poolGetElement(&device_ptr->textures, (Opal_PoolHandle)src.texture);
+	assert(texture_ptr);
+
+	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
+	assert(buffer_ptr);
+
+	WGPUImageCopyBuffer buffer_info = {0};
+	buffer_info.layout.offset = dst.offset;
+	buffer_info.layout.bytesPerRow = dst.row_size;
+	buffer_info.layout.rowsPerImage = dst.num_rows;
+	buffer_info.buffer = buffer_ptr->buffer;
+
+	WGPUImageCopyTexture texture_info = {0};
+	texture_info.texture = texture_ptr->texture;
+	texture_info.mipLevel = src.base_mip;
+	texture_info.origin.x = src.offset_x;
+	texture_info.origin.y = src.offset_y;
+	texture_info.origin.z = src.offset_z;
+	texture_info.aspect = texture_ptr->aspect;
+
+	WGPUExtent3D copy_info = {0};
+	copy_info.width = src.width;
+	copy_info.height = src.height;
+	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? src.depth : src.base_layer;
+
+	wgpuCommandEncoderCopyTextureToBuffer(webgpu_encoder, &texture_info, &buffer_info, &copy_info);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
@@ -1927,7 +2411,7 @@ static Opal_Result webgpu_deviceCmdBufferTransitionBarrier(Opal_Device this, Opa
 	OPAL_UNUSED(state_before);
 	OPAL_UNUSED(state_after);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
@@ -1937,7 +2421,7 @@ static Opal_Result webgpu_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal
 	OPAL_UNUSED(buffer);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
@@ -1947,7 +2431,7 @@ static Opal_Result webgpu_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, O
 	OPAL_UNUSED(buffer);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
@@ -1958,7 +2442,7 @@ static Opal_Result webgpu_deviceCmdTextureTransitionBarrier(Opal_Device this, Op
 	OPAL_UNUSED(state_before);
 	OPAL_UNUSED(state_after);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
@@ -1968,7 +2452,7 @@ static Opal_Result webgpu_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opa
 	OPAL_UNUSED(texture_view);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
@@ -1978,7 +2462,7 @@ static Opal_Result webgpu_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, 
 	OPAL_UNUSED(texture_view);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 /*
@@ -2092,12 +2576,13 @@ Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *
 	// data
 	device_ptr->adapter = adapter;
 	device_ptr->device = device;
-	device_ptr->queue = queue;
 
 	// bump
 	opal_bumpInitialize(&device_ptr->bump, 256);
 
 	// pools
+	opal_poolInitialize(&device_ptr->queues, sizeof(WebGPU_Queue), 32);
+	opal_poolInitialize(&device_ptr->semaphores, sizeof(WebGPU_Semaphore), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(WebGPU_Buffer), 32);
 	opal_poolInitialize(&device_ptr->textures, sizeof(WebGPU_Texture), 32);
 	opal_poolInitialize(&device_ptr->texture_views, sizeof(WebGPU_Texture), 32);
@@ -2111,6 +2596,20 @@ Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *
 	opal_poolInitialize(&device_ptr->pipeline_layouts, sizeof(WebGPU_PipelineLayout), 32);
 	opal_poolInitialize(&device_ptr->pipelines, sizeof(WebGPU_Pipeline), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(WebGPU_Swapchain), 32);
+
+	// queues
+	{
+		WebGPU_QueueSubmitRequest *info = (WebGPU_QueueSubmitRequest *)malloc(sizeof(WebGPU_QueueSubmitRequest));
+		info->device = (Opal_Device)device_ptr;
+
+		WebGPU_Queue result = {0};
+		result.queue = queue;
+		result.submit_info = info;
+		opal_ringInitialize(&result.submit_ring, 1024);
+		
+		info->queue = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &result);
+		device_ptr->queue = info->queue;
+	}
 
 	return OPAL_SUCCESS;
 }

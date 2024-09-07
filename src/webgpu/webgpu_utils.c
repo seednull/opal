@@ -663,6 +663,40 @@ WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType ty
 	return wgpu_texture_view_dimensions[type];
 }
 
+WGPULoadOp webgpu_helperToLoadOp(Opal_LoadOp op)
+{
+	static WGPULoadOp wgpu_load_ops[] =
+	{
+		WGPULoadOp_Clear,
+		WGPULoadOp_Clear,
+		WGPULoadOp_Load,
+	};
+
+	return wgpu_load_ops[op];
+}
+
+WGPUStoreOp webgpu_helperToStoreOp(Opal_StoreOp op)
+{
+	static WGPUStoreOp wgpu_store_ops[] =
+	{
+		WGPUStoreOp_Discard,
+		WGPUStoreOp_Store,
+	};
+
+	return wgpu_store_ops[op];
+}
+
+WGPUIndexFormat webgpu_helperToIndexFormat(Opal_IndexFormat format)
+{
+	static WGPUIndexFormat wgpu_index_formats[] =
+	{
+		WGPUIndexFormat_Uint16,
+		WGPUIndexFormat_Uint32,
+	};
+
+	return wgpu_index_formats[format];
+}
+
 /*
  */
 Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)

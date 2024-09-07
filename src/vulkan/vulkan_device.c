@@ -2618,6 +2618,9 @@ static Opal_Result vulkan_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore s
 	wait_info.pValues = &value;
 
 	VkResult result = device_ptr->vk.vkWaitSemaphoresKHR(device_ptr->device, &wait_info, timeout_milliseconds * 1000000);
+	if (result == VK_TIMEOUT)
+		return OPAL_WAIT_TIMEOUT;
+
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
@@ -3556,7 +3559,7 @@ static Opal_Result vulkan_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst)
+static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3590,7 +3593,7 @@ static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Co
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
+static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
 {
 	assert(this);
 	assert(command_buffer);

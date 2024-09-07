@@ -1088,7 +1088,7 @@ Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer com
 	return ptr->vtbl->cmdCopyBufferToBuffer(device, command_buffer, src, dst, size);
 }
 
-Opal_Result opalCmdCopyBufferToTexture(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst)
+Opal_Result opalCmdCopyBufferToTexture(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1100,7 +1100,7 @@ Opal_Result opalCmdCopyBufferToTexture(Opal_Device device, Opal_CommandBuffer co
 	return ptr->vtbl->cmdCopyBufferToTexture(device, command_buffer, src, dst);
 }
 
-Opal_Result opalCmdCopyTextureToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
+Opal_Result opalCmdCopyTextureToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;

@@ -712,7 +712,7 @@ static Opal_Result null_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_TextureRegion dst)
+static Opal_Result null_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -722,7 +722,7 @@ static Opal_Result null_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Comm
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferView dst)
+static Opal_Result null_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
