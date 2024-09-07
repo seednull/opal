@@ -50,8 +50,8 @@ target_compile_definitions(${TARGET} PRIVATE ${OPAL_PLATFORM_DEFINES})
 if (EMSCRIPTEN)
 	# TODO: could be better
 	set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "
-		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/vulkan/main.vert.spv@samples/04_triangle/shaders/vulkan/main.vert.spv
-		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/vulkan/main.frag.spv@samples/04_triangle/shaders/vulkan/main.frag.spv
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/main.vert.wgsl@samples/04_triangle/shaders/webgpu/main.vert.wgsl
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/main.frag.wgsl@samples/04_triangle/shaders/webgpu/main.frag.wgsl
 	")
 endif()
 

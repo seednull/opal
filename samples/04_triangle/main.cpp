@@ -12,7 +12,17 @@
 
 #define UNUSED(x) do { (void)(x); } while(0)
 
-bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
+#ifdef OPAL_PLATFORM_WINDOWS
+#define VERTEX_SHADER_PATH "samples/04_triangle/shaders/vulkan/main.vert.spv"
+#define FRAGMENT_SHADER_PATH "samples/04_triangle/shaders/vulkan/main.frag.spv"
+#define SHADER_TYPE OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY
+#elif OPAL_PLATFORM_WEB
+#define VERTEX_SHADER_PATH "samples/04_triangle/shaders/webgpu/main.vert.wgsl"
+#define FRAGMENT_SHADER_PATH "samples/04_triangle/shaders/webgpu/main.frag.wgsl"
+#define SHADER_TYPE OPAL_SHADER_SOURCE_TYPE_WGSL
+#endif
+
+bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device, Opal_Shader *shader)
 {
 	assert(name);
 	assert(device);
@@ -26,15 +36,21 @@ bool loadShader(const char *name, Opal_Device device, Opal_Shader *shader)
 	size_t size = ftell(f);
 	fseek(f, 0, SEEK_SET);
 
-	uint8_t *data = new uint8_t[size];
+	size_t storage_size = size;
+	if (type == OPAL_SHADER_SOURCE_TYPE_WGSL || type == OPAL_SHADER_SOURCE_TYPE_MSL)
+		storage_size += 1;
+
+	uint8_t *data = new uint8_t[storage_size];
+	memset(data, 0, storage_size);
+
 	fread(data, sizeof(uint8_t), size, f);
 	fclose(f);
 
 	Opal_ShaderDesc desc =
 	{
-		OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
+		type,
 		data,
-		size,
+		storage_size,
 	};
 
 	Opal_Result result = opalCreateShader(device, &desc, shader);
@@ -130,7 +146,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc =
 	{
-		OPAL_PRESENT_MODE_MAILBOX,
+		OPAL_PRESENT_MODE_FIFO,
 		OPAL_FORMAT_BGRA8_UNORM,
 		OPAL_COLORSPACE_SRGB,
 		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
@@ -226,10 +242,10 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	assert(result == OPAL_SUCCESS);
 
 	// shaders
-	bool loaded = loadShader("samples/04_triangle/shaders/vulkan/main.vert.spv", device, &vertex_shader);
+	bool loaded = loadShader(VERTEX_SHADER_PATH, SHADER_TYPE, device, &vertex_shader);
 	assert(loaded == true);
 
-	loaded = loadShader("samples/04_triangle/shaders/vulkan/main.frag.spv", device, &fragment_shader);
+	loaded = loadShader(FRAGMENT_SHADER_PATH, SHADER_TYPE, device, &fragment_shader);
 	assert(loaded == true);
 
 	// pipeline
@@ -402,8 +418,8 @@ void Application::render()
 	result = opalCmdSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_BufferView vertex_buffer = {triangle_buffer, 0};
-	Opal_BufferView index_buffer = {triangle_buffer, offsetof(TriangleData, indices)};
+	Opal_BufferView vertex_buffer = {triangle_buffer, 0, sizeof(Vertex) * 3};
+	Opal_BufferView index_buffer = {triangle_buffer, offsetof(TriangleData, indices), sizeof(uint32_t) * 3};
 
 	result = opalCmdSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
@@ -598,13 +614,12 @@ int main()
 
 #elif OPAL_PLATFORM_WEB
 
-void update(void *user_data)
+void frame(void *user_data)
 {
 	Application *app = reinterpret_cast<Application *>(user_data);
 	assert(app);
 
 	float dt = 1.0f / 60.0f;
-
 	app->update(dt);
 	app->render();
 	app->present();
@@ -621,7 +636,7 @@ int main()
 	Application app;
 	app.init(handle, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
-	emscripten_set_main_loop_arg(update, &app, 0, 1);
+	emscripten_set_main_loop_arg(frame, &app, 0, 1);
 
 	app.shutdown();
 	return 0;
