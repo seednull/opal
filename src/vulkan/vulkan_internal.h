@@ -161,6 +161,7 @@ typedef struct Vulkan_Image_t
 	uint32_t width;
 	uint32_t height;
 	uint32_t depth;
+	VkImageAspectFlagBits aspect_mask;
 #ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
 #endif
