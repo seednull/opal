@@ -753,9 +753,6 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	WGPUBlendState blend_states[8];
 	memset(blend_states, 0, sizeof(blend_states));
 
-    WGPU_NULLABLE WGPUBlendState const * blend;
-    WGPUColorWriteMaskFlags writeMask;
-
 	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
 	{
 		blend_states[i].color.operation = webgpu_helperToBlendOperation(desc->color_blend_states[i].color_op);
@@ -791,6 +788,7 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	pipeline_info.primitive.cullMode = webgpu_helperToCullMode(desc->cull_mode);
 
 	pipeline_info.multisample.count = webgpu_helperToSampleCount(desc->rasterization_samples);
+	pipeline_info.multisample.mask = UINT32_MAX;
 
 	if (desc->depth_enable)
 		pipeline_info.depthStencil = &depthstencil_state;
