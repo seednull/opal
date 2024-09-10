@@ -18,12 +18,12 @@ set(OPAL_TARGET_TYPE SHARED)
 if (WIN32)
 	set(OPAL_HAS_DIRECTX12 ${OPAL_BUILD_WITH_DIRECTX12})
 	set(OPAL_HAS_VULKAN ${OPAL_BUILD_WITH_VULKAN})
-	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WIN32 NOMINMAX)
+	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_WIN32 OPAL_SHARED_LIBRARY NOMINMAX)
 endif()
 
 if (APPLE)
 	set(OPAL_HAS_METAL ${OPAL_BUILD_WITH_METAL})
-	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_MACOS)
+	set(OPAL_PLATFORM_DEFINES OPAL_PLATFORM_MACOS OPAL_SHARED_LIBRARY)
 endif()
 
 if (EMSCRIPTEN)
@@ -155,7 +155,7 @@ endif()
 # ==================================================================================================
 # Preprocessor
 # ==================================================================================================
-target_compile_definitions(${TARGET} PRIVATE OPAL_SHARED_LIBRARY ${OPAL_PLATFORM_DEFINES})
+target_compile_definitions(${TARGET} PRIVATE ${OPAL_PLATFORM_DEFINES})
 
 # ==================================================================================================
 # Libraries
@@ -167,14 +167,12 @@ endif()
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-if (NOT EMSCRIPTEN)
-	install(
-		TARGETS ${TARGET}
-		EXPORT ${TARGET}
-		RUNTIME DESTINATION bin
-		LIBRARY DESTINATION lib
-		ARCHIVE DESTINATION lib
-		INCLUDES DESTINATION include
-		PUBLIC_HEADER DESTINATION include
-	)
-endif()
+install(
+	TARGETS ${TARGET}
+	EXPORT ${TARGET}
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib
+	INCLUDES DESTINATION include
+	PUBLIC_HEADER DESTINATION include
+)
