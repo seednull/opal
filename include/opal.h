@@ -734,6 +734,11 @@ typedef struct Opal_DeviceInfo_t
 	uint8_t texture_compression_bc : 1;
 	uint64_t max_buffer_alignment;
 	// TODO: separate min buffer offset alignment for storage & uniform buffers
+	// TODO: min_storage_buffer_offset_alignment
+	// TODO: min_uniform_buffer_offset_alignment
+	// TODO: min_uniform_buffer_size
+	// TODO: max_dispatch_workgroups[3]
+	// TODO: max_binding_size
 	uint32_t queue_count[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 } Opal_DeviceInfo;
 
@@ -1395,6 +1400,8 @@ OPAL_APIENTRY Opal_Result opalGetDeviceTable(Opal_Device device, Opal_DeviceTabl
 
 OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
 
+// TODO: get optimal color format from surface
+// TODO: get optimal present mode from surface
 OPAL_APIENTRY Opal_Result opalCreateSurface(Opal_Instance instance, void *handle, Opal_Surface *surface);
 OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device);
 OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
