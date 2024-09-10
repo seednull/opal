@@ -60,11 +60,6 @@ if (WIN32)
 	set(CMAKE_CXX_FLAGS "/W4 /external:W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /EHsc /GR-")
 endif()
 
-if (EMSCRIPTEN)
-	add_link_options("-sUSE_WEBGPU=1")
-	add_link_options("-sASYNCIFY")
-endif()
-
 # ==================================================================================================
 # General includes
 # ==================================================================================================
