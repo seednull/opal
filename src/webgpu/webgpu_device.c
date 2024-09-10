@@ -1475,6 +1475,7 @@ static Opal_Result webgpu_deviceAllocatePrefilledBindset(Opal_Device this, Opal_
 				webgpu_entries[i].size = data.size;
 				webgpu_entries[i].offset = data.offset;
 			}
+			break;
 
 			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_1D:
 			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D:
@@ -1495,6 +1496,7 @@ static Opal_Result webgpu_deviceAllocatePrefilledBindset(Opal_Device this, Opal_
 
 				webgpu_entries[i].textureView = texture_view_ptr->texture_view;
 			}
+			break;
 
 			case OPAL_BINDING_TYPE_SAMPLER:
 			case OPAL_BINDING_TYPE_COMPARE_SAMPLER:
@@ -1506,6 +1508,7 @@ static Opal_Result webgpu_deviceAllocatePrefilledBindset(Opal_Device this, Opal_
 
 				webgpu_entries[i].sampler = sampler_ptr->sampler;
 			}
+			break;
 
 			default:
 				assert(0);
