@@ -157,7 +157,7 @@ typedef struct Vulkan_Buffer_t
 typedef struct Vulkan_Image_t
 {
 	VkImage image;
-	Opal_Format format;
+	Opal_TextureFormat format;
 	uint32_t width;
 	uint32_t height;
 	uint32_t depth;
@@ -271,12 +271,13 @@ VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type);
 
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
 
-VkFormat vulkan_helperToFormat(Opal_Format format);
+VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
+VkFormat vulkan_helperToVertexFormat(Opal_VertexFormat format);
 VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format);
 
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
-VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_Format format);
-VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_Format format);
+VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
+VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_TextureFormat format);
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
 
 VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode);

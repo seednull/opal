@@ -72,7 +72,7 @@ typedef struct WebGPU_Buffer_t
 typedef struct WebGPU_Texture_t
 {
 	WGPUTexture texture;
-	Opal_Format format;
+	Opal_TextureFormat format;
 	WGPUTextureAspect aspect;
 	WGPUTextureDimension dimension;
 } WebGPU_Texture;
@@ -156,16 +156,16 @@ WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opa
 WGPUTextureUsageFlags webgpu_helperToTextureUsage(Opal_TextureUsageFlags flags);
 WGPUTextureDimension webgpu_helperToTextureDimension(Opal_TextureType type);
 WGPUTextureViewDimension webgpu_helperToTextureViewDimension(Opal_TextureViewType type);
-WGPUTextureFormat webgpu_helperToTextureFormat(Opal_Format format);
+WGPUTextureFormat webgpu_helperToTextureFormat(Opal_TextureFormat format);
 uint32_t webgpu_helperToSampleCount(Opal_Samples samples);
-WGPUTextureAspect webgpu_helperToTextureAspect(Opal_Format format);
+WGPUTextureAspect webgpu_helperToTextureAspect(Opal_TextureFormat format);
 
 WGPUAddressMode webgpu_helperToAddressMode(Opal_SamplerAddressMode mode);
 WGPUFilterMode webgpu_helperToFilterMode(Opal_SamplerFilterMode mode);
 WGPUMipmapFilterMode webgpu_helperToMipmapFilterMode(Opal_SamplerFilterMode mode);
 
 WGPUVertexStepMode webgpu_helperToVertexStepMode(Opal_VertexInputRate rate);
-WGPUVertexFormat webgpu_helperToVertexFormat(Opal_Format format);
+WGPUVertexFormat webgpu_helperToVertexFormat(Opal_VertexFormat format);
 
 WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op);
 WGPUStencilOperation webgpu_helperToStencilOperation(Opal_StencilOp op);
@@ -182,7 +182,7 @@ WGPUPresentMode webgpu_helperToPresentMode(Opal_PresentMode mode);
 WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage);
 
 WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type);
-WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_Format format);
+WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_TextureFormat format);
 WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType type);
 
 WGPULoadOp webgpu_helperToLoadOp(Opal_LoadOp op);

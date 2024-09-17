@@ -147,7 +147,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	Opal_SwapchainDesc swapchain_desc =
 	{
 		OPAL_PRESENT_MODE_FIFO,
-		OPAL_FORMAT_BGRA8_UNORM,
+		OPAL_TEXTURE_FORMAT_BGRA8_UNORM,
 		OPAL_COLORSPACE_SRGB,
 		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
 		surface
@@ -254,8 +254,8 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	Opal_VertexAttribute vertex_attributes[] =
 	{
-		{ OPAL_FORMAT_RGBA32_SFLOAT, offsetof(Vertex, position) },
-		{ OPAL_FORMAT_RGBA32_SFLOAT, offsetof(Vertex, color) },
+		{ OPAL_VERTEX_FORMAT_RGBA32_SFLOAT, offsetof(Vertex, position) },
+		{ OPAL_VERTEX_FORMAT_RGBA32_SFLOAT, offsetof(Vertex, color) },
 	};
 
 	Opal_VertexStream vertex_stream =
@@ -280,7 +280,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	pipeline_desc.rasterization_samples = OPAL_SAMPLES_1;
 
 	pipeline_desc.num_color_attachments = 1;
-	pipeline_desc.color_attachment_formats[0] = OPAL_FORMAT_BGRA8_UNORM;
+	pipeline_desc.color_attachment_formats[0] = OPAL_TEXTURE_FORMAT_BGRA8_UNORM;
 
 	result = opalCreateGraphicsPipeline(device, &pipeline_desc, &pipeline);
 	assert(result == OPAL_SUCCESS);
@@ -369,7 +369,7 @@ void Application::resize(uint32_t w, uint32_t h)
 	Opal_SwapchainDesc swapchain_desc =
 	{
 		OPAL_PRESENT_MODE_FIFO,
-		OPAL_FORMAT_BGRA8_UNORM,
+		OPAL_TEXTURE_FORMAT_BGRA8_UNORM,
 		OPAL_COLORSPACE_SRGB,
 		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
 		surface

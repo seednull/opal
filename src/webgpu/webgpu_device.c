@@ -331,7 +331,7 @@ static Opal_Result webgpu_deviceCreateTexture(Opal_Device this, const Opal_Textu
 	WGPUDevice webgpu_device = device_ptr->device;
 
 	WGPUTextureFormat format = webgpu_helperToTextureFormat(desc->format);
-	if (format == WGPUTextureFormat_Undefined && desc->format != OPAL_FORMAT_UNDEFINED)
+	if (format == WGPUTextureFormat_Undefined && desc->format != OPAL_TEXTURE_FORMAT_UNDEFINED)
 		return OPAL_TEXTURE_FORMAT_NOT_SUPPORTED;
 
 	WGPUTextureDescriptor texture_info = {0};
@@ -518,7 +518,7 @@ static Opal_Result webgpu_deviceCreateBindsetLayout(Opal_Device this, uint32_t n
 		webgpu_bindings[i].visibility = webgpu_helperToShaderStage(bindings[i].visibility);
 
 		Opal_BindingType type = bindings[i].type;
-		Opal_Format format = bindings[i].texture_format;
+		Opal_TextureFormat format = bindings[i].texture_format;
 
 		switch (type)
 		{
@@ -861,13 +861,13 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	assert(desc);
 	assert(swapchain);
 
-	static Opal_Format supported_formats[] =
+	static Opal_TextureFormat supported_formats[] =
 	{
-		OPAL_FORMAT_BGRA8_UNORM,
-		OPAL_FORMAT_RGBA8_UNORM,
-		OPAL_FORMAT_RGBA16_SFLOAT
+		OPAL_TEXTURE_FORMAT_BGRA8_UNORM,
+		OPAL_TEXTURE_FORMAT_RGBA8_UNORM,
+		OPAL_TEXTURE_FORMAT_RGBA16_SFLOAT
 	};
-	static uint32_t num_supported_formats = sizeof(supported_formats) / sizeof(Opal_Format);
+	static uint32_t num_supported_formats = sizeof(supported_formats) / sizeof(Opal_TextureFormat);
 
 	uint32_t format_supported = 0;
 	for (uint32_t i = 0; i < num_supported_formats; ++i)

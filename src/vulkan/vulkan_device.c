@@ -225,7 +225,7 @@ static Opal_Result vulkan_deviceGetAccelerationStructurePrebuildInfo(Opal_Device
 				VkAccelerationStructureGeometryTrianglesDataKHR *triangles = &geometry->geometry.triangles;
 
 				triangles->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-				triangles->vertexFormat = vulkan_helperToFormat(opal_triangles->vertex_format);
+				triangles->vertexFormat = vulkan_helperToVertexFormat(opal_triangles->vertex_format);
 				triangles->vertexStride = opal_triangles->vertex_stride;
 				triangles->maxVertex = opal_triangles->num_vertices - 1;
 				triangles->indexType = vulkan_helperToIndexType(opal_triangles->index_format);
@@ -488,7 +488,7 @@ static Opal_Result vulkan_deviceCreateTexture(Opal_Device this, const Opal_Textu
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	image_info.flags = vulkan_helperToImageCreateFlags(desc);
 	image_info.imageType = vulkan_helperToImageType(desc->type);
-	image_info.format = vulkan_helperToFormat(desc->format);
+	image_info.format = vulkan_helperToImageFormat(desc->format);
 	image_info.extent.width = desc->width;
 	image_info.extent.height = desc->height;
 	image_info.extent.depth = desc->depth;
@@ -601,7 +601,7 @@ static Opal_Result vulkan_deviceCreateTextureView(Opal_Device this, const Opal_T
 	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	image_view_info.image = image_ptr->image;
 	image_view_info.viewType = vulkan_helperToImageViewType(desc->type);
-	image_view_info.format = vulkan_helperToFormat(image_ptr->format);
+	image_view_info.format = vulkan_helperToImageFormat(image_ptr->format);
 	image_view_info.components.r = VK_COMPONENT_SWIZZLE_R;
 	image_view_info.components.g = VK_COMPONENT_SWIZZLE_G;
 	image_view_info.components.b = VK_COMPONENT_SWIZZLE_B;
@@ -1015,7 +1015,7 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 			vertex_attributes[num_attributes].location = num_attributes;
 			vertex_attributes[num_attributes].binding = i;
-			vertex_attributes[num_attributes].format = vulkan_helperToFormat(vertex_attribute->format);
+			vertex_attributes[num_attributes].format = vulkan_helperToVertexFormat(vertex_attribute->format);
 			vertex_attributes[num_attributes].offset = vertex_attribute->offset;
 			num_attributes++;
 		}
@@ -1122,7 +1122,7 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	VkFormat color_attachment_formats[8];
 
 	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
-		color_attachment_formats[i] = vulkan_helperToFormat(desc->color_attachment_formats[i]);
+		color_attachment_formats[i] = vulkan_helperToImageFormat(desc->color_attachment_formats[i]);
 
 	VkPipelineRenderingCreateInfoKHR dynamic_rendering_info = {0};
 	dynamic_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
@@ -1131,8 +1131,8 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	if (desc->depth_stencil_attachment_format)
 	{
-		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToFormat(*desc->depth_stencil_attachment_format);
-		dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToFormat(*desc->depth_stencil_attachment_format);
+		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
+		dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
 	}
 
 	// pipeline
@@ -1498,7 +1498,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
-	VkFormat wanted_format = vulkan_helperToFormat(desc->format);
+	VkFormat wanted_format = vulkan_helperToImageFormat(desc->format);
 	VkColorSpaceKHR wanted_color_space = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	VkBool32 found_format = VK_FALSE;
 
@@ -3382,7 +3382,7 @@ static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this,
 					assert(index_buffer_ptr);
 
 					triangles->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-					triangles->vertexFormat = vulkan_helperToFormat(opal_triangles->vertex_format);
+					triangles->vertexFormat = vulkan_helperToVertexFormat(opal_triangles->vertex_format);
 					triangles->vertexData.deviceAddress = vertex_buffer_ptr->device_address + opal_triangles->vertex_buffer.offset;
 					triangles->vertexStride = opal_triangles->vertex_stride;
 					triangles->maxVertex = opal_triangles->num_vertices - 1;

@@ -95,37 +95,38 @@ WGPUTextureViewDimension webgpu_helperToTextureViewDimension(Opal_TextureViewTyp
 	return wgpu_texture_view_dimensions[type];
 }
 
-WGPUTextureFormat webgpu_helperToTextureFormat(Opal_Format format)
+WGPUTextureFormat webgpu_helperToTextureFormat(Opal_TextureFormat format)
 {
 	static WGPUTextureFormat wgpu_formats[] =
 	{
 		WGPUTextureFormat_Undefined,
 
 		// 8-bit formats
-		WGPUTextureFormat_R8Unorm, WGPUTextureFormat_R8Snorm, WGPUTextureFormat_R8Uint, WGPUTextureFormat_R8Sint, WGPUTextureFormat_Undefined,
-		WGPUTextureFormat_RG8Unorm, WGPUTextureFormat_RG8Snorm, WGPUTextureFormat_RG8Uint, WGPUTextureFormat_RG8Sint, WGPUTextureFormat_Undefined,
-		WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined,
-		WGPUTextureFormat_RGBA8Unorm, WGPUTextureFormat_RGBA8Snorm, WGPUTextureFormat_RGBA8Uint, WGPUTextureFormat_RGBA8Sint, WGPUTextureFormat_RGBA8UnormSrgb,
-
-		WGPUTextureFormat_BGRA8Unorm, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_BGRA8UnormSrgb,
+		WGPUTextureFormat_R8Unorm, WGPUTextureFormat_R8Snorm, WGPUTextureFormat_R8Uint, WGPUTextureFormat_R8Sint,
+		WGPUTextureFormat_RG8Unorm, WGPUTextureFormat_RG8Snorm, WGPUTextureFormat_RG8Uint, WGPUTextureFormat_RG8Sint,
+		WGPUTextureFormat_RGBA8Unorm, WGPUTextureFormat_RGBA8Snorm, WGPUTextureFormat_RGBA8Uint, WGPUTextureFormat_RGBA8Sint,
 
 		// 16-bit formats
-		WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_R16Uint, WGPUTextureFormat_R16Sint, WGPUTextureFormat_R16Float,
-		WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_RG16Uint, WGPUTextureFormat_RG16Sint, WGPUTextureFormat_RG16Float,
-		WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined,
-		WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_RGBA16Uint, WGPUTextureFormat_RGBA16Sint, WGPUTextureFormat_RGBA16Float,
+		WGPUTextureFormat_R16Uint, WGPUTextureFormat_R16Sint, WGPUTextureFormat_R16Float,
+		WGPUTextureFormat_RG16Uint, WGPUTextureFormat_RG16Sint, WGPUTextureFormat_RG16Float,
+		WGPUTextureFormat_RGBA16Uint, WGPUTextureFormat_RGBA16Sint, WGPUTextureFormat_RGBA16Float,
 
 		// 32-bit formats
 		WGPUTextureFormat_R32Uint, WGPUTextureFormat_R32Sint, WGPUTextureFormat_R32Float,
 		WGPUTextureFormat_RG32Uint, WGPUTextureFormat_RG32Sint, WGPUTextureFormat_RG32Float,
-		WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined, WGPUTextureFormat_Undefined,
 		WGPUTextureFormat_RGBA32Uint, WGPUTextureFormat_RGBA32Sint, WGPUTextureFormat_RGBA32Float,
+
+		// special 4-channel formats
+		WGPUTextureFormat_BGRA8Unorm,
+		WGPUTextureFormat_BGRA8UnormSrgb,
+		WGPUTextureFormat_RGBA8UnormSrgb,
 
 		// hdr 32-bit formats
 		WGPUTextureFormat_RG11B10Ufloat,
 		WGPUTextureFormat_RGB9E5Ufloat,
 
 		// bc formats
+		WGPUTextureFormat_Undefined,
 		WGPUTextureFormat_Undefined,
 		WGPUTextureFormat_BC1RGBAUnorm,
 		WGPUTextureFormat_BC1RGBAUnormSrgb,
@@ -211,14 +212,14 @@ uint32_t webgpu_helperToSampleCount(Opal_Samples samples)
 	return wgpu_samples[samples];
 }
 
-WGPUTextureAspect webgpu_helperToTextureAspect(Opal_Format format)
+WGPUTextureAspect webgpu_helperToTextureAspect(Opal_TextureFormat format)
 {
-	if (format >= OPAL_FORMAT_COLOR_BEGIN && format <= OPAL_FORMAT_COLOR_END)
+	if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
 		return WGPUTextureAspect_All;
 
-	if (format >= OPAL_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_FORMAT_DEPTH_STENCIL_END)
+	if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
 	{
-		if (format == OPAL_FORMAT_D16_UNORM || format == OPAL_FORMAT_D32_SFLOAT)
+		if (format == OPAL_TEXTURE_FORMAT_D16_UNORM || format == OPAL_TEXTURE_FORMAT_D32_SFLOAT)
 			return WGPUTextureAspect_DepthOnly;
 
 		return WGPUTextureAspect_All;
@@ -272,24 +273,16 @@ WGPUVertexStepMode webgpu_helperToVertexStepMode(Opal_VertexInputRate rate)
 	return wgpu_vertex_step_modes[rate];
 }
 
-WGPUVertexFormat webgpu_helperToVertexFormat(Opal_Format format)
+WGPUVertexFormat webgpu_helperToVertexFormat(Opal_VertexFormat format)
 {
 	static WGPUVertexFormat wgpu_formats[] =
 	{
-		WGPUVertexFormat_Undefined,
-
 		// 8-bit formats
-		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Unorm8x2, WGPUVertexFormat_Snorm8x2, WGPUVertexFormat_Uint8x2, WGPUVertexFormat_Sint8x2, WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Unorm8x4, WGPUVertexFormat_Snorm8x4, WGPUVertexFormat_Uint8x4, WGPUVertexFormat_Sint8x4, WGPUVertexFormat_Undefined,
-
-		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
+		WGPUVertexFormat_Unorm8x2, WGPUVertexFormat_Snorm8x2, WGPUVertexFormat_Uint8x2, WGPUVertexFormat_Sint8x2,
+		WGPUVertexFormat_Unorm8x4, WGPUVertexFormat_Snorm8x4, WGPUVertexFormat_Uint8x4, WGPUVertexFormat_Sint8x4,
 
 		// 16-bit formats
-		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
 		WGPUVertexFormat_Unorm16x2, WGPUVertexFormat_Snorm16x2, WGPUVertexFormat_Uint16x2, WGPUVertexFormat_Sint16x2, WGPUVertexFormat_Float16x2,
-		WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined, WGPUVertexFormat_Undefined,
 		WGPUVertexFormat_Unorm16x4, WGPUVertexFormat_Snorm16x4, WGPUVertexFormat_Uint16x4, WGPUVertexFormat_Sint16x4, WGPUVertexFormat_Float16x4,
 
 		// 32-bit formats
@@ -298,80 +291,12 @@ WGPUVertexFormat webgpu_helperToVertexFormat(Opal_Format format)
 		WGPUVertexFormat_Uint32x3, WGPUVertexFormat_Sint32x3, WGPUVertexFormat_Float32x3,
 		WGPUVertexFormat_Uint32x4, WGPUVertexFormat_Sint32x4, WGPUVertexFormat_Float32x4,
 
-		// hdr 32-bit formats
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-
-		// bc formats
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-
-		// etc formats
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-
-		// astc formats
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-
-		// depth_stencil formats
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
-		WGPUVertexFormat_Undefined,
+		// special formats
+		WGPUVertexFormat_Unorm10_10_10_2,
 	};
 
 	return wgpu_formats[format];
 }
-
 
 WGPUCompareFunction webgpu_helperToCompareFunction(Opal_CompareOp op)
 {
@@ -534,37 +459,38 @@ WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type)
 	return wgpu_buffer_binding_types[type];
 }
 
-WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_Format format)
+WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_TextureFormat format)
 {
 	static WGPUTextureSampleType wgpu_texture_sample_types[] =
 	{
 		WGPUTextureSampleType_Undefined,
 
 		// 8-bit formats
-		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Undefined,
-		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Undefined,
-		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined,
-		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
-
-		WGPUTextureSampleType_Float, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint,
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint,
+		WGPUTextureSampleType_Float, WGPUTextureSampleType_Float, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint,
 
 		// 16-bit formats
-		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
-		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
-		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined,
-		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
 
 		// 32-bit formats
 		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
 		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
-		WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined, WGPUTextureSampleType_Undefined,
 		WGPUTextureSampleType_Uint, WGPUTextureSampleType_Sint, WGPUTextureSampleType_Float,
+
+		// special 4-channel formats
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
+		WGPUTextureSampleType_Float,
 
 		// hdr 32-bit formats
 		WGPUTextureSampleType_UnfilterableFloat,
 		WGPUTextureSampleType_UnfilterableFloat,
 
 		// bc formats
+		WGPUTextureSampleType_Undefined,
 		WGPUTextureSampleType_Undefined,
 		WGPUTextureSampleType_Float,
 		WGPUTextureSampleType_Float,
