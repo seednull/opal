@@ -1282,16 +1282,54 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->texture_compression_astc = (features.features.textureCompressionASTC_LDR == VK_TRUE);
 	info->texture_compression_bc = (features.features.textureCompressionBC == VK_TRUE);
 
-	uint64_t offset = properties.limits.minUniformBufferOffsetAlignment;
-	if (offset < properties.limits.minStorageBufferOffsetAlignment)
-		offset = properties.limits.minStorageBufferOffsetAlignment;
-
-	info->max_buffer_alignment = offset;
-
 	Vulkan_DeviceEnginesInfo device_engines_info = {0};
 	vulkan_helperFillDeviceEnginesInfo(device, &device_engines_info);
 
 	memcpy(info->queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+
+	return OPAL_SUCCESS;
+}
+
+Opal_Result vulkan_helperFillDeviceLimits(VkPhysicalDevice device, Opal_DeviceLimits *limits)
+{
+	assert(device != VK_NULL_HANDLE);
+	assert(limits);
+
+	VkPhysicalDeviceMaintenance3Properties maintenance = {0};
+	maintenance.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+
+	VkPhysicalDeviceProperties2 properties = {0};
+	properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	properties.pNext = &maintenance;
+
+	vkGetPhysicalDeviceProperties2(device, &properties);
+
+	memset(limits, 0, sizeof(Opal_DeviceLimits));
+
+	const VkPhysicalDeviceLimits *vulkan_limits = &properties.properties.limits;
+
+	limits->maxTextureDimension1D = vulkan_limits->maxImageDimension1D;
+	limits->maxTextureDimension2D = vulkan_limits->maxImageDimension2D;
+	limits->maxTextureDimension3D = vulkan_limits->maxImageDimension3D;
+	limits->maxTextureArrayLayers = vulkan_limits->maxImageArrayLayers;
+	limits->maxBufferSize = maintenance.maxMemoryAllocationSize;
+	limits->minUniformBufferOffsetAlignment = vulkan_limits->minUniformBufferOffsetAlignment;
+	limits->minStorageBufferOffsetAlignment = vulkan_limits->minStorageBufferOffsetAlignment;
+	limits->maxBindsets = vulkan_limits->maxBoundDescriptorSets;
+	limits->maxUniformBufferBindingSize = vulkan_limits->maxUniformBufferRange;
+	limits->maxStorageBufferBindingSize = vulkan_limits->maxStorageBufferRange;
+	limits->maxVertexBuffers = vulkan_limits->maxVertexInputBindings;
+	limits->maxVertexAttributes = vulkan_limits->maxVertexInputAttributes;
+	limits->maxVertexBufferStride = vulkan_limits->maxVertexInputBindingStride;
+	limits->maxColorAttachments = vulkan_limits->maxFragmentOutputAttachments;
+	limits->maxComputeSharedMemorySize = vulkan_limits->maxComputeSharedMemorySize;
+	limits->maxComputeWorkgroupCountX = vulkan_limits->maxComputeWorkGroupCount[0];
+	limits->maxComputeWorkgroupCountY = vulkan_limits->maxComputeWorkGroupCount[1];
+	limits->maxComputeWorkgroupCountZ = vulkan_limits->maxComputeWorkGroupCount[2];
+	limits->maxComputeWorkgroupInvocations = vulkan_limits->maxComputeWorkGroupInvocations;
+	limits->maxComputeWorkgroupLocalSizeX = vulkan_limits->maxComputeWorkGroupSize[0];
+	limits->maxComputeWorkgroupLocalSizeY = vulkan_limits->maxComputeWorkGroupSize[1];
+	limits->maxComputeWorkgroupLocalSizeZ = vulkan_limits->maxComputeWorkGroupSize[2];
 
 	return OPAL_SUCCESS;
 }

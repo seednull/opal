@@ -17,6 +17,15 @@ static Opal_Result directx12_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *in
 	return directx12_fillDeviceInfo(ptr->adapter, ptr->device, info);
 }
 
+static Opal_Result directx12_deviceGetLimits(Opal_Device this, Opal_DeviceLimits *limits)
+{
+	assert(this);
+	assert(limits);
+
+	DirectX12_Device *ptr = (DirectX12_Device *)this;
+	return directx12_fillDeviceLimits(ptr->adapter, ptr->device, limits);
+}
+
 static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	OPAL_UNUSED(this);
@@ -796,6 +805,7 @@ static Opal_Result directx12_deviceCmdTextureQueueReleaseBarrier(Opal_Device thi
 static Opal_DeviceTable device_vtbl =
 {
 	directx12_deviceGetInfo,
+	directx12_deviceGetLimits,
 	directx12_deviceGetQueue,
 	directx12_deviceGetAccelerationStructurePrebuildInfo,
 	directx12_deviceGetShaderBindingTablePrebuildInfo,

@@ -34,8 +34,6 @@ void printDeviceInfo(const Opal_DeviceInfo *info)
 	std::cout << "\tETC2 Texture Compression: " << (info->texture_compression_etc2 != 0) << "\n";
 	std::cout << "\tASTC Texture Compression: " << (info->texture_compression_astc != 0) << "\n";
 	std::cout << "\tBC Texture Compression: " << (info->texture_compression_bc != 0) << "\n";
-	std::cout << "Limits:\n";
-	std::cout << "\tMax buffer alignment: " << info->max_buffer_alignment << "\n";
 	std::cout << "\tMain queue count: " << info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] << "\n";
 	std::cout << "\tCompute queue count: " << info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] << "\n";
 	std::cout << "\tCopy queue count: " << info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] << "\n";

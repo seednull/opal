@@ -22,6 +22,17 @@ static Opal_Result null_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result null_deviceGetLimits(Opal_Device this, Opal_DeviceLimits *limits)
+{
+	assert(this);
+	assert(limits);
+
+	Null_Device *ptr = (Null_Device *)this;
+
+	memcpy(limits, &ptr->limits, sizeof(Opal_DeviceLimits));
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result null_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	OPAL_UNUSED(this);
@@ -799,6 +810,7 @@ static Opal_Result null_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Op
 static Opal_DeviceTable device_vtbl =
 {
 	null_deviceGetInfo,
+	null_deviceGetLimits,
 	null_deviceGetQueue,
 	null_deviceGetAccelerationStructurePrebuildInfo,
 	null_deviceGetShaderBindingTablePrebuildInfo,
@@ -901,7 +913,30 @@ Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info)
 
 	info->device_type = OPAL_DEVICE_TYPE_UNKNOWN;
 	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
-	info->max_buffer_alignment = 256;
+
+	return OPAL_SUCCESS;
+}
+
+Opal_Result null_fillDeviceLimits(Opal_DeviceLimits *limits)
+{
+	assert(limits);
+
+	memset(limits, 0, sizeof(Opal_DeviceLimits));
+
+	limits->maxTextureDimension1D = 16384;
+	limits->maxTextureDimension2D = 16384;
+	limits->maxTextureDimension3D = 2048;
+	limits->maxTextureArrayLayers = 2048;
+	limits->maxBufferSize = 0xFFFFFFFF;
+	limits->minUniformBufferOffsetAlignment = 16;
+	limits->minStorageBufferOffsetAlignment = 4;
+	limits->maxBindsets = 8;
+	limits->maxUniformBufferBindingSize = 0x0000FFFF;
+	limits->maxStorageBufferBindingSize = 0xFFFFFFFF;
+	limits->maxVertexBuffers = 32;
+	limits->maxVertexAttributes = 64;
+	limits->maxVertexBufferStride = 0x00003FFF;
+	limits->maxColorAttachments = 8;
 
 	return OPAL_SUCCESS;
 }
@@ -917,5 +952,8 @@ Opal_Result null_deviceInitialize(Null_Device *device_ptr, Null_Instance *instan
 	device_ptr->vtbl = &device_vtbl;
 
 	// data
-	return null_fillDeviceInfo(&device_ptr->info);
+	null_fillDeviceInfo(&device_ptr->info);
+	null_fillDeviceLimits(&device_ptr->limits);
+
+	return OPAL_SUCCESS;
 }

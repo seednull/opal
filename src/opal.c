@@ -180,6 +180,18 @@ Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info)
 	return ptr->vtbl->getDeviceInfo(device, info);
 }
 
+Opal_Result opalGetDeviceLimits(Opal_Device device, Opal_DeviceLimits *limits)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getDeviceLimits);
+
+	return ptr->vtbl->getDeviceLimits(device, limits);
+}
+
 Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	if (device == OPAL_NULL_HANDLE)

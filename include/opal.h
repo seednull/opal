@@ -749,19 +749,34 @@ typedef struct Opal_DeviceInfo_t
 	uint8_t texture_compression_etc2 : 1;
 	uint8_t texture_compression_astc : 1;
 	uint8_t texture_compression_bc : 1;
-	uint64_t max_buffer_alignment;
-	// TODO: min_uniform_buffer_offset_alignment
-	// TODO: min_uniform_buffer_size
-	// TODO: max_uniform_buffer_size
-	// TODO: max_uniform_buffer_binding_size
-	// TODO: min_storage_buffer_offset_alignment
-	// TODO: min_storage_buffer_size
-	// TODO: max_storage_buffer_size
-	// TODO: max_storage_buffer_binding_size
-	// TODO: max_dispatch_workgroups[3]
-	// TODO: max_binding_size
 	uint32_t queue_count[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 } Opal_DeviceInfo;
+
+typedef struct Opal_DeviceLimits_t
+{
+	uint32_t maxTextureDimension1D;
+	uint32_t maxTextureDimension2D;
+	uint32_t maxTextureDimension3D;
+	uint32_t maxTextureArrayLayers;
+	uint64_t maxBufferSize;
+	uint64_t minUniformBufferOffsetAlignment;
+	uint64_t minStorageBufferOffsetAlignment;
+	uint32_t maxBindsets;
+	uint64_t maxUniformBufferBindingSize;
+	uint64_t maxStorageBufferBindingSize;
+	uint32_t maxVertexBuffers;
+	uint32_t maxVertexAttributes;
+	uint32_t maxVertexBufferStride;
+	uint32_t maxColorAttachments;
+	uint32_t maxComputeSharedMemorySize;
+	uint32_t maxComputeWorkgroupCountX;
+	uint32_t maxComputeWorkgroupCountY;
+	uint32_t maxComputeWorkgroupCountZ;
+	uint32_t maxComputeWorkgroupInvocations;
+	uint32_t maxComputeWorkgroupLocalSizeX;
+	uint32_t maxComputeWorkgroupLocalSizeY;
+	uint32_t maxComputeWorkgroupLocalSizeZ;
+} Opal_DeviceLimits;
 
 typedef struct Opal_BufferView_t
 {
@@ -1222,6 +1237,7 @@ typedef Opal_Result (*PFN_opalDestroySurface)(Opal_Instance instance, Opal_Surfa
 typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
 
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
+typedef Opal_Result (*PFN_opalGetDeviceLimits)(Opal_Device device, Opal_DeviceLimits *limits);
 typedef Opal_Result (*PFN_opalGetDeviceQueue)(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 typedef Opal_Result (*PFN_opalGetAccelerationStructurePrebuildInfo)(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info);
 typedef Opal_Result (*PFN_opalGetShaderBindingTablePrebuildInfo)(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
@@ -1325,6 +1341,7 @@ typedef struct Opal_InstanceTable_t
 typedef struct Opal_DeviceTable_t
 {
 	PFN_opalGetDeviceInfo getDeviceInfo;
+	PFN_opalGetDeviceLimits getDeviceLimits;
 	PFN_opalGetDeviceQueue getDeviceQueue;
 	PFN_opalGetAccelerationStructurePrebuildInfo getAccelerationStructurePrebuildInfo;
 	PFN_opalGetShaderBindingTablePrebuildInfo getShaderBindingTablePrebuildInfo;
@@ -1432,6 +1449,7 @@ OPAL_APIENTRY Opal_Result opalDestroyInstance(Opal_Instance instance);
 OPAL_APIENTRY Opal_Result opalDestroySurface(Opal_Instance instance, Opal_Surface surface);
 
 OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);
+OPAL_APIENTRY Opal_Result opalGetDeviceLimits(Opal_Device device, Opal_DeviceLimits *limits);
 OPAL_APIENTRY Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 OPAL_APIENTRY Opal_Result opalGetAccelerationStructurePrebuildInfo(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info);
 OPAL_APIENTRY Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);

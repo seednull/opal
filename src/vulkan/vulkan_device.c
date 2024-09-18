@@ -166,6 +166,15 @@ static Opal_Result vulkan_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 	return vulkan_helperFillDeviceInfo(ptr->physical_device, info);
 }
 
+static Opal_Result vulkan_deviceGetLimits(Opal_Device this, Opal_DeviceLimits *limits)
+{
+	assert(this);
+	assert(limits);
+
+	Vulkan_Device *ptr = (Vulkan_Device *)this;
+	return vulkan_helperFillDeviceLimits(ptr->physical_device, limits);
+}
+
 static Opal_Result vulkan_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	assert(this);
@@ -3754,6 +3763,7 @@ static Opal_Result vulkan_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, 
 static Opal_DeviceTable device_vtbl =
 {
 	vulkan_deviceGetInfo,
+	vulkan_deviceGetLimits,
 	vulkan_deviceGetQueue,
 	vulkan_deviceGetAccelerationStructurePrebuildInfo,
 	vulkan_deviceGetShaderBindingTablePrebuildInfo,

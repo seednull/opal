@@ -15,7 +15,10 @@ typedef struct Null_Device_t
 {
 	Opal_DeviceTable *vtbl;
 	Opal_DeviceInfo info;
+	Opal_DeviceLimits limits;
 } Null_Device;
 
-Opal_Result null_deviceInitialize(Null_Device *device_ptr, Null_Instance *instance_ptr);
 Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info);
+Opal_Result null_fillDeviceLimits(Opal_DeviceLimits *limits);
+
+Opal_Result null_deviceInitialize(Null_Device *device_ptr, Null_Instance *instance_ptr);

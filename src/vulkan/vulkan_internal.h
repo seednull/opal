@@ -263,6 +263,7 @@ Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_
 
 Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info, VkDevice *device);
 Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
+Opal_Result vulkan_helperFillDeviceLimits(VkPhysicalDevice device, Opal_DeviceLimits *limits);
 
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);

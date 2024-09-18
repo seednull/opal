@@ -8,8 +8,8 @@
 Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info)
 {
 	assert(adapter);
-	assert(info);
 	assert(device);
+	assert(info);
 
 	LARGE_INTEGER umd = {0};
 	HRESULT hr = IDXGIAdapter1_CheckInterfaceSupport(adapter, &IID_IDXGIDevice, &umd);
@@ -32,7 +32,6 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *devic
 	info->geometry_shader = 1;
 	info->compute_pipeline = 1;
 	info->texture_compression_bc = 1;
-	info->max_buffer_alignment = 0xFFFF;
 	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
 	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
 	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
@@ -58,6 +57,40 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *devic
 	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS9, &meshlet_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS9));
 	if (SUCCEEDED(hr))
 		info->meshlet_pipeline = (meshlet_options.MeshShaderPipelineStatsSupported == TRUE);
+
+	return OPAL_SUCCESS;
+}
+
+Opal_Result directx12_fillDeviceLimits(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceLimits *limits)
+{
+	assert(adapter);
+	assert(device);
+	assert(limits);
+
+	memset(limits, 0, sizeof(Opal_DeviceLimits));
+
+	limits->maxTextureDimension1D = 16384;
+	limits->maxTextureDimension2D = 16384;
+	limits->maxTextureDimension3D = 2048;
+	limits->maxTextureArrayLayers = 2048;
+	// limits->maxBufferSize = ;
+	limits->minUniformBufferOffsetAlignment = 0xFFFF;
+	limits->minStorageBufferOffsetAlignment = 0xFFFF;
+	limits->maxBindsets = 32;
+	limits->maxUniformBufferBindingSize = 0xFFFFFFFF;
+	limits->maxStorageBufferBindingSize = 0xFFFFFFFF;
+	limits->maxVertexBuffers = 32;
+	limits->maxVertexAttributes = 64;
+	limits->maxVertexBufferStride = 0x00003FFF;
+	limits->maxColorAttachments = 8;
+	// limits->maxComputeSharedMemorySize = 0xFFFF;
+	limits->maxComputeWorkgroupCountX = 65535;
+	limits->maxComputeWorkgroupCountY = 65535;
+	limits->maxComputeWorkgroupCountZ = 65535;
+	limits->maxComputeWorkgroupInvocations = 1024;
+	limits->maxComputeWorkgroupLocalSizeX = 1024;
+	limits->maxComputeWorkgroupLocalSizeY = 1024;
+	limits->maxComputeWorkgroupLocalSizeZ = 64;
 
 	return OPAL_SUCCESS;
 }
