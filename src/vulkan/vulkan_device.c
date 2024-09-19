@@ -3172,7 +3172,7 @@ static Opal_Result vulkan_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuff
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
+static Opal_Result vulkan_deviceCmdDraw(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3182,7 +3182,21 @@ static Opal_Result vulkan_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_C
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	device_ptr->vk.vkCmdDrawIndexed(command_buffer_ptr->command_buffer, num_indices, num_instances, base_index, 0, base_instance);
+	device_ptr->vk.vkCmdDraw(command_buffer_ptr->command_buffer, num_vertices, num_instances, base_vertex, base_instance);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	device_ptr->vk.vkCmdDrawIndexed(command_buffer_ptr->command_buffer, num_indices, num_instances, base_index, vertex_offset, base_instance);
 	return OPAL_SUCCESS;
 }
 
@@ -3825,7 +3839,8 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdSetIndexBuffer,
 	vulkan_deviceCmdSetViewport,
 	vulkan_deviceCmdSetScissor,
-	vulkan_deviceCmdDrawIndexedInstanced,
+	vulkan_deviceCmdDraw,
+	vulkan_deviceCmdDrawIndexed,
 	vulkan_deviceCmdMeshletDispatch,
 	vulkan_deviceCmdComputeDispatch,
 	vulkan_deviceCmdRaytraceDispatch,

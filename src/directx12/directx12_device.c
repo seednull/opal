@@ -618,13 +618,26 @@ static Opal_Result directx12_deviceCmdSetScissor(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
+static Opal_Result directx12_deviceCmdDraw(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(num_vertices);
+	OPAL_UNUSED(num_instances);
+	OPAL_UNUSED(base_vertex);
+	OPAL_UNUSED(base_instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(num_indices);
-	OPAL_UNUSED(base_index);
 	OPAL_UNUSED(num_instances);
+	OPAL_UNUSED(base_index);
+	OPAL_UNUSED(vertex_offset);
 	OPAL_UNUSED(base_instance);
 
 	return OPAL_NOT_SUPPORTED;
@@ -867,7 +880,8 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdSetIndexBuffer,
 	directx12_deviceCmdSetViewport,
 	directx12_deviceCmdSetScissor,
-	directx12_deviceCmdDrawIndexedInstanced,
+	directx12_deviceCmdDraw,
+	directx12_deviceCmdDrawIndexed,
 	directx12_deviceCmdMeshletDispatch,
 	directx12_deviceCmdComputeDispatch,
 	directx12_deviceCmdRaytraceDispatch,

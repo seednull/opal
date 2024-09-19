@@ -992,16 +992,28 @@ Opal_Result opalCmdSetScissor(Opal_Device device, Opal_CommandBuffer command_buf
 	return ptr->vtbl->cmdSetScissor(device, command_buffer, x, y, width, height);
 }
 
-Opal_Result opalCmdDrawIndexedInstanced(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
+Opal_Result opalCmdDraw(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdDrawIndexedInstanced);
+	assert(ptr->vtbl->cmdDraw);
 
-	return ptr->vtbl->cmdDrawIndexedInstanced(device, command_buffer, num_indices, base_index, num_instances, base_instance);
+	return ptr->vtbl->cmdDraw(device, command_buffer, num_vertices, num_instances, base_vertex, base_instance);
+}
+
+Opal_Result opalCmdDrawIndexed(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdDrawIndexed);
+
+	return ptr->vtbl->cmdDrawIndexed(device, command_buffer, num_indices, num_instances, base_index, vertex_offset, base_instance);
 }
 
 Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)

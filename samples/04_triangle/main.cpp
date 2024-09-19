@@ -440,7 +440,7 @@ void Application::render()
 	result = opalCmdSetScissor(device, command_buffer, 0, 0, width, height);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdDrawIndexedInstanced(device, command_buffer, 3, 0, 1, 0);
+	result = opalCmdDrawIndexed(device, command_buffer, 3, 1, 0, 0, 0);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdEndGraphicsPass(device, command_buffer);

@@ -2195,7 +2195,7 @@ static Opal_Result webgpu_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuff
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance)
+static Opal_Result webgpu_deviceCmdDraw(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
 {
 	assert(this);
 	assert(command_buffer);
@@ -2209,7 +2209,25 @@ static Opal_Result webgpu_deviceCmdDrawIndexedInstanced(Opal_Device this, Opal_C
 
 	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
 
-	wgpuRenderPassEncoderDrawIndexed(webgpu_render_encoder, num_indices, num_instances, base_index, 0, base_instance);
+	wgpuRenderPassEncoderDraw(webgpu_render_encoder, num_vertices, num_instances, base_vertex, base_instance);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
+{
+	assert(this);
+	assert(command_buffer);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->render_pass_encoder);
+
+	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
+
+	wgpuRenderPassEncoderDrawIndexed(webgpu_render_encoder, num_indices, num_instances, base_index, vertex_offset, base_instance);
 	return OPAL_SUCCESS;
 }
 
@@ -2542,7 +2560,8 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdSetIndexBuffer,
 	webgpu_deviceCmdSetViewport,
 	webgpu_deviceCmdSetScissor,
-	webgpu_deviceCmdDrawIndexedInstanced,
+	webgpu_deviceCmdDraw,
+	webgpu_deviceCmdDrawIndexed,
 	webgpu_deviceCmdMeshletDispatch,
 	webgpu_deviceCmdComputeDispatch,
 	webgpu_deviceCmdRaytraceDispatch,

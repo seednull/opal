@@ -1314,7 +1314,8 @@ typedef Opal_Result (*PFN_opalCmdSetVertexBuffers)(Opal_Device device, Opal_Comm
 typedef Opal_Result (*PFN_opalCmdSetIndexBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format);
 typedef Opal_Result (*PFN_opalCmdSetViewport)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);
 typedef Opal_Result (*PFN_opalCmdSetScissor)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-typedef Opal_Result (*PFN_opalCmdDrawIndexedInstanced)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance);
+typedef Opal_Result (*PFN_opalCmdDraw)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance);
+typedef Opal_Result (*PFN_opalCmdDrawIndexed)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance);
 typedef Opal_Result (*PFN_opalCmdMeshletDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
 typedef Opal_Result (*PFN_opalCmdComputeDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
 typedef Opal_Result (*PFN_opalCmdRaytraceDispatch)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth);
@@ -1417,7 +1418,8 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCmdSetIndexBuffer cmdSetIndexBuffer;
 	PFN_opalCmdSetViewport cmdSetViewport;
 	PFN_opalCmdSetScissor cmdSetScissor;
-	PFN_opalCmdDrawIndexedInstanced cmdDrawIndexedInstanced;
+	PFN_opalCmdDraw cmdDraw;
+	PFN_opalCmdDrawIndexed cmdDrawIndexed;
 	PFN_opalCmdMeshletDispatch cmdMeshletDispatch;
 	PFN_opalCmdComputeDispatch cmdComputeDispatch;
 	PFN_opalCmdRaytraceDispatch cmdRaytraceDispatch;
@@ -1524,7 +1526,8 @@ OPAL_APIENTRY Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_Comma
 OPAL_APIENTRY Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format);
 OPAL_APIENTRY Opal_Result opalCmdSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);
 OPAL_APIENTRY Opal_Result opalCmdSetScissor(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-OPAL_APIENTRY Opal_Result opalCmdDrawIndexedInstanced(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t base_index, uint32_t num_instances, uint32_t base_instance);
+OPAL_APIENTRY Opal_Result opalCmdDraw(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance);
+OPAL_APIENTRY Opal_Result opalCmdDrawIndexed(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance);
 OPAL_APIENTRY Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
 OPAL_APIENTRY Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z);
 OPAL_APIENTRY Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth);
