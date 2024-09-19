@@ -706,9 +706,11 @@ typedef enum Opal_BindingType_t
 } Opal_BindingType;
 
 typedef enum Opal_PrimitiveType_t {
-	OPAL_PRIMITIVE_TYPE_POINT = 0,
-	OPAL_PRIMITIVE_TYPE_LINE,
-	OPAL_PRIMITIVE_TYPE_TRIANGLE,
+	OPAL_PRIMITIVE_TYPE_POINT_LIST = 0,
+	OPAL_PRIMITIVE_TYPE_LINE_LIST,
+	OPAL_PRIMITIVE_TYPE_LINE_STRIP,
+	OPAL_PRIMITIVE_TYPE_TRIANGLE_LIST,
+	OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP,
 	OPAL_PRIMITIVE_TYPE_TRIANGLE_PATCH,
 	OPAL_PRIMITIVE_TYPE_QUAD_PATCH,
 
@@ -1124,6 +1126,7 @@ typedef struct Opal_GraphicsPipelineDesc_t
 	uint32_t num_vertex_streams;
 	const Opal_VertexStream *vertex_streams;
 	Opal_PrimitiveType primitive_type;
+	Opal_IndexFormat index_format;
 
 	Opal_CullMode cull_mode;
 	Opal_FrontFace front_face;

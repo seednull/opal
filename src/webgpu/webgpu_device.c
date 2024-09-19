@@ -787,6 +787,9 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	pipeline_info.primitive.frontFace = webgpu_helperToFrontFace(desc->front_face);
 	pipeline_info.primitive.cullMode = webgpu_helperToCullMode(desc->cull_mode);
 
+	if (desc->primitive_type == OPAL_PRIMITIVE_TYPE_LINE_STRIP || desc->primitive_type == OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP)
+		pipeline_info.primitive.stripIndexFormat = webgpu_helperToIndexFormat(desc->index_format);
+
 	pipeline_info.multisample.count = webgpu_helperToSampleCount(desc->rasterization_samples);
 	pipeline_info.multisample.mask = UINT32_MAX;
 

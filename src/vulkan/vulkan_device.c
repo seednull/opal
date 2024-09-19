@@ -1035,6 +1035,9 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	input_assembly.topology = vulkan_helperToPrimitiveTopology(desc->primitive_type);
 
+	if (desc->primitive_type == OPAL_PRIMITIVE_TYPE_LINE_STRIP || desc->primitive_type == OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP)
+		input_assembly.primitiveRestartEnable = VK_TRUE;
+
 	// viewport state
 	VkViewport default_viewport = {0};
 	VkRect2D default_scissor = {0};

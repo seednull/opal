@@ -371,7 +371,9 @@ WGPUPrimitiveTopology webgpu_helperToPrimitiveTopology(Opal_PrimitiveType type)
 	{
 		WGPUPrimitiveTopology_PointList,
 		WGPUPrimitiveTopology_LineList,
+		WGPUPrimitiveTopology_LineStrip,
 		WGPUPrimitiveTopology_TriangleList,
+		WGPUPrimitiveTopology_TriangleStrip,
 		WGPUPrimitiveTopology_Undefined,
 		WGPUPrimitiveTopology_Undefined,
 	};
