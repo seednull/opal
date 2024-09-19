@@ -191,6 +191,4 @@ WGPUStoreOp webgpu_helperToStoreOp(Opal_StoreOp op);
 WGPUIndexFormat webgpu_helperToIndexFormat(Opal_IndexFormat format);
 
 Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info);
-Opal_Result webgpu_fillDeviceLimits(WGPUAdapter adapter, Opal_DeviceLimits *limits);
-
 Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *instance_ptr, WGPUAdapter adapter, WGPUDevice device, WGPUQueue queue);

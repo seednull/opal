@@ -263,7 +263,8 @@ Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_
 
 Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info, VkDevice *device);
 Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);
-Opal_Result vulkan_helperFillDeviceLimits(VkPhysicalDevice device, Opal_DeviceLimits *limits);
+Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info);
+Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
@@ -317,9 +318,6 @@ VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkI
 
 const char *vulkan_platformGetSurfaceExtension();
 Opal_Result vulkan_platformCreateSurface(VkInstance instance, void *handle, VkSurfaceKHR *surface);
-
-Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info);
-Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperties *memory_properties, uint32_t memory_type_mask, uint32_t required_flags, uint32_t preferred_flags, uint32_t not_preferred_flags, uint32_t *memory_type);
 
 Opal_Result vulkan_allocatorInitialize(Vulkan_Device *device, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps, uint32_t buffer_image_granularity);
 Opal_Result vulkan_allocatorShutdown(Vulkan_Device *device);

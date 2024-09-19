@@ -44,11 +44,11 @@ uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint)
 		default: score += device_type_default_scores[info->device_type]; break;
 	}
 
-	score += info->tessellation_shader;
-	score += info->geometry_shader;
-	score += info->compute_pipeline * 10;
-	score += info->meshlet_pipeline * 10;
-	score += info->raytrace_pipeline * 10;
+	score += info->features.tessellation_shader;
+	score += info->features.geometry_shader;
+	score += info->features.compute_pipeline * 10;
+	score += info->features.meshlet_pipeline * 10;
+	score += info->features.raytrace_pipeline * 10;
 
 	return score;
 }

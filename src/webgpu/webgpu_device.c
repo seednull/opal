@@ -218,15 +218,6 @@ static Opal_Result webgpu_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 	return webgpu_fillDeviceInfo(device_ptr->adapter, info);
 }
 
-static Opal_Result webgpu_deviceGetLimits(Opal_Device this, Opal_DeviceLimits *limits)
-{
-	assert(this);
-	assert(limits);
-
-	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
-	return webgpu_fillDeviceLimits(device_ptr->adapter, limits);
-}
-
 static Opal_Result webgpu_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	assert(this);
@@ -2480,7 +2471,6 @@ static Opal_Result webgpu_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, 
 static Opal_DeviceTable device_vtbl =
 {
 	webgpu_deviceGetInfo,
-	webgpu_deviceGetLimits,
 	webgpu_deviceGetQueue,
 	webgpu_deviceGetAccelerationStructurePrebuildInfo,
 	webgpu_deviceGetShaderBindingTablePrebuildInfo,

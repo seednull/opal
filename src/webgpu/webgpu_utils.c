@@ -633,8 +633,12 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	WGPUAdapterInfo adapter_info = {0};
 	wgpuAdapterGetInfo(adapter, &adapter_info);
 
+	WGPUSupportedLimits adapter_limits = {0};
+	wgpuAdapterGetLimits(adapter, &adapter_limits);
+
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
+	// fill basic info
 	if (adapter_info.description)
 		strncpy(info->name, adapter_info.description, 256);
 
@@ -650,47 +654,43 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 		default: info->device_type = OPAL_DEVICE_TYPE_UNKNOWN; break;
 	}
 
-	info->compute_pipeline = 1;
-	info->texture_compression_etc2 = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionETC2) != 0;
-	info->texture_compression_astc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionASTC) != 0;
-	info->texture_compression_bc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionBC) != 0;
-	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
+	// fill features
+	info->features.compute_pipeline = 1;
+	info->features.texture_compression_etc2 = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionETC2) != 0;
+	info->features.texture_compression_astc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionASTC) != 0;
+	info->features.texture_compression_bc = wgpuAdapterHasFeature(adapter, WGPUFeatureName_TextureCompressionBC) != 0;
+	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
 
-	return OPAL_SUCCESS;
-}
+	// fill limits
+	info->limits.maxTextureDimension1D = adapter_limits.limits.maxTextureDimension1D;
+	info->limits.maxTextureDimension2D = adapter_limits.limits.maxTextureDimension2D;
+	info->limits.maxTextureDimension3D = adapter_limits.limits.maxTextureDimension3D;
+	info->limits.maxTextureArrayLayers = adapter_limits.limits.maxTextureArrayLayers;
 
-Opal_Result webgpu_fillDeviceLimits(WGPUAdapter adapter, Opal_DeviceLimits *limits)
-{
-	assert(adapter);
-	assert(limits);
+	info->limits.maxBufferSize = adapter_limits.limits.maxBufferSize;
+	info->limits.minUniformBufferOffsetAlignment = adapter_limits.limits.minUniformBufferOffsetAlignment;
+	info->limits.minStorageBufferOffsetAlignment = adapter_limits.limits.minStorageBufferOffsetAlignment;
 
-	WGPUSupportedLimits adapter_limits = {0};
-	wgpuAdapterGetLimits(adapter, &adapter_limits);
+	info->limits.maxBindsets = adapter_limits.limits.maxBindGroups;
+	info->limits.maxUniformBufferBindingSize = adapter_limits.limits.maxUniformBufferBindingSize;
+	info->limits.maxStorageBufferBindingSize = adapter_limits.limits.maxStorageBufferBindingSize;
 
-	memset(limits, 0, sizeof(Opal_DeviceLimits));
+	info->limits.maxVertexBuffers = adapter_limits.limits.maxVertexBuffers;
+	info->limits.maxVertexAttributes = adapter_limits.limits.maxVertexAttributes;
+	info->limits.maxVertexBufferStride = adapter_limits.limits.maxVertexBufferArrayStride;
+	info->limits.maxColorAttachments = adapter_limits.limits.maxColorAttachments;
 
-	limits->maxTextureDimension1D = adapter_limits.limits.maxTextureDimension1D;
-	limits->maxTextureDimension2D = adapter_limits.limits.maxTextureDimension2D;
-	limits->maxTextureDimension3D = adapter_limits.limits.maxTextureDimension3D;
-	limits->maxTextureArrayLayers = adapter_limits.limits.maxTextureArrayLayers;
-	limits->maxBufferSize = adapter_limits.limits.maxBufferSize;
-	limits->minUniformBufferOffsetAlignment = adapter_limits.limits.minUniformBufferOffsetAlignment;
-	limits->minStorageBufferOffsetAlignment = adapter_limits.limits.minStorageBufferOffsetAlignment;
-	limits->maxBindsets = adapter_limits.limits.maxBindGroups;
-	limits->maxUniformBufferBindingSize = adapter_limits.limits.maxUniformBufferBindingSize;
-	limits->maxStorageBufferBindingSize = adapter_limits.limits.maxStorageBufferBindingSize;
-	limits->maxVertexBuffers = adapter_limits.limits.maxVertexBuffers;
-	limits->maxVertexAttributes = adapter_limits.limits.maxVertexAttributes;
-	limits->maxVertexBufferStride = adapter_limits.limits.maxVertexBufferArrayStride;
-	limits->maxColorAttachments = adapter_limits.limits.maxColorAttachments;
-	limits->maxComputeSharedMemorySize = adapter_limits.limits.maxComputeWorkgroupStorageSize;
-	limits->maxComputeWorkgroupCountX = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
-	limits->maxComputeWorkgroupCountY = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
-	limits->maxComputeWorkgroupCountZ = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
-	limits->maxComputeWorkgroupInvocations = adapter_limits.limits.maxComputeInvocationsPerWorkgroup;
-	limits->maxComputeWorkgroupLocalSizeX = adapter_limits.limits.maxComputeWorkgroupSizeX;
-	limits->maxComputeWorkgroupLocalSizeY = adapter_limits.limits.maxComputeWorkgroupSizeY;
-	limits->maxComputeWorkgroupLocalSizeZ = adapter_limits.limits.maxComputeWorkgroupSizeZ;
+	info->limits.maxComputeSharedMemorySize = adapter_limits.limits.maxComputeWorkgroupStorageSize;
+
+	info->limits.maxComputeWorkgroupCountX = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
+	info->limits.maxComputeWorkgroupCountY = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
+	info->limits.maxComputeWorkgroupCountZ = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
+
+	info->limits.maxComputeWorkgroupInvocations = adapter_limits.limits.maxComputeInvocationsPerWorkgroup;
+
+	info->limits.maxComputeWorkgroupLocalSizeX = adapter_limits.limits.maxComputeWorkgroupSizeX;
+	info->limits.maxComputeWorkgroupLocalSizeY = adapter_limits.limits.maxComputeWorkgroupSizeY;
+	info->limits.maxComputeWorkgroupLocalSizeZ = adapter_limits.limits.maxComputeWorkgroupSizeZ;
 
 	return OPAL_SUCCESS;
 }

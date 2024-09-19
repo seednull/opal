@@ -22,17 +22,6 @@ static Opal_Result null_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result null_deviceGetLimits(Opal_Device this, Opal_DeviceLimits *limits)
-{
-	assert(this);
-	assert(limits);
-
-	Null_Device *ptr = (Null_Device *)this;
-
-	memcpy(limits, &ptr->limits, sizeof(Opal_DeviceLimits));
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result null_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
 {
 	OPAL_UNUSED(this);
@@ -810,7 +799,6 @@ static Opal_Result null_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Op
 static Opal_DeviceTable device_vtbl =
 {
 	null_deviceGetInfo,
-	null_deviceGetLimits,
 	null_deviceGetQueue,
 	null_deviceGetAccelerationStructurePrebuildInfo,
 	null_deviceGetShaderBindingTablePrebuildInfo,
@@ -912,31 +900,22 @@ Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info)
 	memcpy(info->name, device_name, sizeof(char) * 12);
 
 	info->device_type = OPAL_DEVICE_TYPE_UNKNOWN;
-	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
+	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
 
-	return OPAL_SUCCESS;
-}
-
-Opal_Result null_fillDeviceLimits(Opal_DeviceLimits *limits)
-{
-	assert(limits);
-
-	memset(limits, 0, sizeof(Opal_DeviceLimits));
-
-	limits->maxTextureDimension1D = 16384;
-	limits->maxTextureDimension2D = 16384;
-	limits->maxTextureDimension3D = 2048;
-	limits->maxTextureArrayLayers = 2048;
-	limits->maxBufferSize = 0xFFFFFFFF;
-	limits->minUniformBufferOffsetAlignment = 16;
-	limits->minStorageBufferOffsetAlignment = 4;
-	limits->maxBindsets = 8;
-	limits->maxUniformBufferBindingSize = 0x0000FFFF;
-	limits->maxStorageBufferBindingSize = 0xFFFFFFFF;
-	limits->maxVertexBuffers = 32;
-	limits->maxVertexAttributes = 64;
-	limits->maxVertexBufferStride = 0x00003FFF;
-	limits->maxColorAttachments = 8;
+	info->limits.maxTextureDimension1D = 16384;
+	info->limits.maxTextureDimension2D = 16384;
+	info->limits.maxTextureDimension3D = 2048;
+	info->limits.maxTextureArrayLayers = 2048;
+	info->limits.maxBufferSize = 0xFFFFFFFF;
+	info->limits.minUniformBufferOffsetAlignment = 16;
+	info->limits.minStorageBufferOffsetAlignment = 4;
+	info->limits.maxBindsets = 8;
+	info->limits.maxUniformBufferBindingSize = 0x0000FFFF;
+	info->limits.maxStorageBufferBindingSize = 0xFFFFFFFF;
+	info->limits.maxVertexBuffers = 32;
+	info->limits.maxVertexAttributes = 64;
+	info->limits.maxVertexBufferStride = 0x00003FFF;
+	info->limits.maxColorAttachments = 8;
 
 	return OPAL_SUCCESS;
 }
@@ -952,8 +931,5 @@ Opal_Result null_deviceInitialize(Null_Device *device_ptr, Null_Instance *instan
 	device_ptr->vtbl = &device_vtbl;
 
 	// data
-	null_fillDeviceInfo(&device_ptr->info);
-	null_fillDeviceLimits(&device_ptr->limits);
-
-	return OPAL_SUCCESS;
+	return null_fillDeviceInfo(&device_ptr->info);
 }

@@ -21,6 +21,4 @@ typedef struct DirectX12_Device_t
 } DirectX12_Device;
 
 Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info);
-Opal_Result directx12_fillDeviceLimits(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceLimits *limits);
-
 Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_Instance *instance_ptr, IDXGIAdapter1 *adapter, ID3D12Device *device);

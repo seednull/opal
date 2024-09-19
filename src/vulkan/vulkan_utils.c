@@ -1202,9 +1202,17 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	assert(device != VK_NULL_HANDLE);
 	assert(info);
 
-	// get features
-	VkPhysicalDeviceProperties properties = {0};
+	// get properties
+	VkPhysicalDeviceMaintenance3Properties maintenance = {0};
+	maintenance.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
 
+	VkPhysicalDeviceProperties2 properties = {0};
+	properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	properties.pNext = &maintenance;
+
+	vkGetPhysicalDeviceProperties2(device, &properties);
+
+	// get features
 	VkPhysicalDeviceFeatures2 features = {0};
 	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
@@ -1221,7 +1229,6 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	raytracing_features.pNext = &mesh_features;
 	features.pNext = &raytracing_features;
 
-	vkGetPhysicalDeviceProperties(device, &properties);
 	vkGetPhysicalDeviceFeatures2(device, &features);
 
 	// check available device extensions
@@ -1258,11 +1265,12 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 
 	free(device_extensions);
 
+	// fill basic info
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
-	strncpy(info->name, properties.deviceName, 256);
+	strncpy(info->name, properties.properties.deviceName, 256);
 
-	switch (properties.deviceType)
+	switch (properties.properties.deviceType)
 	{
 		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: info->device_type = OPAL_DEVICE_TYPE_DISCRETE; break;
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: info->device_type = OPAL_DEVICE_TYPE_INTEGRATED; break;
@@ -1270,66 +1278,55 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 		default: info->device_type = OPAL_DEVICE_TYPE_UNKNOWN; break;
 	}
 
-	info->driver_version = properties.driverVersion;
-	info->vendor_id = properties.vendorID;
-	info->device_id = properties.deviceID;
-	info->tessellation_shader = (features.features.tessellationShader == VK_TRUE);
-	info->geometry_shader = (features.features.geometryShader == VK_TRUE);
-	info->compute_pipeline = 1;
-	info->meshlet_pipeline = (has_meshlet == VK_TRUE);
-	info->raytrace_pipeline = has_raytracing && has_acceleration_structure;
-	info->texture_compression_etc2 = (features.features.textureCompressionETC2 == VK_TRUE);
-	info->texture_compression_astc = (features.features.textureCompressionASTC_LDR == VK_TRUE);
-	info->texture_compression_bc = (features.features.textureCompressionBC == VK_TRUE);
+	info->driver_version = properties.properties.driverVersion;
+	info->vendor_id = properties.properties.vendorID;
+	info->device_id = properties.properties.deviceID;
 
+	// fill features
 	Vulkan_DeviceEnginesInfo device_engines_info = {0};
 	vulkan_helperFillDeviceEnginesInfo(device, &device_engines_info);
 
-	memcpy(info->queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+	memcpy(info->features.queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
 
-	return OPAL_SUCCESS;
-}
+	info->features.tessellation_shader = (features.features.tessellationShader == VK_TRUE);
+	info->features.geometry_shader = (features.features.geometryShader == VK_TRUE);
+	info->features.compute_pipeline = 1;
+	info->features.meshlet_pipeline = (has_meshlet == VK_TRUE);
+	info->features.raytrace_pipeline = has_raytracing && has_acceleration_structure;
+	info->features.texture_compression_etc2 = (features.features.textureCompressionETC2 == VK_TRUE);
+	info->features.texture_compression_astc = (features.features.textureCompressionASTC_LDR == VK_TRUE);
+	info->features.texture_compression_bc = (features.features.textureCompressionBC == VK_TRUE);
 
-Opal_Result vulkan_helperFillDeviceLimits(VkPhysicalDevice device, Opal_DeviceLimits *limits)
-{
-	assert(device != VK_NULL_HANDLE);
-	assert(limits);
+	// fill limits
+	info->limits.maxTextureDimension1D = properties.properties.limits.maxImageDimension1D;
+	info->limits.maxTextureDimension2D = properties.properties.limits.maxImageDimension2D;
+	info->limits.maxTextureDimension3D = properties.properties.limits.maxImageDimension3D;
+	info->limits.maxTextureArrayLayers = properties.properties.limits.maxImageArrayLayers;
 
-	VkPhysicalDeviceMaintenance3Properties maintenance = {0};
-	maintenance.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+	info->limits.maxBufferSize = maintenance.maxMemoryAllocationSize;
+	info->limits.minUniformBufferOffsetAlignment = properties.properties.limits.minUniformBufferOffsetAlignment;
+	info->limits.minStorageBufferOffsetAlignment = properties.properties.limits.minStorageBufferOffsetAlignment;
 
-	VkPhysicalDeviceProperties2 properties = {0};
-	properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-	properties.pNext = &maintenance;
+	info->limits.maxBindsets = properties.properties.limits.maxBoundDescriptorSets;
+	info->limits.maxUniformBufferBindingSize = properties.properties.limits.maxUniformBufferRange;
+	info->limits.maxStorageBufferBindingSize = properties.properties.limits.maxStorageBufferRange;
 
-	vkGetPhysicalDeviceProperties2(device, &properties);
+	info->limits.maxVertexBuffers = properties.properties.limits.maxVertexInputBindings;
+	info->limits.maxVertexAttributes = properties.properties.limits.maxVertexInputAttributes;
+	info->limits.maxVertexBufferStride = properties.properties.limits.maxVertexInputBindingStride;
+	info->limits.maxColorAttachments = properties.properties.limits.maxFragmentOutputAttachments;
 
-	memset(limits, 0, sizeof(Opal_DeviceLimits));
+	info->limits.maxComputeSharedMemorySize = properties.properties.limits.maxComputeSharedMemorySize;
 
-	const VkPhysicalDeviceLimits *vulkan_limits = &properties.properties.limits;
+	info->limits.maxComputeWorkgroupCountX = properties.properties.limits.maxComputeWorkGroupCount[0];
+	info->limits.maxComputeWorkgroupCountY = properties.properties.limits.maxComputeWorkGroupCount[1];
+	info->limits.maxComputeWorkgroupCountZ = properties.properties.limits.maxComputeWorkGroupCount[2];
 
-	limits->maxTextureDimension1D = vulkan_limits->maxImageDimension1D;
-	limits->maxTextureDimension2D = vulkan_limits->maxImageDimension2D;
-	limits->maxTextureDimension3D = vulkan_limits->maxImageDimension3D;
-	limits->maxTextureArrayLayers = vulkan_limits->maxImageArrayLayers;
-	limits->maxBufferSize = maintenance.maxMemoryAllocationSize;
-	limits->minUniformBufferOffsetAlignment = vulkan_limits->minUniformBufferOffsetAlignment;
-	limits->minStorageBufferOffsetAlignment = vulkan_limits->minStorageBufferOffsetAlignment;
-	limits->maxBindsets = vulkan_limits->maxBoundDescriptorSets;
-	limits->maxUniformBufferBindingSize = vulkan_limits->maxUniformBufferRange;
-	limits->maxStorageBufferBindingSize = vulkan_limits->maxStorageBufferRange;
-	limits->maxVertexBuffers = vulkan_limits->maxVertexInputBindings;
-	limits->maxVertexAttributes = vulkan_limits->maxVertexInputAttributes;
-	limits->maxVertexBufferStride = vulkan_limits->maxVertexInputBindingStride;
-	limits->maxColorAttachments = vulkan_limits->maxFragmentOutputAttachments;
-	limits->maxComputeSharedMemorySize = vulkan_limits->maxComputeSharedMemorySize;
-	limits->maxComputeWorkgroupCountX = vulkan_limits->maxComputeWorkGroupCount[0];
-	limits->maxComputeWorkgroupCountY = vulkan_limits->maxComputeWorkGroupCount[1];
-	limits->maxComputeWorkgroupCountZ = vulkan_limits->maxComputeWorkGroupCount[2];
-	limits->maxComputeWorkgroupInvocations = vulkan_limits->maxComputeWorkGroupInvocations;
-	limits->maxComputeWorkgroupLocalSizeX = vulkan_limits->maxComputeWorkGroupSize[0];
-	limits->maxComputeWorkgroupLocalSizeY = vulkan_limits->maxComputeWorkGroupSize[1];
-	limits->maxComputeWorkgroupLocalSizeZ = vulkan_limits->maxComputeWorkGroupSize[2];
+	info->limits.maxComputeWorkgroupInvocations = properties.properties.limits.maxComputeWorkGroupInvocations;
+
+	info->limits.maxComputeWorkgroupLocalSizeX = properties.properties.limits.maxComputeWorkGroupSize[0];
+	info->limits.maxComputeWorkgroupLocalSizeY = properties.properties.limits.maxComputeWorkGroupSize[1];
+	info->limits.maxComputeWorkgroupLocalSizeZ = properties.properties.limits.maxComputeWorkGroupSize[2];
 
 	return OPAL_SUCCESS;
 }
