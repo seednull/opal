@@ -8,43 +8,6 @@
 
 /*
  */
-typedef struct WebGPU_BufferMapRequest_t
-{
-	uint32_t finished;
-	uint32_t status;
-} WebGPU_BufferMapRequest;
-
-static void webgpu_bufferMapCallback(WGPUBufferMapAsyncStatus status, void *user_data)
-{
-	WebGPU_BufferMapRequest *request = (WebGPU_BufferMapRequest*)user_data;
-
-	request->status = status;
-	request->finished = 1;
-}
-
-static Opal_Result webgpu_mapBufferSync(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size, void **result)
-{
-	assert(result);
-	WebGPU_BufferMapRequest request = {0};
-
-	wgpuBufferMapAsync(buffer, mode, offset, size, webgpu_bufferMapCallback, &request);
-
-	while (!request.finished)
-		emscripten_sleep(0);
-
-	if (request.status != WGPUBufferMapAsyncStatus_Success)
-		return OPAL_WEBGPU_ERROR;
-
-	void *mapped_ptr = wgpuBufferGetMappedRange(buffer, offset, size);
-	if (mapped_ptr == NULL)
-		return OPAL_WEBGPU_ERROR;
-
-	*result = mapped_ptr;
-	return OPAL_SUCCESS;
-}
-
-/*
- */
 typedef struct WebGPU_QueueSubmitRequest_t
 {
 	Opal_Device device;
@@ -1613,10 +1576,17 @@ static Opal_Result webgpu_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, 
 
 	if (buffer_ptr->map_count == 0)
 	{
-		Opal_Result result = webgpu_mapBufferSync(buffer_ptr->buffer, buffer_ptr->map_flags, 0, (size_t)buffer_ptr->size, &buffer_ptr->mapped_ptr);
+		wgpuBufferMapAsync(buffer_ptr->buffer, buffer_ptr->map_flags, 0, (size_t)buffer_ptr->size, NULL, NULL);
 
-		if (result != OPAL_SUCCESS)
-			return result;
+		while (wgpuBufferGetMapState(buffer_ptr->buffer) == WGPUBufferMapState_Pending)
+			emscripten_sleep(0);
+
+		if (wgpuBufferGetMapState(buffer_ptr->buffer) != WGPUBufferMapState_Mapped)
+			return OPAL_WEBGPU_ERROR;
+
+		buffer_ptr->mapped_ptr = wgpuBufferGetMappedRange(buffer_ptr->buffer, 0, (size_t)buffer_ptr->size);
+		if (buffer_ptr->mapped_ptr == NULL)
+			return OPAL_WEBGPU_ERROR;
 	}
 
 	assert(buffer_ptr->mapped_ptr);
