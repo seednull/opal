@@ -148,7 +148,8 @@ typedef struct WebGPU_Swapchain_t
 {
 	WGPUSwapChain swapchain;
 	Opal_TextureView current_texture_view;
-	uint32_t current_semaphore;
+	uint64_t semaphore_value;
+	uint64_t wait_value;
 } WebGPU_Swapchain;
 
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type);
