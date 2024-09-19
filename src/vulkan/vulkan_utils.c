@@ -201,6 +201,8 @@ VkFormat vulkan_helperToVertexFormat(Opal_VertexFormat format)
 {
 	static VkFormat vk_formats[] =
 	{
+		VK_FORMAT_UNDEFINED,
+
 		// 8-bit formats
 		VK_FORMAT_R8G8_UNORM, VK_FORMAT_R8G8_SNORM, VK_FORMAT_R8G8_UINT,VK_FORMAT_R8G8_SINT,
 		VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SNORM, VK_FORMAT_R8G8B8A8_UINT, VK_FORMAT_R8G8B8A8_SINT,
@@ -226,6 +228,7 @@ VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format)
 {
 	static VkIndexType vk_index_types[] =
 	{
+		VK_INDEX_TYPE_NONE_KHR,
 		VK_INDEX_TYPE_UINT16,
 		VK_INDEX_TYPE_UINT32,
 	};

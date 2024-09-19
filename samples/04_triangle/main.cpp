@@ -274,7 +274,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	pipeline_desc.num_vertex_streams = 1;
 	pipeline_desc.vertex_streams = &vertex_stream;
 	pipeline_desc.primitive_type = OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP;
-	pipeline_desc.index_format = OPAL_INDEX_FORMAT_UINT32;
+	pipeline_desc.strip_index_format = OPAL_INDEX_FORMAT_UINT32;
 
 	pipeline_desc.cull_mode = OPAL_CULL_MODE_NONE;
 	pipeline_desc.front_face = OPAL_FRONT_FACE_COUNTER_CLOCKWISE;

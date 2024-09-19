@@ -485,7 +485,9 @@ typedef enum Opal_TextureFormat_t
 
 typedef enum Opal_VertexFormat_t
 {
-	OPAL_VERTEX_FORMAT_RG8_UNORM = 0,
+	OPAL_VERTEX_FORMAT_UNDEFINED = 0,
+
+	OPAL_VERTEX_FORMAT_RG8_UNORM,
 	OPAL_VERTEX_FORMAT_RG8_SNORM,
 	OPAL_VERTEX_FORMAT_RG8_UINT,
 	OPAL_VERTEX_FORMAT_RG8_SINT,
@@ -531,7 +533,9 @@ typedef enum Opal_VertexFormat_t
 
 typedef enum Opal_IndexFormat_t
 {
-	OPAL_INDEX_FORMAT_UINT16 = 0,
+	OPAL_INDEX_FORMAT_UNDEFINED = 0,
+
+	OPAL_INDEX_FORMAT_UINT16,
 	OPAL_INDEX_FORMAT_UINT32,
 
 	OPAL_INDEX_FORMAT_ENUM_MAX,
@@ -1126,7 +1130,7 @@ typedef struct Opal_GraphicsPipelineDesc_t
 	uint32_t num_vertex_streams;
 	const Opal_VertexStream *vertex_streams;
 	Opal_PrimitiveType primitive_type;
-	Opal_IndexFormat index_format;
+	Opal_IndexFormat strip_index_format;
 
 	Opal_CullMode cull_mode;
 	Opal_FrontFace front_face;

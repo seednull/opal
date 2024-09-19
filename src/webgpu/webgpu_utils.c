@@ -277,6 +277,8 @@ WGPUVertexFormat webgpu_helperToVertexFormat(Opal_VertexFormat format)
 {
 	static WGPUVertexFormat wgpu_formats[] =
 	{
+		WGPUVertexFormat_Undefined,
+
 		// 8-bit formats
 		WGPUVertexFormat_Unorm8x2, WGPUVertexFormat_Snorm8x2, WGPUVertexFormat_Uint8x2, WGPUVertexFormat_Sint8x2,
 		WGPUVertexFormat_Unorm8x4, WGPUVertexFormat_Snorm8x4, WGPUVertexFormat_Uint8x4, WGPUVertexFormat_Sint8x4,
@@ -618,6 +620,7 @@ WGPUIndexFormat webgpu_helperToIndexFormat(Opal_IndexFormat format)
 {
 	static WGPUIndexFormat wgpu_index_formats[] =
 	{
+		WGPUIndexFormat_Undefined,
 		WGPUIndexFormat_Uint16,
 		WGPUIndexFormat_Uint32,
 	};
