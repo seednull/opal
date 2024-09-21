@@ -714,6 +714,18 @@ Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer)
 	return ptr->vtbl->unmapBuffer(device, buffer);
 }
 
+Opal_Result opalWriteBuffer(Opal_Device device, Opal_Queue queue, Opal_BufferView buffer, const void *data, uint64_t size)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->writeBuffer);
+
+	return ptr->vtbl->writeBuffer(device, queue, buffer, data, size);
+}
+
 Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
 {
 	if (device == OPAL_NULL_HANDLE)

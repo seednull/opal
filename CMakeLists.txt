@@ -43,9 +43,6 @@ endif()
 if (EMSCRIPTEN)
 	set(OPAL_PLATFORM emscripten)
 	set(OPAL_ABI wasm)
-endif()
-
-if (EMSCRIPTEN)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 

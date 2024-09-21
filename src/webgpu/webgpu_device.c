@@ -66,6 +66,12 @@ static void webgpu_deviceOnSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus sta
 	}
 }
 
+static void webgpu_deviceOnBufferMapCallback(WGPUBufferMapAsyncStatus status, void *userdata)
+{
+
+}
+
+
 /*
  */
 static void webgpu_destroyQueue(WebGPU_Queue *queue_ptr)
@@ -245,19 +251,6 @@ static Opal_Result webgpu_deviceCreateBuffer(Opal_Device this, const Opal_Buffer
 			OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE |
 			OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE;
 
-		if ((desc->usage & unsupported_usages) != 0)
-			return OPAL_BUFFER_USAGE_NOT_SUPPORTED;
-	}
-
-	if (desc->memory_type != OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL)
-	{
-		Opal_BufferUsageFlags unsupported_usages = 
-			OPAL_BUFFER_USAGE_VERTEX |
-			OPAL_BUFFER_USAGE_INDEX |
-			OPAL_BUFFER_USAGE_UNIFORM |
-			OPAL_BUFFER_USAGE_STORAGE |
-			OPAL_BUFFER_USAGE_INDIRECT;
-		
 		if ((desc->usage & unsupported_usages) != 0)
 			return OPAL_BUFFER_USAGE_NOT_SUPPORTED;
 	}
@@ -1572,11 +1565,11 @@ static Opal_Result webgpu_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, 
 	assert(buffer_ptr);
 
 	if (buffer_ptr->map_flags == 0)
-		return OPAL_BUFFER_UNMAPPABLE;
+		return OPAL_BUFFER_NONMAPPABLE;
 
 	if (buffer_ptr->map_count == 0)
 	{
-		wgpuBufferMapAsync(buffer_ptr->buffer, buffer_ptr->map_flags, 0, (size_t)buffer_ptr->size, NULL, NULL);
+		wgpuBufferMapAsync(buffer_ptr->buffer, buffer_ptr->map_flags, 0, (size_t)buffer_ptr->size, webgpu_deviceOnBufferMapCallback, NULL);
 
 		while (wgpuBufferGetMapState(buffer_ptr->buffer) == WGPUBufferMapState_Pending)
 			emscripten_sleep(0);
@@ -1607,7 +1600,7 @@ static Opal_Result webgpu_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer
 	assert(buffer_ptr);
 
 	if (buffer_ptr->map_flags == 0)
-		return OPAL_BUFFER_UNMAPPABLE;
+		return OPAL_BUFFER_NONMAPPABLE;
 
 	assert(buffer_ptr->map_count > 0);
 	buffer_ptr->map_count--;
@@ -1618,6 +1611,26 @@ static Opal_Result webgpu_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer
 		buffer_ptr->mapped_ptr = NULL;
 	}
 	
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceWriteBuffer(Opal_Device this, Opal_Queue queue, Opal_BufferView buffer, const void *data, uint64_t size)
+{
+	assert(this);
+	assert(queue);
+	assert(buffer.buffer);
+	assert(data);
+	assert(size > 0);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+
+	WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer.buffer);
+	assert(buffer_ptr);
+
+	wgpuQueueWriteBuffer(queue_ptr->queue, buffer_ptr->buffer, buffer.offset, data, (size_t)size);
 	return OPAL_SUCCESS;
 }
 
@@ -2515,6 +2528,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceResetBindsetPool,
 	webgpu_deviceMapBuffer,
 	webgpu_deviceUnmapBuffer,
+	webgpu_deviceWriteBuffer,
 	webgpu_deviceUpdateBindset,
 	webgpu_deviceBeginCommandBuffer,
 	webgpu_deviceEndCommandBuffer,

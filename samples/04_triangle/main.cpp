@@ -172,23 +172,6 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_BufferDesc staging_buffer_desc =
-	{
-		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_TRANSFER_SRC),
-		sizeof(TriangleData),
-		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
-		OPAL_ALLOCATION_HINT_AUTO,
-	};
-
-	Opal_Buffer staging_buffer = OPAL_NULL_HANDLE;
-	result = opalCreateBuffer(device, &staging_buffer_desc, &staging_buffer);
-	assert(result == OPAL_SUCCESS);
-
-	// copy
-	void *staging_ptr = nullptr;
-	result = opalMapBuffer(device, staging_buffer, &staging_ptr);
-	assert(result == OPAL_SUCCESS);
-
 	TriangleData triangle_data =
 	{
 		// vertices
@@ -202,6 +185,23 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		// indices
 		0, 1, 2,
 	};
+
+	// copy
+	Opal_BufferDesc staging_buffer_desc =
+	{
+		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_TRANSFER_SRC),
+		sizeof(TriangleData),
+		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
+		OPAL_ALLOCATION_HINT_AUTO,
+	};
+
+	Opal_Buffer staging_buffer = OPAL_NULL_HANDLE;
+	result = opalCreateBuffer(device, &staging_buffer_desc, &staging_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	void *staging_ptr = nullptr;
+	result = opalMapBuffer(device, staging_buffer, &staging_ptr);
+	assert(result == OPAL_SUCCESS);
 
 	memcpy(staging_ptr, &triangle_data, sizeof(TriangleData));
 

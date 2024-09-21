@@ -46,11 +46,11 @@ opalBeginCommandBuffer will call vkBeginCommandBuffer with VK_COMMAND_BUFFER_USA
 
 Intentionally disabled as WebGPU expects to work with a single device. Use opalCreateDefaultDevice with proper hint.
 
-### No map / unmap support for non-copy buffer usages
+### No map / unmap support for uniform / storage / indirect / vertex / index buffer usages
 
 WebGPU only allow mapping buffers with WGPUBufferUsage_CopySrc or WGPUBufferUsage_CopyDst usage. This is similar to previous GAPI designs where staging buffer must be created in order to upload data to the GPU memory.
 
-opalCreateBuffer will return OPAL_BUFFER_USAGE_NOT_SUPPORTED for non device-local memory type and uniform / storage / indirect / vertex / index buffer usage.
+opalMapBuffer / webgpu_deviceUnmapBuffer will return OPAL_BUFFER_NONMAPPABLE for any combinations of uniform / storage / indirect / vertex / index buffer usages.
 
 ## DirectX 12
 

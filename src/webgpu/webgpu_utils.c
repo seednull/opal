@@ -13,20 +13,10 @@ WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opa
 	WGPUBufferUsageFlags result = 0;
 
 	if (flags & OPAL_BUFFER_USAGE_TRANSFER_SRC)
-	{
 		result |= WGPUBufferUsage_CopySrc;
 
-		if (memory_type != OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL)
-			result |= WGPUBufferUsage_MapWrite;
-	}
-
 	if (flags & OPAL_BUFFER_USAGE_TRANSFER_DST)
-	{
 		result |= WGPUBufferUsage_CopyDst;
-
-		if (memory_type != OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL)
-			result |= WGPUBufferUsage_MapRead;
-	}
 
 	if (flags & OPAL_BUFFER_USAGE_VERTEX)
 		result |= WGPUBufferUsage_Vertex;
@@ -42,6 +32,12 @@ WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opa
 
 	if (flags & OPAL_BUFFER_USAGE_INDIRECT)
 		result |= WGPUBufferUsage_Indirect;
+
+	if (flags == OPAL_BUFFER_USAGE_TRANSFER_SRC && (memory_type == OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD || memory_type == OPAL_ALLOCATION_MEMORY_TYPE_STREAM))
+		result |= WGPUBufferUsage_MapWrite;
+
+	if (flags == OPAL_BUFFER_USAGE_TRANSFER_DST && (memory_type == OPAL_ALLOCATION_MEMORY_TYPE_READBACK))
+		result |= WGPUBufferUsage_MapRead;
 
 	return result;
 }
