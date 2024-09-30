@@ -78,6 +78,16 @@ VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode)
 	return vk_present_modes[mode];
 }
 
+VkColorSpaceKHR vulkan_helperToColorSpace(Opal_ColorSpace color_space)
+{
+	static VkColorSpaceKHR vk_color_spaces[] =
+	{
+		VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+	};
+
+	return vk_color_spaces[color_space];
+}
+
 VkImageAspectFlags vulkan_helperToAspectMask(Opal_TextureFormat format)
 {
 	if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)

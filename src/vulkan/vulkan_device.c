@@ -1502,20 +1502,28 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 		return OPAL_VULKAN_ERROR;
 
 	VkFormat wanted_format = vulkan_helperToImageFormat(desc->format);
-	VkColorSpaceKHR wanted_color_space = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	VkColorSpaceKHR wanted_color_space = vulkan_helperToColorSpace(desc->color_space);
+
 	VkBool32 found_format = VK_FALSE;
+	VkBool32 found_color_space = VK_FALSE;
 
 	for (uint32_t i = 0; i < num_surface_formats; ++i)
 	{
-		if (surface_formats[i].format == wanted_format && surface_formats[i].colorSpace == wanted_color_space)
-		{
+		if (surface_formats[i].format == wanted_format)
 			found_format = VK_TRUE;
+
+		if (surface_formats[i].colorSpace == wanted_color_space)
+			found_color_space = VK_TRUE;
+		
+		if (found_format && found_color_space)
 			break;
-		}
 	}
 
 	if (found_format == VK_FALSE)
 		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
+
+	if (found_color_space == VK_FALSE)
+		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
 
 	// swap chain
 	VkSwapchainCreateInfoKHR swapchain_info = {0};

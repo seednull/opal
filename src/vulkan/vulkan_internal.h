@@ -272,6 +272,7 @@ VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type);
 VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type);
 
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
+VkColorSpaceKHR vulkan_helperToColorSpace(Opal_ColorSpace color_space);
 
 VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
 VkFormat vulkan_helperToVertexFormat(Opal_VertexFormat format);

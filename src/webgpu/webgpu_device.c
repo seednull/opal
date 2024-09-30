@@ -847,8 +847,8 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	if (desc->mode != OPAL_PRESENT_MODE_FIFO)
 		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
 
-	if (desc->colorspace != OPAL_COLORSPACE_SRGB)
-		return OPAL_SWAPCHAIN_COLORSPACE_NOT_SUPPORTED;
+	if (desc->color_space != OPAL_COLOR_SPACE_SRGB)
+		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WebGPU_Instance *instance_ptr = device_ptr->instance;

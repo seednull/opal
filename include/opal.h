@@ -83,7 +83,7 @@ typedef enum Opal_Result_t
 	OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED,
-	OPAL_SWAPCHAIN_COLORSPACE_NOT_SUPPORTED,
+	OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED,
 	OPAL_BUFFER_USAGE_NOT_SUPPORTED,
 	OPAL_BUFFER_NONMAPPABLE,
 	OPAL_TEXTURE_FORMAT_NOT_SUPPORTED,
@@ -352,13 +352,13 @@ typedef enum Opal_PresentMode_t
 	OPAL_PRESENT_MODE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_PresentMode;
 
-typedef enum Opal_Colorspace_t
+typedef enum Opal_ColorSpace_t
 {
-	OPAL_COLORSPACE_SRGB = 0,
+	OPAL_COLOR_SPACE_SRGB = 0,
 
-	OPAL_COLORSPACE_ENUM_MAX,
-	OPAL_COLORSPACE_ENUM_FORCE32 = 0x7FFFFFFF,
-} Opal_Colorspace;
+	OPAL_COLOR_SPACE_ENUM_MAX,
+	OPAL_COLOR_SPACE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_ColorSpace;
 
 typedef enum Opal_TextureFormat_t
 {
@@ -1214,7 +1214,7 @@ typedef struct Opal_SwapchainDesc_t
 {
 	Opal_PresentMode mode;
 	Opal_TextureFormat format;
-	Opal_Colorspace colorspace;
+	Opal_ColorSpace color_space;
 	Opal_TextureUsageFlags usage;
 	Opal_Surface surface;
 } Opal_SwapchainDesc;
