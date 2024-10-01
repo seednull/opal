@@ -45,6 +45,44 @@ static Opal_Result directx12_deviceGetShaderBindingTablePrebuildInfo(Opal_Device
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result directx12_deviceGetSupportedSurfaceFormats(Opal_Device this, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(surface);
+	OPAL_UNUSED(num_formats);
+	OPAL_UNUSED(formats);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceGetSupportedPresentModes(Opal_Device this, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(surface);
+	OPAL_UNUSED(num_present_modes);
+	OPAL_UNUSED(present_modes);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceGetPreferredSurfaceFormat(Opal_Device this, Opal_Surface surface, Opal_SurfaceFormat *format)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(surface);
+	OPAL_UNUSED(format);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceGetPreferredSurfacePresentMode(Opal_Device this, Opal_Surface surface, Opal_PresentMode *present_mode)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(surface);
+	OPAL_UNUSED(present_mode);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
 	OPAL_UNUSED(this);
@@ -823,6 +861,11 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceGetQueue,
 	directx12_deviceGetAccelerationStructurePrebuildInfo,
 	directx12_deviceGetShaderBindingTablePrebuildInfo,
+
+	directx12_deviceGetSupportedSurfaceFormats,
+	directx12_deviceGetSupportedPresentModes,
+	directx12_deviceGetPreferredSurfaceFormat,
+	directx12_deviceGetPreferredSurfacePresentMode,
 
 	directx12_deviceCreateSemaphore,
 	directx12_deviceCreateBuffer,

@@ -218,6 +218,56 @@ Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal
 
 /*
  */
+Opal_Result opalGetSupportedSurfaceFormats(Opal_Device device, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getSupportedSurfaceFormats);
+
+	return ptr->vtbl->getSupportedSurfaceFormats(device, surface, num_formats, formats);
+}
+
+Opal_Result opalGetSupportedPresentModes(Opal_Device device, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getSupportedPresentModes);
+
+	return ptr->vtbl->getSupportedPresentModes(device, surface, num_present_modes, present_modes);
+}
+
+Opal_Result opalGetPreferredSurfaceFormat(Opal_Device device, Opal_Surface surface, Opal_SurfaceFormat *format)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getPreferredSurfaceFormat);
+
+	return ptr->vtbl->getPreferredSurfaceFormat(device, surface, format);
+}
+
+Opal_Result opalGetPreferredSurfacePresentMode(Opal_Device device, Opal_Surface surface, Opal_PresentMode *present_mode)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->getPreferredSurfacePresentMode);
+
+	return ptr->vtbl->getPreferredSurfacePresentMode(device, surface, present_mode);
+}
+
+/*
+ */
 Opal_Result opalCreateSemaphore(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
 	if (device == OPAL_NULL_HANDLE)

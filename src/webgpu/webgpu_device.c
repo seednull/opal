@@ -226,6 +226,156 @@ static Opal_Result webgpu_deviceGetShaderBindingTablePrebuildInfo(Opal_Device th
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result webgpu_deviceGetSupportedSurfaceFormats(Opal_Device this, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
+{
+	assert(this);
+	assert(surface);
+	assert(num_formats);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Instance *instance_ptr = device_ptr->instance;
+	WebGPU_Surface *surface_ptr = (WebGPU_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)surface);
+	assert(surface_ptr);
+
+	WGPUAdapter webgpu_adapter = device_ptr->adapter;
+	WGPUDevice webgpu_device = device_ptr->device;
+	WGPUSurface webgpu_surface = surface_ptr->surface;
+
+	WGPUSurfaceCapabilities capabilities = {0};
+	wgpuSurfaceGetCapabilities(webgpu_surface, webgpu_adapter, &capabilities);
+
+	*num_formats = (uint32_t)capabilities.formatCount;
+
+	if (formats)
+	{
+		for (uint32_t i = 0; i < (uint32_t)capabilities.formatCount; ++i)
+		{
+			formats[i].texture_format = webgpu_helperFromTextureFormat(capabilities.formats[i]);
+			formats[i].color_space = OPAL_COLOR_SPACE_SRGB;
+		}
+	}
+
+	wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceGetSupportedPresentModes(Opal_Device this, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes)
+{
+	assert(this);
+	assert(surface);
+	assert(num_present_modes);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Instance *instance_ptr = device_ptr->instance;
+	WebGPU_Surface *surface_ptr = (WebGPU_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)surface);
+	assert(surface_ptr);
+
+	WGPUAdapter webgpu_adapter = device_ptr->adapter;
+	WGPUDevice webgpu_device = device_ptr->device;
+	WGPUSurface webgpu_surface = surface_ptr->surface;
+
+	WGPUSurfaceCapabilities capabilities = {0};
+	wgpuSurfaceGetCapabilities(webgpu_surface, webgpu_adapter, &capabilities);
+
+	*num_present_modes = (uint32_t)capabilities.presentModeCount;
+
+	if (present_modes)
+	{
+		for (uint32_t i = 0; i < (uint32_t)capabilities.presentModeCount; ++i)
+		{
+			present_modes[i] = webgpu_helperFromPresentMode(capabilities.presentModes[i]);
+		}
+	}
+
+	wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceGetPreferredSurfaceFormat(Opal_Device this, Opal_Surface surface, Opal_SurfaceFormat *format)
+{
+	assert(this);
+	assert(surface);
+	assert(format);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Instance *instance_ptr = device_ptr->instance;
+	WebGPU_Surface *surface_ptr = (WebGPU_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)surface);
+	assert(surface_ptr);
+
+	WGPUAdapter webgpu_adapter = device_ptr->adapter;
+	WGPUDevice webgpu_device = device_ptr->device;
+	WGPUSurface webgpu_surface = surface_ptr->surface;
+
+	WGPUSurfaceCapabilities capabilities = {0};
+	wgpuSurfaceGetCapabilities(webgpu_surface, webgpu_adapter, &capabilities);
+
+	if (capabilities.formatCount == 0)
+	{
+		wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+		return OPAL_SURFACE_NOT_DRAWABLE;
+	}
+
+	format->texture_format = webgpu_helperFromTextureFormat(capabilities.formats[0]);
+	format->color_space = OPAL_COLOR_SPACE_SRGB;
+
+	WGPUTextureFormat optimal_format = WGPUTextureFormat_BGRA8Unorm;
+
+	for (uint32_t i = 0; i < (uint32_t)capabilities.formatCount; ++i)
+	{
+		if (capabilities.formats[i] == optimal_format)
+		{
+			format->texture_format = webgpu_helperFromTextureFormat(optimal_format);
+			break;
+		}
+	}
+
+	wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceGetPreferredSurfacePresentMode(Opal_Device this, Opal_Surface surface, Opal_PresentMode *present_mode)
+{
+	assert(this);
+	assert(surface);
+	assert(present_mode);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WebGPU_Instance *instance_ptr = device_ptr->instance;
+	WebGPU_Surface *surface_ptr = (WebGPU_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)surface);
+	assert(surface_ptr);
+
+	WGPUAdapter webgpu_adapter = device_ptr->adapter;
+	WGPUDevice webgpu_device = device_ptr->device;
+	WGPUSurface webgpu_surface = surface_ptr->surface;
+
+	WGPUSurfaceCapabilities capabilities = {0};
+	wgpuSurfaceGetCapabilities(webgpu_surface, webgpu_adapter, &capabilities);
+
+	if (capabilities.presentModeCount == 0)
+	{
+		wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+		return OPAL_SURFACE_NOT_PRESENTABLE;
+	}
+
+	*present_mode = webgpu_helperFromPresentMode(capabilities.presentModes[0]);
+
+	// TODO: it's probably a good idea to search for mailbox for high performance device,
+	//       but for low power device fifo will drain less battery by adding latency
+	WGPUPresentMode optimal_present_mode = WGPUPresentMode_Mailbox;
+
+	for (uint32_t i = 0; i < (uint32_t)capabilities.presentModeCount; ++i)
+	{
+		if (capabilities.presentModes[i] == optimal_present_mode)
+		{
+			*present_mode = webgpu_helperFromPresentMode(optimal_present_mode);
+			break;
+		}
+	}
+
+	wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result webgpu_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
 	assert(this);
@@ -834,7 +984,7 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	uint32_t format_supported = 0;
 	for (uint32_t i = 0; i < num_supported_formats; ++i)
 	{
-		if (desc->format == supported_formats[i])
+		if (desc->format.texture_format == supported_formats[i])
 		{
 			format_supported = 1;
 			break;
@@ -847,7 +997,7 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	if (desc->mode != OPAL_PRESENT_MODE_FIFO)
 		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
 
-	if (desc->color_space != OPAL_COLOR_SPACE_SRGB)
+	if (desc->format.color_space != OPAL_COLOR_SPACE_SRGB)
 		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
@@ -861,7 +1011,7 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 
 	WGPUSwapChainDescriptor swapchain_info = {0};
 	swapchain_info.usage = webgpu_helperToTextureUsage(desc->usage);
-	swapchain_info.format = webgpu_helperToTextureFormat(desc->format);
+	swapchain_info.format = webgpu_helperToTextureFormat(desc->format.texture_format);
 	swapchain_info.presentMode = webgpu_helperToPresentMode(desc->mode);
 
 	WGPUSwapChain webgpu_swapchain = wgpuDeviceCreateSwapChain(webgpu_device, webgpu_surface, &swapchain_info);
@@ -2484,6 +2634,11 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceGetQueue,
 	webgpu_deviceGetAccelerationStructurePrebuildInfo,
 	webgpu_deviceGetShaderBindingTablePrebuildInfo,
+
+	webgpu_deviceGetSupportedSurfaceFormats,
+	webgpu_deviceGetSupportedPresentModes,
+	webgpu_deviceGetPreferredSurfaceFormat,
+	webgpu_deviceGetPreferredSurfacePresentMode,
 
 	webgpu_deviceCreateSemaphore,
 	webgpu_deviceCreateBuffer,

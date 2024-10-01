@@ -80,6 +80,8 @@ typedef enum Opal_Result_t
 	OPAL_NO_MEMORY,
 	OPAL_NO_POOL_MEMORY,
 	OPAL_WAIT_TIMEOUT,
+	OPAL_SURFACE_NOT_DRAWABLE,
+	OPAL_SURFACE_NOT_PRESENTABLE,
 	OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED,
@@ -1210,11 +1212,16 @@ typedef struct Opal_RaytracePipelineDesc_t
 	uint32_t max_hit_attribute_size;
 } Opal_RaytracePipelineDesc;
 
+typedef struct Opal_SurfaceFormat_t
+{
+	Opal_TextureFormat texture_format;
+	Opal_ColorSpace color_space;
+} Opal_SurfaceFormat;
+
 typedef struct Opal_SwapchainDesc_t
 {
 	Opal_PresentMode mode;
-	Opal_TextureFormat format;
-	Opal_ColorSpace color_space;
+	Opal_SurfaceFormat format;
 	Opal_TextureUsageFlags usage;
 	Opal_Surface surface;
 } Opal_SwapchainDesc;
@@ -1253,6 +1260,11 @@ typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo
 typedef Opal_Result (*PFN_opalGetDeviceQueue)(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 typedef Opal_Result (*PFN_opalGetAccelerationStructurePrebuildInfo)(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info);
 typedef Opal_Result (*PFN_opalGetShaderBindingTablePrebuildInfo)(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
+
+typedef Opal_Result (*PFN_opalGetSupportedSurfaceFormats)(Opal_Device device, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats);
+typedef Opal_Result (*PFN_opalGetSupportedPresentModes)(Opal_Device device, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes);
+typedef Opal_Result (*PFN_opalGetPreferredSurfaceFormat)(Opal_Device device, Opal_Surface surface, Opal_SurfaceFormat *format);
+typedef Opal_Result (*PFN_opalGetPreferredSurfacePresentMode)(Opal_Device device, Opal_Surface surface, Opal_PresentMode *present_mode);
 
 typedef Opal_Result (*PFN_opalCreateSemaphore)(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore);
 typedef Opal_Result (*PFN_opalCreateBuffer)(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer);
@@ -1358,6 +1370,11 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalGetDeviceQueue getDeviceQueue;
 	PFN_opalGetAccelerationStructurePrebuildInfo getAccelerationStructurePrebuildInfo;
 	PFN_opalGetShaderBindingTablePrebuildInfo getShaderBindingTablePrebuildInfo;
+
+	PFN_opalGetSupportedSurfaceFormats getSupportedSurfaceFormats;
+	PFN_opalGetSupportedPresentModes getSupportedPresentModes;
+	PFN_opalGetPreferredSurfaceFormat getPreferredSurfaceFormat;
+	PFN_opalGetPreferredSurfacePresentMode getPreferredSurfacePresentMode;
 
 	PFN_opalCreateSemaphore createSemaphore;
 	PFN_opalCreateBuffer createBuffer;
@@ -1467,6 +1484,11 @@ OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo 
 OPAL_APIENTRY Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 OPAL_APIENTRY Opal_Result opalGetAccelerationStructurePrebuildInfo(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info);
 OPAL_APIENTRY Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
+
+OPAL_APIENTRY Opal_Result opalGetSupportedSurfaceFormats(Opal_Device device, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats);
+OPAL_APIENTRY Opal_Result opalGetSupportedPresentModes(Opal_Device device, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes);
+OPAL_APIENTRY Opal_Result opalGetPreferredSurfaceFormat(Opal_Device device, Opal_Surface surface, Opal_SurfaceFormat *format);
+OPAL_APIENTRY Opal_Result opalGetPreferredSurfacePresentMode(Opal_Device device, Opal_Surface surface, Opal_PresentMode *present_mode);
 
 OPAL_APIENTRY Opal_Result opalCreateSemaphore(Opal_Device device, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore);
 OPAL_APIENTRY Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer);

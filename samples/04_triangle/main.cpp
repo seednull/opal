@@ -144,14 +144,15 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalGetDeviceQueue(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, 0, &queue);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_SwapchainDesc swapchain_desc =
-	{
-		OPAL_PRESENT_MODE_FIFO,
-		OPAL_TEXTURE_FORMAT_BGRA8_UNORM,
-		OPAL_COLOR_SPACE_SRGB,
-		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
-		surface
-	};
+	Opal_SwapchainDesc swapchain_desc = {};
+	swapchain_desc.surface = surface;
+	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED);
+
+	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalGetPreferredSurfacePresentMode(device, surface, &swapchain_desc.mode);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalCreateSwapchain(device, &swapchain_desc, &swapchain);
 	assert(result == OPAL_SUCCESS);
@@ -367,14 +368,15 @@ void Application::resize(uint32_t w, uint32_t h)
 	result = opalDestroySwapchain(device, swapchain);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_SwapchainDesc swapchain_desc =
-	{
-		OPAL_PRESENT_MODE_FIFO,
-		OPAL_TEXTURE_FORMAT_BGRA8_UNORM,
-		OPAL_COLOR_SPACE_SRGB,
-		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED),
-		surface
-	};
+	Opal_SwapchainDesc swapchain_desc = {};
+	swapchain_desc.surface = surface;
+	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED);
+
+	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalGetPreferredSurfacePresentMode(device, surface, &swapchain_desc.mode);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalCreateSwapchain(device, &swapchain_desc, &swapchain);
 	assert(result == OPAL_SUCCESS);

@@ -311,6 +311,227 @@ static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device th
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result vulkan_deviceGetSupportedSurfaceFormats(Opal_Device this, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
+{
+	assert(this);
+	assert(surface);
+	assert(num_formats);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Instance *instance_ptr = device_ptr->instance;
+	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
+
+	// surface
+	Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)surface);
+	assert(surface_ptr);
+
+	VkSurfaceKHR vulkan_surface = surface_ptr->surface;
+
+	uint32_t num_vulkan_formats = 0;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_formats, NULL);
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * (*num_formats));
+	VkSurfaceFormatKHR *vulkan_formats = (VkSurfaceFormatKHR *)(device_ptr->bump.data);
+
+	vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_formats, vulkan_formats);
+
+	static VkFormat allowed_formats[] =
+	{
+		VK_FORMAT_B8G8R8A8_UNORM,
+		VK_FORMAT_B8G8R8A8_SRGB,
+		VK_FORMAT_R16G16B16A16_SFLOAT,
+		// TODO: add rgb10a2 support
+	};
+	static uint32_t num_allowed_formats = sizeof(allowed_formats) / sizeof(VkFormat);
+
+	static VkColorSpaceKHR allowed_color_spaces[] =
+	{
+		VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+		// TODO: add more color spaces
+	};
+	static uint32_t num_allowed_color_spaces = sizeof(allowed_color_spaces) / sizeof(VkColorSpaceKHR);
+
+	uint32_t num_supported_formats = 0;
+	for (uint32_t i = 0; i < num_vulkan_formats; ++i)
+	{
+		VkFormat format = vulkan_formats[i].format;
+		VkColorSpaceKHR color_space = vulkan_formats[i].colorSpace;
+
+		VkBool32 format_allowed = VK_FALSE;
+		for (uint32_t j = 0; j < num_allowed_formats; ++j)
+		{
+			if (allowed_formats[j] != format)
+				continue;
+
+			format_allowed = VK_TRUE;
+			break; 
+		}
+
+		if (format_allowed == VK_FALSE)
+			continue;
+
+		VkBool32 color_space_allowed = VK_FALSE;
+		for (uint32_t j = 0; j < num_allowed_color_spaces; ++j)
+		{
+			if (allowed_color_spaces[j] != color_space)
+				continue;
+
+			color_space_allowed = VK_TRUE;
+			break;
+		}
+		
+		if (color_space_allowed == VK_FALSE)
+			continue;
+
+		if (formats)
+		{
+			formats[num_supported_formats].texture_format = vulkan_helperFromImageFormat(format);
+			formats[num_supported_formats].color_space = vulkan_helperFromColorSpace(color_space);
+		}
+
+		num_supported_formats++;
+	}
+
+	*num_formats = num_supported_formats;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceGetSupportedPresentModes(Opal_Device this, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes)
+{
+	assert(this);
+	assert(surface);
+	assert(num_present_modes);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	Vulkan_Instance *instance_ptr = device_ptr->instance;
+	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
+
+	// surface
+	Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)surface);
+	assert(surface_ptr);
+
+	VkSurfaceKHR vulkan_surface = surface_ptr->surface;
+
+	uint32_t num_vulkan_modes = 0;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_modes, NULL);
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * (*num_present_modes));
+	VkPresentModeKHR *vulkan_modes = (VkPresentModeKHR *)(device_ptr->bump.data);
+
+	vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_modes, vulkan_modes);
+
+	static VkPresentModeKHR allowed_present_modes[] =
+	{
+		VK_PRESENT_MODE_IMMEDIATE_KHR,
+		VK_PRESENT_MODE_MAILBOX_KHR,
+		VK_PRESENT_MODE_FIFO_KHR,
+	};
+	static uint32_t num_allowed_present_modes = sizeof(allowed_present_modes) / sizeof(VkPresentModeKHR);
+
+	uint32_t num_supported_modes = 0;
+	for (uint32_t i = 0; i < num_vulkan_modes; ++i)
+	{
+		VkPresentModeKHR mode = vulkan_modes[i];
+
+		VkBool32 mode_allowed = VK_FALSE;
+		for (uint32_t j = 0; j < num_allowed_present_modes; ++j)
+		{
+			if (allowed_present_modes[j] != mode)
+				continue;
+
+			mode_allowed = VK_TRUE;
+			break;
+		}
+
+		if (mode_allowed == VK_FALSE)
+			continue;
+
+		if (present_modes)
+			present_modes[num_supported_modes] = vulkan_helperFromPresentMode(mode);
+
+		num_supported_modes++;
+	}
+
+	*num_present_modes = num_supported_modes;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceGetPreferredSurfaceFormat(Opal_Device this, Opal_Surface surface, Opal_SurfaceFormat *format)
+{
+	assert(this);
+	assert(surface);
+	assert(format);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	uint32_t num_formats = 0;
+	vulkan_deviceGetSupportedSurfaceFormats(this, surface, &num_formats, NULL);
+
+	if (num_formats == 0)
+		return OPAL_SURFACE_NOT_DRAWABLE;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(Opal_SurfaceFormat) * num_formats);
+	Opal_SurfaceFormat *formats = (Opal_SurfaceFormat *)(device_ptr->bump.data);
+
+	vulkan_deviceGetSupportedSurfaceFormats(this, surface, &num_formats, formats);
+
+	Opal_TextureFormat optimal_format = OPAL_TEXTURE_FORMAT_BGRA8_UNORM;
+	Opal_ColorSpace optimal_color_space = OPAL_COLOR_SPACE_SRGB;
+
+	*format = formats[0];
+	for (uint32_t i = 0; i < num_formats; ++i)
+	{
+		if (formats[i].texture_format == optimal_format && formats[i].color_space == optimal_color_space)
+		{
+			format->texture_format = optimal_format;
+			format->color_space = optimal_color_space;
+			break;
+		}
+	}
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceGetPreferredSurfacePresentMode(Opal_Device this, Opal_Surface surface, Opal_PresentMode *present_mode)
+{
+	assert(this);
+	assert(surface);
+	assert(present_mode);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	uint32_t num_present_modes = 0;
+	vulkan_deviceGetSupportedPresentModes(this, surface, &num_present_modes, NULL);
+
+	if (num_present_modes == 0)
+		return OPAL_SURFACE_NOT_PRESENTABLE;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(Opal_PresentMode) * num_present_modes);
+	Opal_PresentMode *present_modes = (Opal_PresentMode *)(device_ptr->bump.data);
+
+	vulkan_deviceGetSupportedPresentModes(this, surface, &num_present_modes, present_modes);
+
+	// TODO: it's probably a good idea to search for mailbox for high performance device,
+	//       but for low power device fifo will drain less battery by adding latency
+	Opal_PresentMode optimal_present_mode = OPAL_PRESENT_MODE_MAILBOX;
+
+	*present_mode = present_modes[0];
+	for (uint32_t i = 0; i < num_present_modes; ++i)
+	{
+		if (present_modes[i] == optimal_present_mode)
+		{
+			*present_mode = optimal_present_mode;
+			break;
+		}
+	}
+
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result vulkan_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
 	assert(this);
@@ -1501,8 +1722,8 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
-	VkFormat wanted_format = vulkan_helperToImageFormat(desc->format);
-	VkColorSpaceKHR wanted_color_space = vulkan_helperToColorSpace(desc->color_space);
+	VkFormat wanted_format = vulkan_helperToImageFormat(desc->format.texture_format);
+	VkColorSpaceKHR wanted_color_space = vulkan_helperToColorSpace(desc->format.color_space);
 
 	VkBool32 found_format = VK_FALSE;
 	VkBool32 found_color_space = VK_FALSE;
@@ -1534,7 +1755,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	swapchain_info.imageColorSpace = wanted_color_space;
 	swapchain_info.imageExtent = extent;
 	swapchain_info.imageArrayLayers = 1;
-	swapchain_info.imageUsage = vulkan_helperToImageUsage(desc->usage, desc->format);
+	swapchain_info.imageUsage = vulkan_helperToImageUsage(desc->usage, desc->format.texture_format);
 	swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 	swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -3793,6 +4014,11 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceGetQueue,
 	vulkan_deviceGetAccelerationStructurePrebuildInfo,
 	vulkan_deviceGetShaderBindingTablePrebuildInfo,
+
+	vulkan_deviceGetSupportedSurfaceFormats,
+	vulkan_deviceGetSupportedPresentModes,
+	vulkan_deviceGetPreferredSurfaceFormat,
+	vulkan_deviceGetPreferredSurfacePresentMode,
 
 	vulkan_deviceCreateSemaphore,
 	vulkan_deviceCreateBuffer,

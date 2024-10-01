@@ -158,6 +158,7 @@ WGPUTextureUsageFlags webgpu_helperToTextureUsage(Opal_TextureUsageFlags flags);
 WGPUTextureDimension webgpu_helperToTextureDimension(Opal_TextureType type);
 WGPUTextureViewDimension webgpu_helperToTextureViewDimension(Opal_TextureViewType type);
 WGPUTextureFormat webgpu_helperToTextureFormat(Opal_TextureFormat format);
+Opal_TextureFormat webgpu_helperFromTextureFormat(WGPUTextureFormat format);
 uint32_t webgpu_helperToSampleCount(Opal_Samples samples);
 WGPUTextureAspect webgpu_helperToTextureAspect(Opal_TextureFormat format);
 
@@ -179,6 +180,7 @@ WGPUFrontFace webgpu_helperToFrontFace(Opal_FrontFace face);
 WGPUCullMode webgpu_helperToCullMode(Opal_CullMode mode);
 
 WGPUPresentMode webgpu_helperToPresentMode(Opal_PresentMode mode);
+Opal_PresentMode webgpu_helperFromPresentMode(WGPUPresentMode mode);
 
 WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage);
 

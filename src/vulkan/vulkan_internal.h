@@ -272,9 +272,12 @@ VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type);
 VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type);
 
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
+Opal_PresentMode vulkan_helperFromPresentMode(VkPresentModeKHR mode);
 VkColorSpaceKHR vulkan_helperToColorSpace(Opal_ColorSpace color_space);
+Opal_ColorSpace vulkan_helperFromColorSpace(VkColorSpaceKHR color_space);
 
 VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format);
+Opal_TextureFormat vulkan_helperFromImageFormat(VkFormat format);
 VkFormat vulkan_helperToVertexFormat(Opal_VertexFormat format);
 VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format);
 
