@@ -2205,13 +2205,13 @@ static Opal_Result webgpu_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+static Opal_Result webgpu_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	assert(this);
 	assert(command_buffer);
 	assert(pipeline_layout);
-	assert(num_bindsets > 0);
-	assert(bindsets);
+	assert(bindset);
+	assert(num_dynamic_offsets == 0 || dynamic_offsets);
 
 	OPAL_UNUSED(pipeline_layout);
 
@@ -2222,29 +2222,16 @@ static Opal_Result webgpu_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuf
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->render_pass_encoder || command_buffer_ptr->compute_pass_encoder);
 
+	WebGPU_Bindset *bindset_ptr = (WebGPU_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindset);
+	assert(bindset_ptr);
+
 	WGPURenderPassEncoder webgpu_render_encoder = command_buffer_ptr->render_pass_encoder;
 	if (webgpu_render_encoder)
-	{
-		for (uint32_t i = 0; i < num_bindsets; ++i)
-		{
-			WebGPU_Bindset *bindset_ptr = (WebGPU_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindsets[i]);
-			assert(bindset_ptr);
-
-			wgpuRenderPassEncoderSetBindGroup(webgpu_render_encoder, i, bindset_ptr->bindset, 0, NULL);
-		}
-	}
+		wgpuRenderPassEncoderSetBindGroup(webgpu_render_encoder, index, bindset_ptr->bindset, num_dynamic_offsets, dynamic_offsets);
 
 	WGPUComputePassEncoder webgpu_compute_encoder = command_buffer_ptr->compute_pass_encoder;
 	if (webgpu_compute_encoder)
-	{
-		for (uint32_t i = 0; i < num_bindsets; ++i)
-		{
-			WebGPU_Bindset *bindset_ptr = (WebGPU_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindsets[i]);
-			assert(bindset_ptr);
-
-			wgpuComputePassEncoderSetBindGroup(webgpu_compute_encoder, i, bindset_ptr->bindset, 0, NULL);
-		}
-	}
+		wgpuComputePassEncoderSetBindGroup(webgpu_compute_encoder, index, bindset_ptr->bindset, num_dynamic_offsets, dynamic_offsets);
 
 	return OPAL_SUCCESS;
 }
@@ -2703,7 +2690,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdBeginRaytracePass,
 	webgpu_deviceCmdEndRaytracePass,
 	webgpu_deviceCmdSetPipeline,
-	webgpu_deviceCmdSetBindsets,
+	webgpu_deviceCmdSetBindset,
 	webgpu_deviceCmdSetVertexBuffers,
 	webgpu_deviceCmdSetIndexBuffer,
 	webgpu_deviceCmdSetViewport,

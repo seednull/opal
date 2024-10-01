@@ -994,16 +994,16 @@ Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_bu
 	return ptr->vtbl->cmdSetPipeline(device, command_buffer, pipeline);
 }
 
-Opal_Result opalCmdSetBindsets(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+Opal_Result opalCmdSetBindset(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetBindsets);
+	assert(ptr->vtbl->cmdSetBindset);
 
-	return ptr->vtbl->cmdSetBindsets(device, command_buffer, pipeline_layout, num_bindsets, bindsets);
+	return ptr->vtbl->cmdSetBindset(device, command_buffer, pipeline_layout, index, bindset, num_dynamic_offsets, dynamic_offsets);
 }
 
 Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)

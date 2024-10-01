@@ -618,13 +618,15 @@ static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffe
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+static Opal_Result null_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(pipeline_layout);
-	OPAL_UNUSED(num_bindsets);
-	OPAL_UNUSED(bindsets);
+	OPAL_UNUSED(index);
+	OPAL_UNUSED(bindset);
+	OPAL_UNUSED(num_dynamic_offsets);
+	OPAL_UNUSED(dynamic_offsets);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -933,7 +935,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdBeginRaytracePass,
 	null_deviceCmdEndRaytracePass,
 	null_deviceCmdSetPipeline,
-	null_deviceCmdSetBindsets,
+	null_deviceCmdSetBindset,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,
 	null_deviceCmdSetViewport,

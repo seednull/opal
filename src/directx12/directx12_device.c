@@ -615,13 +615,15 @@ static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+static Opal_Result directx12_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(pipeline_layout);
-	OPAL_UNUSED(num_bindsets);
-	OPAL_UNUSED(bindsets);
+	OPAL_UNUSED(index);
+	OPAL_UNUSED(bindset);
+	OPAL_UNUSED(num_dynamic_offsets);
+	OPAL_UNUSED(dynamic_offsets);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -930,7 +932,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdBeginRaytracePass,
 	directx12_deviceCmdEndRaytracePass,
 	directx12_deviceCmdSetPipeline,
-	directx12_deviceCmdSetBindsets,
+	directx12_deviceCmdSetBindset,
 	directx12_deviceCmdSetVertexBuffers,
 	directx12_deviceCmdSetIndexBuffer,
 	directx12_deviceCmdSetViewport,

@@ -3287,13 +3287,13 @@ static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t num_bindsets, const Opal_Bindset *bindsets)
+static Opal_Result vulkan_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	assert(this);
 	assert(command_buffer);
 	assert(pipeline_layout);
-	assert(num_bindsets > 0);
-	assert(bindsets);
+	assert(bindset);
+	assert(num_dynamic_offsets == 0 || dynamic_offsets);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -3301,24 +3301,16 @@ static Opal_Result vulkan_deviceCmdSetBindsets(Opal_Device this, Opal_CommandBuf
 	assert(command_buffer_ptr);
 
 	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	Vulkan_Bindset *bindset_ptr = (Vulkan_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindset);
+	assert(bindset_ptr);
 
 	VkCommandBuffer vulkan_command_buffer = command_buffer_ptr->command_buffer;
 	VkPipelineBindPoint vulkan_bind_point = command_buffer_ptr->pipeline_bind_point;
 	VkPipelineLayout vulkan_pipeline_layout = pipeline_layout_ptr->layout;
 
-	opal_bumpReset(&device_ptr->bump);
-	uint32_t offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorSet) * num_bindsets);
-
-	VkDescriptorSet *vulkan_sets = (VkDescriptorSet *)(device_ptr->bump.data + offset);
-	for (uint32_t i = 0; i < num_bindsets; ++i)
-	{
-		Vulkan_Bindset *bindset_ptr = (Vulkan_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindsets[i]);
-		assert(bindset_ptr);
-
-		vulkan_sets[i] = bindset_ptr->set;
-	}
-
-	device_ptr->vk.vkCmdBindDescriptorSets(vulkan_command_buffer, vulkan_bind_point, vulkan_pipeline_layout, 0, num_bindsets, vulkan_sets, 0, NULL);
+	device_ptr->vk.vkCmdBindDescriptorSets(vulkan_command_buffer, vulkan_bind_point, vulkan_pipeline_layout, index, 1, &bindset_ptr->set, num_dynamic_offsets, dynamic_offsets);
 	return OPAL_SUCCESS;
 }
 
@@ -4083,7 +4075,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdBeginRaytracePass,
 	vulkan_deviceCmdEndRaytracePass,
 	vulkan_deviceCmdSetPipeline,
-	vulkan_deviceCmdSetBindsets,
+	vulkan_deviceCmdSetBindset,
 	vulkan_deviceCmdSetVertexBuffers,
 	vulkan_deviceCmdSetIndexBuffer,
 	vulkan_deviceCmdSetViewport,
