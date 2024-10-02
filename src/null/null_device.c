@@ -452,11 +452,11 @@ static Opal_Result null_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceWriteBuffer(Opal_Device this, Opal_Queue queue, Opal_BufferView buffer, const void *data, uint64_t size)
+static Opal_Result null_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(queue);
 	OPAL_UNUSED(buffer);
+	OPAL_UNUSED(offset);
 	OPAL_UNUSED(data);
 	OPAL_UNUSED(size);
 

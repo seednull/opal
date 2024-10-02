@@ -1764,23 +1764,22 @@ static Opal_Result webgpu_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceWriteBuffer(Opal_Device this, Opal_Queue queue, Opal_BufferView buffer, const void *data, uint64_t size)
+static Opal_Result webgpu_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size)
 {
 	assert(this);
-	assert(queue);
-	assert(buffer.buffer);
+	assert(buffer);
 	assert(data);
 	assert(size > 0);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 
-	WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	WebGPU_Queue *queue_ptr = (WebGPU_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)device_ptr->queue);
 	assert(queue_ptr);
 
-	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer.buffer);
+	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
 	assert(buffer_ptr);
 
-	wgpuQueueWriteBuffer(queue_ptr->queue, buffer_ptr->buffer, buffer.offset, data, (size_t)size);
+	wgpuQueueWriteBuffer(queue_ptr->queue, buffer_ptr->buffer, offset, data, (size_t)size);
 	return OPAL_SUCCESS;
 }
 

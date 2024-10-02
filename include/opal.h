@@ -1309,7 +1309,7 @@ typedef Opal_Result (*PFN_opalFreeBindset)(Opal_Device device, Opal_BindsetPool 
 typedef Opal_Result (*PFN_opalResetBindsetPool)(Opal_Device device, Opal_BindsetPool bindset_pool);
 typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
 typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
-typedef Opal_Result (*PFN_opalWriteBuffer)(Opal_Device device, Opal_Queue queue, Opal_BufferView buffer, const void *data, uint64_t size);
+typedef Opal_Result (*PFN_opalWriteBuffer)(Opal_Device device, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size);
 typedef Opal_Result (*PFN_opalUpdateBindset)(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
 typedef Opal_Result (*PFN_opalBeginCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalEndCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
@@ -1533,7 +1533,7 @@ OPAL_APIENTRY Opal_Result opalFreeBindset(Opal_Device device, Opal_BindsetPool b
 OPAL_APIENTRY Opal_Result opalResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool);
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
 OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
-OPAL_APIENTRY Opal_Result opalWriteBuffer(Opal_Device device, Opal_Queue queue, Opal_BufferView buffer, const void *data, uint64_t size);
+OPAL_APIENTRY Opal_Result opalWriteBuffer(Opal_Device device, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size);
 OPAL_APIENTRY Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
 OPAL_APIENTRY Opal_Result opalBeginCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalEndCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
