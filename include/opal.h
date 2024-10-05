@@ -860,6 +860,7 @@ typedef struct Opal_SamplerDesc_t
 	float min_lod;
 	float max_lod;
 	uint32_t max_anisotropy;
+	uint32_t compare_enable;
 	Opal_CompareOp compare_op;
 } Opal_SamplerDesc;
 
@@ -923,7 +924,7 @@ typedef struct Opal_TextureRegion_t
 	uint32_t height;
 	uint32_t depth;
 	uint32_t base_mip;
-	uint32_t base_layer;
+	uint32_t layer_count;
 } Opal_TextureRegion;
 
 typedef struct Opal_VertexAttribute_t

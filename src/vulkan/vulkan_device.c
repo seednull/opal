@@ -877,7 +877,7 @@ static Opal_Result vulkan_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	sampler_info.addressModeW = vulkan_helperToSamplerAddressMode(desc->address_mode_w);
 	sampler_info.anisotropyEnable = desc->max_anisotropy > 0;
 	sampler_info.maxAnisotropy = (float)desc->max_anisotropy;
-	sampler_info.compareEnable = desc->compare_op != OPAL_COMPARE_OP_NEVER;
+	sampler_info.compareEnable = desc->compare_enable;
 	sampler_info.compareOp = vulkan_helperToCompareOp(desc->compare_op);
 	sampler_info.minLod = desc->min_lod;
 	sampler_info.maxLod = desc->max_lod;
@@ -3835,8 +3835,8 @@ static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Co
 	copy_region.imageOffset.y = dst.offset_z;
 	copy_region.imageSubresource.aspectMask = dst_image_ptr->aspect_mask;
 	copy_region.imageSubresource.mipLevel = dst.base_mip;
-	copy_region.imageSubresource.baseArrayLayer = dst.base_layer;
-	copy_region.imageSubresource.layerCount = 1;
+	copy_region.imageSubresource.baseArrayLayer = 0;
+	copy_region.imageSubresource.layerCount = dst.layer_count;
 
 	device_ptr->vk.vkCmdCopyBufferToImage(command_buffer_ptr->command_buffer, src_buffer_ptr->buffer, dst_image_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
@@ -3869,8 +3869,8 @@ static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_Co
 	copy_region.imageOffset.y = src.offset_z;
 	copy_region.imageSubresource.aspectMask = src_image_ptr->aspect_mask;
 	copy_region.imageSubresource.mipLevel = src.base_mip;
-	copy_region.imageSubresource.baseArrayLayer = src.base_layer;
-	copy_region.imageSubresource.layerCount = 1;
+	copy_region.imageSubresource.baseArrayLayer = 0;
+	copy_region.imageSubresource.layerCount = src.layer_count;
 
 	device_ptr->vk.vkCmdCopyImageToBuffer(command_buffer_ptr->command_buffer, src_image_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_buffer_ptr->buffer, 1, &copy_region);
 

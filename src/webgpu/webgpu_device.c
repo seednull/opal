@@ -519,7 +519,8 @@ static Opal_Result webgpu_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	sampler_info.mipmapFilter = webgpu_helperToMipmapFilterMode(desc->mip_filter);
 	sampler_info.lodMinClamp = desc->min_lod;
 	sampler_info.lodMaxClamp = desc->max_lod;
-	sampler_info.compare = webgpu_helperToCompareFunction(desc->compare_op);
+	if (desc->compare_enable)
+		sampler_info.compare = webgpu_helperToCompareFunction(desc->compare_op);
 	sampler_info.maxAnisotropy = (uint16_t)desc->max_anisotropy;
 
 	WGPUSampler webgpu_sampler = wgpuDeviceCreateSampler(webgpu_device, &sampler_info);
@@ -2499,7 +2500,7 @@ static Opal_Result webgpu_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Co
 	WGPUExtent3D copy_info = {0};
 	copy_info.width = dst.width;
 	copy_info.height = dst.height;
-	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? dst.depth : dst.base_layer;
+	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? dst.depth : dst.layer_count;
 
 	wgpuCommandEncoderCopyBufferToTexture(webgpu_encoder, &buffer_info, &texture_info, &copy_info);
 	return OPAL_SUCCESS;
@@ -2544,7 +2545,7 @@ static Opal_Result webgpu_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_Co
 	WGPUExtent3D copy_info = {0};
 	copy_info.width = src.width;
 	copy_info.height = src.height;
-	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? src.depth : src.base_layer;
+	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? src.depth : src.layer_count;
 
 	wgpuCommandEncoderCopyTextureToBuffer(webgpu_encoder, &texture_info, &buffer_info, &copy_info);
 	return OPAL_SUCCESS;
