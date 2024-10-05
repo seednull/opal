@@ -903,7 +903,7 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	pipeline_info.multisample.count = webgpu_helperToSampleCount(desc->rasterization_samples);
 	pipeline_info.multisample.mask = UINT32_MAX;
 
-	if (desc->depth_enable)
+	if (desc->depth_stencil_attachment_format)
 		pipeline_info.depthStencil = &depthstencil_state;
 
 	pipeline_info.fragment = &fragment_state;
