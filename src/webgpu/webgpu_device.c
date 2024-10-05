@@ -841,21 +841,27 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	if (desc->depth_stencil_attachment_format)
 		depthstencil_state.format = webgpu_helperToTextureFormat(*desc->depth_stencil_attachment_format);
 
-	depthstencil_state.depthWriteEnabled = desc->depth_write;
-	depthstencil_state.depthCompare = webgpu_helperToCompareFunction(desc->depth_compare_op);
+	if (desc->depth_enable)
+	{
+		depthstencil_state.depthWriteEnabled = desc->depth_write;
+		depthstencil_state.depthCompare = webgpu_helperToCompareFunction(desc->depth_compare_op);
+	}
 
-	depthstencil_state.stencilFront.compare = webgpu_helperToCompareFunction(desc->stencil_front.compare_op);
-	depthstencil_state.stencilFront.failOp = webgpu_helperToStencilOperation(desc->stencil_front.fail_op);
-	depthstencil_state.stencilFront.depthFailOp = webgpu_helperToStencilOperation(desc->stencil_front.depth_fail_op);
-	depthstencil_state.stencilFront.passOp = webgpu_helperToStencilOperation(desc->stencil_front.pass_op);
+	if (desc->stencil_enable)
+	{
+		depthstencil_state.stencilFront.compare = webgpu_helperToCompareFunction(desc->stencil_front.compare_op);
+		depthstencil_state.stencilFront.failOp = webgpu_helperToStencilOperation(desc->stencil_front.fail_op);
+		depthstencil_state.stencilFront.depthFailOp = webgpu_helperToStencilOperation(desc->stencil_front.depth_fail_op);
+		depthstencil_state.stencilFront.passOp = webgpu_helperToStencilOperation(desc->stencil_front.pass_op);
 
-	depthstencil_state.stencilBack.compare = webgpu_helperToCompareFunction(desc->stencil_back.compare_op);
-	depthstencil_state.stencilBack.failOp = webgpu_helperToStencilOperation(desc->stencil_back.fail_op);
-	depthstencil_state.stencilBack.depthFailOp = webgpu_helperToStencilOperation(desc->stencil_back.depth_fail_op);
-	depthstencil_state.stencilBack.passOp = webgpu_helperToStencilOperation(desc->stencil_back.pass_op);
+		depthstencil_state.stencilBack.compare = webgpu_helperToCompareFunction(desc->stencil_back.compare_op);
+		depthstencil_state.stencilBack.failOp = webgpu_helperToStencilOperation(desc->stencil_back.fail_op);
+		depthstencil_state.stencilBack.depthFailOp = webgpu_helperToStencilOperation(desc->stencil_back.depth_fail_op);
+		depthstencil_state.stencilBack.passOp = webgpu_helperToStencilOperation(desc->stencil_back.pass_op);
 
-	depthstencil_state.stencilReadMask = desc->stencil_read_mask;
-	depthstencil_state.stencilWriteMask = desc->stencil_write_mask;
+		depthstencil_state.stencilReadMask = desc->stencil_read_mask;
+		depthstencil_state.stencilWriteMask = desc->stencil_write_mask;
+	}
 
 	WGPUColorTargetState color_targets[8];
 	memset(color_targets, 0, sizeof(color_targets));
@@ -903,8 +909,7 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	pipeline_info.multisample.count = webgpu_helperToSampleCount(desc->rasterization_samples);
 	pipeline_info.multisample.mask = UINT32_MAX;
 
-	if (desc->depth_stencil_attachment_format)
-		pipeline_info.depthStencil = &depthstencil_state;
+	pipeline_info.depthStencil = &depthstencil_state;
 
 	pipeline_info.fragment = &fragment_state;
 
