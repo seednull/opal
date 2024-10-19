@@ -204,7 +204,7 @@ Opal_Result opalGetAccelerationStructurePrebuildInfo(Opal_Device device, const O
 	return ptr->vtbl->getAccelerationStructurePrebuildInfo(device, desc, info);
 }
 
-Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -642,6 +642,18 @@ Opal_Result opalBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBin
 	assert(ptr->vtbl->buildShaderBindingTable);
 
 	return ptr->vtbl->buildShaderBindingTable(device, desc);
+}
+
+Opal_Result opalBuildAccelerationStructureInstanceBuffer(Opal_Device device, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->buildAccelerationStructureInstanceBuffer);
+
+	return ptr->vtbl->buildAccelerationStructureInstanceBuffer(device, desc);
 }
 
 Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)

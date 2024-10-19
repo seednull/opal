@@ -36,7 +36,7 @@ static Opal_Result directx12_deviceGetAccelerationStructurePrebuildInfo(Opal_Dev
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+static Opal_Result directx12_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -346,6 +346,14 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 }
 
 static Opal_Result directx12_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(desc);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result directx12_deviceBuildAccelerationStructureInstanceBuffer(Opal_Device this, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -902,6 +910,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroy,
 
 	directx12_deviceBuildShaderBindingTable,
+	directx12_deviceBuildAccelerationStructureInstanceBuffer,
 	directx12_deviceAllocateCommandBuffer,
 	directx12_deviceFreeCommandBuffer,
 	directx12_deviceResetCommandPool,

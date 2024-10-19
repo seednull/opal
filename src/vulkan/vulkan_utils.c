@@ -542,6 +542,25 @@ VkGeometryFlagsKHR vulkan_helperToAccelerationStructureGeometryFlags(Opal_Accele
 	return vk_flags;
 }
 
+VkGeometryInstanceFlagsKHR vulkan_helperToAccelerationStructureGeometryInstanceFlags(Opal_AccelerationStructureInstanceFlags flags)
+{
+	VkGeometryInstanceFlagsKHR vk_flags = 0;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_TRIANGLE_CULL_DISABLE)
+		vk_flags |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_TRIANGLE_FRONT_COUNTER_CLOCKWISE)
+		vk_flags |= VK_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_FORCE_OPAQUE)
+		vk_flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_FORCE_NO_OPAQUE)
+		vk_flags |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR;
+
+	return vk_flags;
+}
+
 VkAccelerationStructureTypeKHR vulkan_helperToAccelerationStructureType(Opal_AccelerationStructureType type)
 {
 	static VkAccelerationStructureTypeKHR vk_acceleration_structure_types[] =
@@ -1363,9 +1382,13 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	VkPhysicalDeviceMaintenance3Properties maintenance = {0};
 	maintenance.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
 
+	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {0};
+	raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+	raytracing_properties.pNext = &maintenance;
+
 	VkPhysicalDeviceProperties2 properties = {0};
 	properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-	properties.pNext = &maintenance;
+	properties.pNext = &raytracing_properties;
 
 	vkGetPhysicalDeviceProperties2(device, &properties);
 
@@ -1455,35 +1478,38 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->features.texture_compression_bc = (features.features.textureCompressionBC == VK_TRUE);
 
 	// fill limits
-	info->limits.maxTextureDimension1D = properties.properties.limits.maxImageDimension1D;
-	info->limits.maxTextureDimension2D = properties.properties.limits.maxImageDimension2D;
-	info->limits.maxTextureDimension3D = properties.properties.limits.maxImageDimension3D;
-	info->limits.maxTextureArrayLayers = properties.properties.limits.maxImageArrayLayers;
+	info->limits.max_texture_dimension_1d = properties.properties.limits.maxImageDimension1D;
+	info->limits.max_texture_dimension_2d = properties.properties.limits.maxImageDimension2D;
+	info->limits.max_texture_dimension_3d = properties.properties.limits.maxImageDimension3D;
+	info->limits.max_texture_array_layers = properties.properties.limits.maxImageArrayLayers;
 
-	info->limits.maxBufferSize = maintenance.maxMemoryAllocationSize;
-	info->limits.minUniformBufferOffsetAlignment = properties.properties.limits.minUniformBufferOffsetAlignment;
-	info->limits.minStorageBufferOffsetAlignment = properties.properties.limits.minStorageBufferOffsetAlignment;
+	info->limits.max_buffer_size = maintenance.maxMemoryAllocationSize;
+	info->limits.min_uniform_buffer_offset_alignment = properties.properties.limits.minUniformBufferOffsetAlignment;
+	info->limits.min_storage_buffer_offset_alignment = properties.properties.limits.minStorageBufferOffsetAlignment;
 
-	info->limits.maxBindsets = properties.properties.limits.maxBoundDescriptorSets;
-	info->limits.maxUniformBufferBindingSize = properties.properties.limits.maxUniformBufferRange;
-	info->limits.maxStorageBufferBindingSize = properties.properties.limits.maxStorageBufferRange;
+	info->limits.max_bindsets = properties.properties.limits.maxBoundDescriptorSets;
+	info->limits.max_uniform_buffer_binding_size = properties.properties.limits.maxUniformBufferRange;
+	info->limits.max_storage_buffer_binding_size = properties.properties.limits.maxStorageBufferRange;
 
-	info->limits.maxVertexBuffers = properties.properties.limits.maxVertexInputBindings;
-	info->limits.maxVertexAttributes = properties.properties.limits.maxVertexInputAttributes;
-	info->limits.maxVertexBufferStride = properties.properties.limits.maxVertexInputBindingStride;
-	info->limits.maxColorAttachments = properties.properties.limits.maxFragmentOutputAttachments;
+	info->limits.max_vertex_buffers = properties.properties.limits.maxVertexInputBindings;
+	info->limits.max_vertex_attributes = properties.properties.limits.maxVertexInputAttributes;
+	info->limits.max_vertex_buffer_stride = properties.properties.limits.maxVertexInputBindingStride;
+	info->limits.max_color_attachments = properties.properties.limits.maxFragmentOutputAttachments;
 
-	info->limits.maxComputeSharedMemorySize = properties.properties.limits.maxComputeSharedMemorySize;
+	info->limits.max_compute_shared_memory_size = properties.properties.limits.maxComputeSharedMemorySize;
 
-	info->limits.maxComputeWorkgroupCountX = properties.properties.limits.maxComputeWorkGroupCount[0];
-	info->limits.maxComputeWorkgroupCountY = properties.properties.limits.maxComputeWorkGroupCount[1];
-	info->limits.maxComputeWorkgroupCountZ = properties.properties.limits.maxComputeWorkGroupCount[2];
+	info->limits.max_compute_workgroup_count_x = properties.properties.limits.maxComputeWorkGroupCount[0];
+	info->limits.max_compute_workgroup_count_y = properties.properties.limits.maxComputeWorkGroupCount[1];
+	info->limits.max_compute_workgroup_count_z = properties.properties.limits.maxComputeWorkGroupCount[2];
 
-	info->limits.maxComputeWorkgroupInvocations = properties.properties.limits.maxComputeWorkGroupInvocations;
+	info->limits.max_compute_workgroup_invocations = properties.properties.limits.maxComputeWorkGroupInvocations;
 
-	info->limits.maxComputeWorkgroupLocalSizeX = properties.properties.limits.maxComputeWorkGroupSize[0];
-	info->limits.maxComputeWorkgroupLocalSizeY = properties.properties.limits.maxComputeWorkGroupSize[1];
-	info->limits.maxComputeWorkgroupLocalSizeZ = properties.properties.limits.maxComputeWorkGroupSize[2];
+	info->limits.max_compute_workgroup_local_size_x = properties.properties.limits.maxComputeWorkGroupSize[0];
+	info->limits.max_compute_workgroup_local_size_y = properties.properties.limits.maxComputeWorkGroupSize[1];
+	info->limits.max_compute_workgroup_local_size_z = properties.properties.limits.maxComputeWorkGroupSize[2];
+
+	info->limits.max_raytrace_recursion_depth = raytracing_properties.maxRayRecursionDepth;
+	info->limits.max_raytrace_hit_attribute_size = raytracing_properties.maxRayHitAttributeSize;
 
 	return OPAL_SUCCESS;
 }

@@ -283,7 +283,7 @@ static Opal_Result vulkan_deviceGetAccelerationStructurePrebuildInfo(Opal_Device
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
 {
 	assert(this);
 	assert(desc);
@@ -297,16 +297,18 @@ static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device th
 
 	uint32_t aligned_handle_size = alignUp(handle_size, handle_alignment);
 
-	uint32_t raygen_size = alignUp(desc->max_raygen_entries * aligned_handle_size, base_alignment);
-	uint32_t hitgroup_size = alignUp(desc->max_hitgroup_entries * aligned_handle_size, base_alignment);
+	uint32_t raygen_size = alignUp(desc->num_raygen_indices * aligned_handle_size, base_alignment);
+	uint32_t hitgroup_size = alignUp(desc->num_hitgroup_indices * aligned_handle_size, base_alignment);
 
 	// Note: we don't need to align miss part since the buffer offset could be either 0 or already aligned to base_alignment
-	uint32_t miss_size = desc->max_miss_entries * aligned_handle_size;
+	uint32_t miss_size = desc->num_miss_indices * aligned_handle_size;
 
 	info->buffer_size = raygen_size + hitgroup_size + miss_size;
-	info->shader_handle_size = handle_size;
-	info->shader_handle_alignment = handle_alignment;
-	info->base_alignment = base_alignment;
+
+	info->base_raygen_offset = 0;
+	info->base_hitgroup_offset = raygen_size;
+	info->base_miss_offset = raygen_size + hitgroup_size;
+	info->aligned_handle_size = aligned_handle_size;
 
 	return OPAL_SUCCESS;
 }
@@ -1513,14 +1515,9 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 		Vulkan_Shader *anyhit_shader_ptr = NULL;
 		Vulkan_Shader *intersection_shader_ptr = NULL;
 		
-		if (desc->hitgroup_closesthit_shaders)
-			closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_closesthit_shaders[i]);
-
-		if (desc->hitgroup_anyhit_shaders)
-			anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_anyhit_shaders[i]);
-
-		if (desc->hitgroup_intersection_shaders)
-			intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_intersection_shaders[i]);
+		closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].closesthit_shader);
+		anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].anyhit_shader);
+		intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].intersection_shader);
 
 		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
 		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -1614,6 +1611,9 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 	Vulkan_Pipeline result = {0};
 	result.pipeline = vulkan_pipeline;
 	result.bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+	result.num_raygen_groups = desc->num_raygen_shaders;
+	result.num_hitgroup_groups = desc->num_hitgroup_shaders;
+	result.num_miss_groups = desc->num_miss_shaders;
 
 	*pipeline = (Opal_Pipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
 	return OPAL_SUCCESS;
@@ -2346,7 +2346,11 @@ static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device this, const 
 	assert(pipeline_ptr);
 	assert(pipeline_ptr->bind_point == VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
 
-	uint32_t num_groups = desc->num_raygen_entries + desc->num_hitgroup_entries + desc->num_miss_entries;
+	uint32_t num_raygen_groups = pipeline_ptr->num_raygen_groups;
+	uint32_t num_hitgroup_group = pipeline_ptr->num_hitgroup_groups;
+	uint32_t num_miss_group = pipeline_ptr->num_miss_groups;
+
+	uint32_t num_groups = num_raygen_groups + num_hitgroup_group + num_miss_group;
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t group_handles_offset = opal_bumpAlloc(&device_ptr->bump, handle_size * num_groups);
@@ -2357,18 +2361,16 @@ static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device this, const 
 		return OPAL_VULKAN_ERROR;
 
 	const uint8_t *raygen_src_data = handles_src_data;
-	const uint8_t *hitgroup_src_data = handles_src_data + desc->num_raygen_entries * handle_size;
-	const uint8_t *miss_src_data = hitgroup_src_data + desc->num_hitgroup_entries * handle_size;
-
-	uint32_t num_raygen_indices = (desc->raygen_index != NULL) ? 1 : 0;
+	const uint8_t *hitgroup_src_data = handles_src_data + num_raygen_groups * handle_size;
+	const uint8_t *miss_src_data = hitgroup_src_data + num_hitgroup_group * handle_size;
 
 	uint8_t *raygen_dst_data = handles_dst_data;
-	uint8_t *hitgroup_dst_data = handles_dst_data + alignUp(num_raygen_indices * aligned_handle_size, base_alignment);
+	uint8_t *hitgroup_dst_data = handles_dst_data + alignUp(desc->num_raygen_indices * aligned_handle_size, base_alignment);
 	uint8_t *miss_dst_data = hitgroup_dst_data + alignUp(desc->num_hitgroup_indices * aligned_handle_size, base_alignment);
 
-	for (uint32_t i = 0; i < num_raygen_indices; ++i)
+	for (uint32_t i = 0; i < desc->num_raygen_indices; ++i)
 	{
-		uint32_t offset = desc->raygen_index[i] * handle_size;
+		uint32_t offset = desc->raygen_indices[i] * handle_size;
 		memcpy(raygen_dst_data, raygen_src_data + offset, handle_size);
 		raygen_dst_data += aligned_handle_size;
 	}
@@ -2388,6 +2390,45 @@ static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device this, const 
 	}
 
 	return vulkan_deviceUnmapBuffer(this, desc->sbt.buffer);
+}
+
+static Opal_Result vulkan_deviceBuildAccelerationStructureInstanceBuffer(Opal_Device this, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
+{
+	assert(this);
+	assert(desc);
+
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	uint8_t *dst_data;
+	Opal_Result result = vulkan_deviceMapBuffer(this, desc->buffer.buffer, &dst_data);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	dst_data += desc->buffer.offset;
+
+	for (uint32_t i = 0; i < desc->num_instances; ++i)
+	{
+		const Opal_AccelerationStructureInstance *opal_instance = &desc->instances[i];
+		VkAccelerationStructureInstanceKHR *vulkan_instance = (VkAccelerationStructureInstanceKHR *)dst_data;
+
+		Vulkan_AccelerationStructure *blas_ptr = (Vulkan_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)opal_instance->blas);
+		assert(blas_ptr);
+
+		VkAccelerationStructureDeviceAddressInfoKHR info = {0};
+		info.accelerationStructure = blas_ptr->acceleration_structure;
+
+		memcpy(&vulkan_instance->transform, opal_instance->transform, sizeof(VkTransformMatrixKHR));
+		vulkan_instance->instanceCustomIndex = opal_instance->instance_id;
+		vulkan_instance->mask = opal_instance->instance_mask;
+		vulkan_instance->instanceShaderBindingTableRecordOffset = opal_instance->sbt_hitgroup_offset;
+		vulkan_instance->flags = vulkan_helperToAccelerationStructureGeometryInstanceFlags(opal_instance->flags);
+		vulkan_instance->accelerationStructureReference = vkGetAccelerationStructureDeviceAddressKHR(vulkan_device, &info);
+
+		dst_data += sizeof(VkAccelerationStructureInstanceKHR);
+	}
+
+	return vulkan_deviceUnmapBuffer(this, desc->buffer.buffer);
 }
 
 static Opal_Result vulkan_deviceAllocateCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
@@ -4045,6 +4086,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroy,
 
 	vulkan_deviceBuildShaderBindingTable,
+	vulkan_deviceBuildAccelerationStructureInstanceBuffer,
 	vulkan_deviceAllocateCommandBuffer,
 	vulkan_deviceFreeCommandBuffer,
 	vulkan_deviceResetCommandPool,

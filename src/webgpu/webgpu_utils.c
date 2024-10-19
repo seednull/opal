@@ -795,35 +795,35 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
 
 	// fill limits
-	info->limits.maxTextureDimension1D = adapter_limits.limits.maxTextureDimension1D;
-	info->limits.maxTextureDimension2D = adapter_limits.limits.maxTextureDimension2D;
-	info->limits.maxTextureDimension3D = adapter_limits.limits.maxTextureDimension3D;
-	info->limits.maxTextureArrayLayers = adapter_limits.limits.maxTextureArrayLayers;
+	info->limits.max_texture_dimension_1d = adapter_limits.limits.maxTextureDimension1D;
+	info->limits.max_texture_dimension_2d = adapter_limits.limits.maxTextureDimension2D;
+	info->limits.max_texture_dimension_3d = adapter_limits.limits.maxTextureDimension3D;
+	info->limits.max_texture_array_layers = adapter_limits.limits.maxTextureArrayLayers;
 
-	info->limits.maxBufferSize = adapter_limits.limits.maxBufferSize;
-	info->limits.minUniformBufferOffsetAlignment = adapter_limits.limits.minUniformBufferOffsetAlignment;
-	info->limits.minStorageBufferOffsetAlignment = adapter_limits.limits.minStorageBufferOffsetAlignment;
+	info->limits.max_buffer_size = adapter_limits.limits.maxBufferSize;
+	info->limits.min_uniform_buffer_offset_alignment = adapter_limits.limits.minUniformBufferOffsetAlignment;
+	info->limits.min_storage_buffer_offset_alignment = adapter_limits.limits.minStorageBufferOffsetAlignment;
 
-	info->limits.maxBindsets = adapter_limits.limits.maxBindGroups;
-	info->limits.maxUniformBufferBindingSize = adapter_limits.limits.maxUniformBufferBindingSize;
-	info->limits.maxStorageBufferBindingSize = adapter_limits.limits.maxStorageBufferBindingSize;
+	info->limits.max_bindsets = adapter_limits.limits.maxBindGroups;
+	info->limits.max_uniform_buffer_binding_size = adapter_limits.limits.maxUniformBufferBindingSize;
+	info->limits.max_storage_buffer_binding_size = adapter_limits.limits.maxStorageBufferBindingSize;
 
-	info->limits.maxVertexBuffers = adapter_limits.limits.maxVertexBuffers;
-	info->limits.maxVertexAttributes = adapter_limits.limits.maxVertexAttributes;
-	info->limits.maxVertexBufferStride = adapter_limits.limits.maxVertexBufferArrayStride;
-	info->limits.maxColorAttachments = adapter_limits.limits.maxColorAttachments;
+	info->limits.max_vertex_buffers = adapter_limits.limits.maxVertexBuffers;
+	info->limits.max_vertex_attributes = adapter_limits.limits.maxVertexAttributes;
+	info->limits.max_vertex_buffer_stride = adapter_limits.limits.maxVertexBufferArrayStride;
+	info->limits.max_color_attachments = adapter_limits.limits.maxColorAttachments;
 
-	info->limits.maxComputeSharedMemorySize = adapter_limits.limits.maxComputeWorkgroupStorageSize;
+	info->limits.max_compute_shared_memory_size = adapter_limits.limits.maxComputeWorkgroupStorageSize;
 
-	info->limits.maxComputeWorkgroupCountX = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
-	info->limits.maxComputeWorkgroupCountY = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
-	info->limits.maxComputeWorkgroupCountZ = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
+	info->limits.max_compute_workgroup_count_x = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
+	info->limits.max_compute_workgroup_count_y = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
+	info->limits.max_compute_workgroup_count_z = adapter_limits.limits.maxComputeWorkgroupsPerDimension;
 
-	info->limits.maxComputeWorkgroupInvocations = adapter_limits.limits.maxComputeInvocationsPerWorkgroup;
+	info->limits.max_compute_workgroup_invocations = adapter_limits.limits.maxComputeInvocationsPerWorkgroup;
 
-	info->limits.maxComputeWorkgroupLocalSizeX = adapter_limits.limits.maxComputeWorkgroupSizeX;
-	info->limits.maxComputeWorkgroupLocalSizeY = adapter_limits.limits.maxComputeWorkgroupSizeY;
-	info->limits.maxComputeWorkgroupLocalSizeZ = adapter_limits.limits.maxComputeWorkgroupSizeZ;
+	info->limits.max_compute_workgroup_local_size_x = adapter_limits.limits.maxComputeWorkgroupSizeX;
+	info->limits.max_compute_workgroup_local_size_y = adapter_limits.limits.maxComputeWorkgroupSizeY;
+	info->limits.max_compute_workgroup_local_size_z = adapter_limits.limits.maxComputeWorkgroupSizeZ;
 
 	return OPAL_SUCCESS;
 }

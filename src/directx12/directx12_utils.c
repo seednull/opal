@@ -63,28 +63,28 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *devic
 		info->features.meshlet_pipeline = (meshlet_options.MeshShaderPipelineStatsSupported == TRUE);
 
 	// fill limits
-	info->limits.maxTextureDimension1D = 16384;
-	info->limits.maxTextureDimension2D = 16384;
-	info->limits.maxTextureDimension3D = 2048;
-	info->limits.maxTextureArrayLayers = 2048;
-	// info->limits.maxBufferSize = ;
-	info->limits.minUniformBufferOffsetAlignment = 0xFFFF;
-	info->limits.minStorageBufferOffsetAlignment = 0xFFFF;
-	info->limits.maxBindsets = 32;
-	info->limits.maxUniformBufferBindingSize = 0xFFFFFFFF;
-	info->limits.maxStorageBufferBindingSize = 0xFFFFFFFF;
-	info->limits.maxVertexBuffers = 32;
-	info->limits.maxVertexAttributes = 64;
-	info->limits.maxVertexBufferStride = 0x00003FFF;
-	info->limits.maxColorAttachments = 8;
-	// info->limits.maxComputeSharedMemorySize = 0xFFFF;
-	info->limits.maxComputeWorkgroupCountX = 65535;
-	info->limits.maxComputeWorkgroupCountY = 65535;
-	info->limits.maxComputeWorkgroupCountZ = 65535;
-	info->limits.maxComputeWorkgroupInvocations = 1024;
-	info->limits.maxComputeWorkgroupLocalSizeX = 1024;
-	info->limits.maxComputeWorkgroupLocalSizeY = 1024;
-	info->limits.maxComputeWorkgroupLocalSizeZ = 64;
+	info->limits.max_texture_dimension_1d = 16384;
+	info->limits.max_texture_dimension_2d = 16384;
+	info->limits.max_texture_dimension_3d = 2048;
+	info->limits.max_texture_array_layers = 2048;
+	// info->limits.max_buffer_size = ;
+	info->limits.min_uniform_buffer_offset_alignment = 0xFFFF;
+	info->limits.min_storage_buffer_offset_alignment = 0xFFFF;
+	info->limits.max_bindsets = 32;
+	info->limits.max_uniform_buffer_binding_size = 0xFFFFFFFF;
+	info->limits.max_storage_buffer_binding_size = 0xFFFFFFFF;
+	info->limits.max_vertex_buffers = 32;
+	info->limits.max_vertex_attributes = 64;
+	info->limits.max_vertex_buffer_stride = 0x00003FFF;
+	info->limits.max_color_attachments = 8;
+	// info->limits.max_compute_shared_memory_size = 0xFFFF;
+	info->limits.max_compute_workgroup_count_x = 65535;
+	info->limits.max_compute_workgroup_count_y = 65535;
+	info->limits.max_compute_workgroup_count_z = 65535;
+	info->limits.max_compute_workgroup_invocations = 1024;
+	info->limits.max_compute_workgroup_local_size_x = 1024;
+	info->limits.max_compute_workgroup_local_size_y = 1024;
+	info->limits.max_compute_workgroup_local_size_z = 64;
 
 	return OPAL_SUCCESS;
 }

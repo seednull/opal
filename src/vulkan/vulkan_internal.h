@@ -239,6 +239,9 @@ typedef struct Vulkan_Pipeline_t
 {
 	VkPipeline pipeline;
 	VkPipelineBindPoint bind_point;
+	uint32_t num_raygen_groups;
+	uint32_t num_hitgroup_groups;
+	uint32_t num_miss_groups;
 } Vulkan_Pipeline;
 
 typedef struct Vulkan_Surface_t
@@ -292,6 +295,7 @@ VkSamplerAddressMode vulkan_helperToSamplerAddressMode(Opal_SamplerAddressMode m
 
 VkGeometryTypeKHR vulkan_helperToAccelerationStructureGeometryType(Opal_AccelerationStructureGeometryType type);
 VkGeometryFlagsKHR vulkan_helperToAccelerationStructureGeometryFlags(Opal_AccelerationStructureGeometryFlags flags);
+VkGeometryInstanceFlagsKHR vulkan_helperToAccelerationStructureGeometryInstanceFlags(Opal_AccelerationStructureInstanceFlags flags);
 VkAccelerationStructureTypeKHR vulkan_helperToAccelerationStructureType(Opal_AccelerationStructureType type);
 VkBuildAccelerationStructureFlagBitsKHR vulkan_helperToAccelerationStructureBuildFlags(Opal_AccelerationStructureBuildFlags flags);
 VkBuildAccelerationStructureModeKHR vulkan_helperToAccelerationStructureBuildMode(Opal_AccelerationStructureBuildMode mode);

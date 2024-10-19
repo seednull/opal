@@ -217,7 +217,7 @@ static Opal_Result webgpu_deviceGetAccelerationStructurePrebuildInfo(Opal_Device
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+static Opal_Result webgpu_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -1423,6 +1423,14 @@ static Opal_Result webgpu_deviceDestroy(Opal_Device this)
 }
 
 static Opal_Result webgpu_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(desc);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result webgpu_deviceBuildAccelerationStructureInstanceBuffer(Opal_Device this, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -2665,6 +2673,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceDestroy,
 
 	webgpu_deviceBuildShaderBindingTable,
+	webgpu_deviceBuildAccelerationStructureInstanceBuffer,
 	webgpu_deviceAllocateCommandBuffer,
 	webgpu_deviceFreeCommandBuffer,
 	webgpu_deviceResetCommandPool,

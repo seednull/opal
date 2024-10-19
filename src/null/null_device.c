@@ -41,7 +41,7 @@ static Opal_Result null_deviceGetAccelerationStructurePrebuildInfo(Opal_Device t
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
+static Opal_Result null_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -349,6 +349,14 @@ static Opal_Result null_deviceDestroy(Opal_Device this)
 }
 
 static Opal_Result null_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(desc);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceBuildAccelerationStructureInstanceBuffer(Opal_Device this, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -905,6 +913,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroy,
 
 	null_deviceBuildShaderBindingTable,
+	null_deviceBuildAccelerationStructureInstanceBuffer,
 	null_deviceAllocateCommandBuffer,
 	null_deviceFreeCommandBuffer,
 	null_deviceResetCommandPool,
@@ -973,20 +982,20 @@ Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info)
 	info->device_type = OPAL_DEVICE_TYPE_UNKNOWN;
 	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
 
-	info->limits.maxTextureDimension1D = 16384;
-	info->limits.maxTextureDimension2D = 16384;
-	info->limits.maxTextureDimension3D = 2048;
-	info->limits.maxTextureArrayLayers = 2048;
-	info->limits.maxBufferSize = 0xFFFFFFFF;
-	info->limits.minUniformBufferOffsetAlignment = 16;
-	info->limits.minStorageBufferOffsetAlignment = 4;
-	info->limits.maxBindsets = 8;
-	info->limits.maxUniformBufferBindingSize = 0x0000FFFF;
-	info->limits.maxStorageBufferBindingSize = 0xFFFFFFFF;
-	info->limits.maxVertexBuffers = 32;
-	info->limits.maxVertexAttributes = 64;
-	info->limits.maxVertexBufferStride = 0x00003FFF;
-	info->limits.maxColorAttachments = 8;
+	info->limits.max_texture_dimension_1d = 16384;
+	info->limits.max_texture_dimension_2d = 16384;
+	info->limits.max_texture_dimension_3d = 2048;
+	info->limits.max_texture_array_layers = 2048;
+	info->limits.max_buffer_size = 0xFFFFFFFF;
+	info->limits.min_uniform_buffer_offset_alignment = 16;
+	info->limits.min_storage_buffer_offset_alignment = 4;
+	info->limits.max_bindsets = 8;
+	info->limits.max_uniform_buffer_binding_size = 0x0000FFFF;
+	info->limits.max_storage_buffer_binding_size = 0xFFFFFFFF;
+	info->limits.max_vertex_buffers = 32;
+	info->limits.max_vertex_attributes = 64;
+	info->limits.max_vertex_buffer_stride = 0x00003FFF;
+	info->limits.max_color_attachments = 8;
 
 	return OPAL_SUCCESS;
 }

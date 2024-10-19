@@ -744,28 +744,30 @@ typedef enum Opal_FrontFace_t {
 // Structs
 typedef struct Opal_DeviceLimits_t
 {
-	uint32_t maxTextureDimension1D;
-	uint32_t maxTextureDimension2D;
-	uint32_t maxTextureDimension3D;
-	uint32_t maxTextureArrayLayers;
-	uint64_t maxBufferSize;
-	uint64_t minUniformBufferOffsetAlignment;
-	uint64_t minStorageBufferOffsetAlignment;
-	uint32_t maxBindsets;
-	uint64_t maxUniformBufferBindingSize;
-	uint64_t maxStorageBufferBindingSize;
-	uint32_t maxVertexBuffers;
-	uint32_t maxVertexAttributes;
-	uint32_t maxVertexBufferStride;
-	uint32_t maxColorAttachments;
-	uint32_t maxComputeSharedMemorySize;
-	uint32_t maxComputeWorkgroupCountX;
-	uint32_t maxComputeWorkgroupCountY;
-	uint32_t maxComputeWorkgroupCountZ;
-	uint32_t maxComputeWorkgroupInvocations;
-	uint32_t maxComputeWorkgroupLocalSizeX;
-	uint32_t maxComputeWorkgroupLocalSizeY;
-	uint32_t maxComputeWorkgroupLocalSizeZ;
+	uint32_t max_texture_dimension_1d;
+	uint32_t max_texture_dimension_2d;
+	uint32_t max_texture_dimension_3d;
+	uint32_t max_texture_array_layers;
+	uint64_t max_buffer_size;
+	uint64_t min_uniform_buffer_offset_alignment;
+	uint64_t min_storage_buffer_offset_alignment;
+	uint32_t max_bindsets;
+	uint64_t max_uniform_buffer_binding_size;
+	uint64_t max_storage_buffer_binding_size;
+	uint32_t max_vertex_buffers;
+	uint32_t max_vertex_attributes;
+	uint32_t max_vertex_buffer_stride;
+	uint32_t max_color_attachments;
+	uint32_t max_compute_shared_memory_size;
+	uint32_t max_compute_workgroup_count_x;
+	uint32_t max_compute_workgroup_count_y;
+	uint32_t max_compute_workgroup_count_z;
+	uint32_t max_compute_workgroup_invocations;
+	uint32_t max_compute_workgroup_local_size_x;
+	uint32_t max_compute_workgroup_local_size_y;
+	uint32_t max_compute_workgroup_local_size_z;
+	uint32_t max_raytrace_recursion_depth;
+	uint32_t max_raytrace_hit_attribute_size;
 } Opal_DeviceLimits;
 
 typedef struct Opal_DeviceFeatures_t
@@ -1002,16 +1004,6 @@ typedef struct Opal_StencilFaceState_t {
 	Opal_CompareOp compare_op;
 } Opal_StencilFaceState;
 
-typedef struct Opal_AccelerationStructureInstance_t
-{
-	float transform[3][4];
-	uint32_t instance_id : 24;
-	uint32_t instance_mask : 8;
-	uint32_t sbt_hitgroup_offset : 24;
-	Opal_AccelerationStructureInstanceFlags flags : 8;
-	Opal_AccelerationStructure handle;
-} Opal_AccelerationStructureInstance;
-
 typedef struct Opal_AccelerationStructureGeometryDataTriangles_t
 {
 	uint32_t num_vertices;
@@ -1088,22 +1080,30 @@ typedef struct Opal_AccelerationStructurePostbuildInfo_t
 	uint64_t compacted_buffer_size;
 } Opal_AccelerationStructurePostbuildInfo;
 
-typedef struct Opal_ShaderBindingTableLayoutDesc_t
+typedef struct Opal_AccelerationStructureInstance_t
 {
-	uint32_t max_raygen_entries;
-	uint32_t max_hitgroup_entries;
-	uint32_t max_miss_entries;
-} Opal_ShaderBindingTableLayoutDesc;
+	float transform[3][4];
+	uint32_t instance_id : 24;
+	uint32_t instance_mask : 8;
+	uint32_t sbt_hitgroup_offset : 24;
+	Opal_AccelerationStructureInstanceFlags flags : 8;
+	Opal_AccelerationStructure blas;
+} Opal_AccelerationStructureInstance;
+
+typedef struct Opal_AccelerationStructureInstanceBufferBuildDesc_t
+{
+	Opal_BufferView buffer;
+	uint32_t num_instances;
+	const Opal_AccelerationStructureInstance *instances;
+} Opal_AccelerationStructureInstanceBufferBuildDesc;
 
 typedef struct Opal_ShaderBindingTableBuildDesc_t
 {
 	Opal_BufferView sbt;
 	Opal_Pipeline pipeline;
-	uint32_t num_raygen_entries;
-	uint32_t num_hitgroup_entries;
-	uint32_t num_miss_entries;
 
-	uint32_t *raygen_index;
+	uint32_t num_raygen_indices;
+	const uint32_t *raygen_indices;
 
 	uint32_t num_hitgroup_indices;
 	const uint32_t *hitgroup_indices;
@@ -1115,9 +1115,10 @@ typedef struct Opal_ShaderBindingTableBuildDesc_t
 typedef struct Opal_ShaderBindingTablePrebuildInfo_t
 {
 	uint64_t buffer_size;
-	uint32_t shader_handle_size;
-	uint32_t shader_handle_alignment;
-	uint32_t base_alignment;
+	uint64_t base_raygen_offset;
+	uint64_t base_hitgroup_offset;
+	uint64_t base_miss_offset;
+	uint64_t aligned_handle_size;
 } Opal_ShaderBindingTablePrebuildInfo;
 
 typedef struct Opal_GraphicsPipelineDesc_t
@@ -1193,6 +1194,13 @@ typedef struct Opal_ComputePipelineDesc_t
 	Opal_Shader compute_shader;
 } Opal_ComputePipelineDesc;
 
+typedef struct Opal_HitgroupShader_t
+{
+	Opal_Shader intersection_shader;
+	Opal_Shader anyhit_shader;
+	Opal_Shader closesthit_shader;
+} Opal_HitgroupShader;
+
 typedef struct Opal_RaytracePipelineDesc_t
 {
 	Opal_PipelineLayout pipeline_layout;
@@ -1201,9 +1209,7 @@ typedef struct Opal_RaytracePipelineDesc_t
 	const Opal_Shader *raygen_shaders;
 
 	uint32_t num_hitgroup_shaders;
-	const Opal_Shader *hitgroup_intersection_shaders;
-	const Opal_Shader *hitgroup_anyhit_shaders;
-	const Opal_Shader *hitgroup_closesthit_shaders;
+	const Opal_HitgroupShader *hitgroup_shaders;
 
 	uint32_t num_miss_shaders;
 	const Opal_Shader *miss_shaders;
@@ -1260,7 +1266,7 @@ typedef Opal_Result (*PFN_opalDestroyInstance)(Opal_Instance instance);
 typedef Opal_Result (*PFN_opalGetDeviceInfo)(Opal_Device device, Opal_DeviceInfo *info);
 typedef Opal_Result (*PFN_opalGetDeviceQueue)(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 typedef Opal_Result (*PFN_opalGetAccelerationStructurePrebuildInfo)(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info);
-typedef Opal_Result (*PFN_opalGetShaderBindingTablePrebuildInfo)(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
+typedef Opal_Result (*PFN_opalGetShaderBindingTablePrebuildInfo)(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
 
 typedef Opal_Result (*PFN_opalGetSupportedSurfaceFormats)(Opal_Device device, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats);
 typedef Opal_Result (*PFN_opalGetSupportedPresentModes)(Opal_Device device, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes);
@@ -1300,6 +1306,7 @@ typedef Opal_Result (*PFN_opalDestroySwapchain)(Opal_Device device, Opal_Swapcha
 typedef Opal_Result (*PFN_opalDestroyDevice)(Opal_Device device);
 
 typedef Opal_Result (*PFN_opalBuildShaderBindingTable)(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc);
+typedef Opal_Result (*PFN_opalBuildAccelerationStructureInstanceBuffer)(Opal_Device device, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc);
 typedef Opal_Result (*PFN_opalAllocateCommandBuffer)(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer);
 typedef Opal_Result (*PFN_opalFreeCommandBuffer)(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalResetCommandPool)(Opal_Device device, Opal_CommandPool command_pool);
@@ -1410,6 +1417,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalDestroyDevice destroyDevice;
 
 	PFN_opalBuildShaderBindingTable buildShaderBindingTable;
+	PFN_opalBuildAccelerationStructureInstanceBuffer buildAccelerationStructureInstanceBuffer;
 	PFN_opalAllocateCommandBuffer allocateCommandBuffer;
 	PFN_opalFreeCommandBuffer freeCommandBuffer;
 	PFN_opalResetCommandPool resetCommandPool;
@@ -1484,7 +1492,7 @@ OPAL_APIENTRY Opal_Result opalDestroySurface(Opal_Instance instance, Opal_Surfac
 OPAL_APIENTRY Opal_Result opalGetDeviceInfo(Opal_Device device, Opal_DeviceInfo *info);
 OPAL_APIENTRY Opal_Result opalGetDeviceQueue(Opal_Device device, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue);
 OPAL_APIENTRY Opal_Result opalGetAccelerationStructurePrebuildInfo(Opal_Device device, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info);
-OPAL_APIENTRY Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableLayoutDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
+OPAL_APIENTRY Opal_Result opalGetShaderBindingTablePrebuildInfo(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info);
 
 OPAL_APIENTRY Opal_Result opalGetSupportedSurfaceFormats(Opal_Device device, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats);
 OPAL_APIENTRY Opal_Result opalGetSupportedPresentModes(Opal_Device device, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes);
@@ -1524,6 +1532,7 @@ OPAL_APIENTRY Opal_Result opalDestroySwapchain(Opal_Device device, Opal_Swapchai
 OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
 
 OPAL_APIENTRY Opal_Result opalBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc);
+OPAL_APIENTRY Opal_Result opalBuildAccelerationStructureInstanceBuffer(Opal_Device device, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc);
 OPAL_APIENTRY Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer);
 OPAL_APIENTRY Opal_Result opalFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalResetCommandPool(Opal_Device device, Opal_CommandPool command_pool);
