@@ -291,7 +291,8 @@ typedef enum Opal_BufferUsageFlags_t
 	OPAL_BUFFER_USAGE_STORAGE = 0x00000020,
 	OPAL_BUFFER_USAGE_INDIRECT = 0x00000040,
 	OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE = 0x00000080,
-	OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE = 0x00000100,
+	OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT = 0x00000100,
+	OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE = 0x00000200,
 
 	OPAL_BUFFER_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_BufferUsageFlags;
@@ -1215,8 +1216,6 @@ typedef struct Opal_RaytracePipelineDesc_t
 	const Opal_Shader *miss_shaders;
 
 	uint32_t max_recursion_depth;
-	uint32_t max_ray_payload_size;
-	uint32_t max_hit_attribute_size;
 } Opal_RaytracePipelineDesc;
 
 typedef struct Opal_SurfaceFormat_t
