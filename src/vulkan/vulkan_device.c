@@ -3566,7 +3566,7 @@ static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comma
 	{
 		assert(isAlignedul(miss_entry.offset, base_alignment));
 
-		vulkan_miss_entry.deviceAddress = miss_sbt_buffer_ptr->device_address + raygen_entry.offset;
+		vulkan_miss_entry.deviceAddress = miss_sbt_buffer_ptr->device_address + miss_entry.offset;
 		vulkan_miss_entry.size = aligned_handle_size;
 		vulkan_miss_entry.stride = aligned_handle_size;
 	}
@@ -3576,7 +3576,7 @@ static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comma
 	{
 		assert(isAlignedul(hitgroup_entry.offset, base_alignment));
 
-		vulkan_hitgroup_entry.deviceAddress = hitgroup_sbt_buffer_ptr->device_address + raygen_entry.offset;
+		vulkan_hitgroup_entry.deviceAddress = hitgroup_sbt_buffer_ptr->device_address + hitgroup_entry.offset;
 		vulkan_hitgroup_entry.size = aligned_handle_size;
 		vulkan_hitgroup_entry.stride = aligned_handle_size;
 	}
