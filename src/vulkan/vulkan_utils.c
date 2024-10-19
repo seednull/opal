@@ -853,9 +853,7 @@ VkAttachmentStoreOp vulkan_helperToStoreOp(Opal_StoreOp op)
 VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state)
 {
 	VkPipelineStageFlags all_compute = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
-		| VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR
-		| VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT
-		| VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+		| VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 
 	VkPipelineStageFlags all_non_fragment = all_compute
 		| VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
@@ -907,9 +905,7 @@ VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state)
 VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state)
 {
 	VkPipelineStageFlags all_compute = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
-		| VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR
-		| VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT
-		| VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+		| VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 
 	VkPipelineStageFlags all_non_fragment = all_compute
 		| VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
