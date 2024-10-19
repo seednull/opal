@@ -1481,7 +1481,7 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t shader_stages_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkPipelineShaderStageCreateInfo) * max_shader_modules);
-	uint32_t shader_groups_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkVertexInputAttributeDescription) * max_shader_groups);
+	uint32_t shader_groups_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRayTracingShaderGroupCreateInfoKHR) * max_shader_groups);
 
 	VkPipelineShaderStageCreateInfo *shader_stages = (VkPipelineShaderStageCreateInfo *)(device_ptr->bump.data + shader_stages_offset);
 	memset(shader_stages, 0, sizeof(VkPipelineShaderStageCreateInfo) * max_shader_modules);

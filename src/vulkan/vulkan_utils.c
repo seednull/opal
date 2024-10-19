@@ -1054,7 +1054,7 @@ VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkI
 		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 	if (state & OPAL_RESOURCE_STATE_COPY_SOURCE)
-		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 	if (state & OPAL_RESOURCE_STATE_PRESENT)
 		return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
