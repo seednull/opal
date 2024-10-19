@@ -1180,6 +1180,9 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {0};
 	raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
 
+	VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR raytracing_maintenance_features = {0};
+	raytracing_maintenance_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
+
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_features = {0};
 	mesh_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 
@@ -1190,7 +1193,8 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	dynamic_rendering_features.pNext = &acceleration_structure_features;
 	acceleration_structure_features.pNext = &buffer_device_address_features;
 	buffer_device_address_features.pNext = &raytracing_features;
-	raytracing_features.pNext = &mesh_features;
+	raytracing_features.pNext = &raytracing_maintenance_features;
+	raytracing_maintenance_features.pNext = &mesh_features;
 	mesh_features.pNext = &timeline_semaphore_features;
 
 	vkGetPhysicalDeviceFeatures2(physical_device, &features);
@@ -1213,6 +1217,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkBool32 has_acceleration_structure = VK_FALSE;
 	VkBool32 has_buffer_device_address = VK_FALSE;
 	VkBool32 has_raytracing = VK_FALSE;
+	VkBool32 has_raytracing_maintenance = VK_FALSE;
 	VkBool32 has_meshlet = VK_FALSE;
 	VkBool32 has_timeline_semaphores = VK_FALSE;
 
@@ -1231,6 +1236,9 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 
 		if (strcmp(device_extension_name, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
 			has_raytracing = raytracing_features.rayTracingPipeline;
+
+		if (strcmp(device_extension_name, VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME) == 0)
+			has_raytracing_maintenance = raytracing_maintenance_features.rayTracingMaintenance1;
 
 		if (strcmp(device_extension_name, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
 			has_meshlet = mesh_features.meshShader && mesh_features.taskShader;
@@ -1299,6 +1307,16 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 		paravozik->next = &raytracing_features;
 
 		paravozik = (VkParavozikKHR *)&raytracing_features;
+		paravozik->next = NULL;
+	}
+
+	if (has_raytracing_maintenance)
+	{
+		extensions[num_extensions++] = VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME;
+
+		paravozik->next = &raytracing_maintenance_features;
+
+		paravozik = (VkParavozikKHR *)&raytracing_maintenance_features;
 		paravozik->next = NULL;
 	}
 
