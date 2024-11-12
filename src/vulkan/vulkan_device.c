@@ -1983,7 +1983,7 @@ static Opal_Result vulkan_deviceDestroyAccelerationStructure(Opal_Device this, O
 	Vulkan_AccelerationStructure *acceleration_structure_ptr = (Vulkan_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, handle);
 	assert(acceleration_structure_ptr);
 
-	opal_poolRemoveElement(&device_ptr->samplers, handle);
+	opal_poolRemoveElement(&device_ptr->acceleration_structures, handle);
 
 	vulkan_destroyAccelerationStructure(device_ptr, acceleration_structure_ptr);
 	return OPAL_SUCCESS;
