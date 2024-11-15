@@ -20,6 +20,10 @@ Both API allow creating an arbitary number of queues, however, in order to keep 
 - Compute (aka async compute) engine will have 8 queues.
 - Copy (aka async transfer) engine will have 2 queues.
 
+### No support for acceleration structure serialization / deserialization
+
+Intentionally removed api as there is no practical use for the end user.
+
 ## Vulkan
 
 ### No support for queue priorities
