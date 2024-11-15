@@ -3865,8 +3865,6 @@ static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_
 		Vulkan_AccelerationStructure *acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src_acceleration_structures[i]);
 		assert(acceleration_structure_ptr);
 
-		VkAccelerationStructureKHR acceleration_structure = acceleration_structure_ptr->acceleration_structure;
-
 		VkQueryPool size_pool = acceleration_structure_ptr->size_pool;
 		VkQueryPool serialization_size_pool = acceleration_structure_ptr->serialization_size_pool;
 		VkQueryPool compacted_size_pool = acceleration_structure_ptr->compacted_size_pool;
