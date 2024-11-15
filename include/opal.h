@@ -868,7 +868,6 @@ typedef struct Opal_SamplerDesc_t
 typedef struct Opal_AccelerationStructureDesc_t
 {
 	Opal_AccelerationStructureType type;
-	uint64_t size;
 	Opal_BufferView buffer;
 } Opal_AccelerationStructureDesc;
 

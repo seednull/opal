@@ -920,7 +920,7 @@ static Opal_Result vulkan_deviceCreateAccelerationStructure(Opal_Device this, co
 	acceleration_structure_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
 	acceleration_structure_info.buffer = buffer_ptr->buffer;
 	acceleration_structure_info.offset = desc->buffer.offset;
-	acceleration_structure_info.size = desc->size;
+	acceleration_structure_info.size = desc->buffer.size;
 	acceleration_structure_info.type = vulkan_helperToAccelerationStructureType(desc->type);
 
 	VkResult vulkan_result = device_ptr->vk.vkCreateAccelerationStructureKHR(vulkan_device, &acceleration_structure_info, NULL, &vulkan_acceleration_structure);
