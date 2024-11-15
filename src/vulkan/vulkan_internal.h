@@ -193,6 +193,7 @@ typedef struct Vulkan_AccelerationStructure_t
 	VkQueryPool size_pool;
 	VkQueryPool serialization_size_pool;
 	VkQueryPool compacted_size_pool;
+	uint32_t allow_compaction;
 } Vulkan_AccelerationStructure;
 
 typedef struct Vulkan_CommandPool_t

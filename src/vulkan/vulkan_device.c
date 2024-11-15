@@ -3599,6 +3599,8 @@ static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this,
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
+	VkCommandBuffer vulkan_command_buffer = command_buffer_ptr->command_buffer;
+
 	uint32_t num_entries = 0;
 
 	for (uint32_t i = 0; i < num_build_descs; ++i)
@@ -3760,7 +3762,34 @@ static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this,
 			assert(0);
 	}
 
-	device_ptr->vk.vkCmdBuildAccelerationStructuresKHR(command_buffer_ptr->command_buffer, num_build_descs, build_infos, build_ranges_ptrs);
+	device_ptr->vk.vkCmdBuildAccelerationStructuresKHR(vulkan_command_buffer, num_build_descs, build_infos, build_ranges_ptrs);
+
+	for (uint32_t i = 0; i < num_build_descs; ++i)
+	{
+		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
+
+		Vulkan_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
+		assert(dst_acceleration_structure_ptr);
+
+		dst_acceleration_structure_ptr->allow_compaction = (desc->build_flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_ALLOW_COMPACTION) != 0;
+
+		VkAccelerationStructureKHR acceleration_structure = dst_acceleration_structure_ptr->acceleration_structure;
+
+		VkQueryPool size_pool = dst_acceleration_structure_ptr->size_pool;
+		VkQueryPool serialization_size_pool = dst_acceleration_structure_ptr->serialization_size_pool;
+		VkQueryPool compacted_size_pool = dst_acceleration_structure_ptr->compacted_size_pool;
+
+		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, size_pool, 0, 1);
+		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, serialization_size_pool, 0, 1);
+		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, compacted_size_pool, 0, 1);
+
+		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE_KHR, size_pool, 0);
+		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR, serialization_size_pool, 0);
+
+		if (dst_acceleration_structure_ptr->allow_compaction)
+			device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, compacted_size_pool, 0);
+	}
+
 	return OPAL_SUCCESS;
 }
 
@@ -3831,17 +3860,11 @@ static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_
 		VkQueryPool serialization_size_pool = acceleration_structure_ptr->serialization_size_pool;
 		VkQueryPool compacted_size_pool = acceleration_structure_ptr->compacted_size_pool;
 
-		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, size_pool, 0, 1);
-		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, serialization_size_pool, 0, 1);
-		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, compacted_size_pool, 0, 1);
+		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, size_pool, 0, 1, vulkan_buffer, base_offset + size_offset, 0, query_result_flags);
+		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, serialization_size_pool, 0, 1, vulkan_buffer, base_offset + serialization_size_offset, 0, query_result_flags);
 
-		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE_KHR, size_pool, 0);
-		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR, serialization_size_pool, 1);
-		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, compacted_size_pool, 2);
-
-		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, size_pool, 0, 1, vulkan_buffer, base_offset + size_offset, stride, query_result_flags);
-		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, serialization_size_pool, 0, 1, vulkan_buffer, base_offset + serialization_size_offset, stride, query_result_flags);
-		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, compacted_size_pool, 0, 1, vulkan_buffer, base_offset + compacted_size_offset, stride, query_result_flags);
+		if (acceleration_structure_ptr->allow_compaction)
+			device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, compacted_size_pool, 0, 1, vulkan_buffer, base_offset + compacted_size_offset, 0, query_result_flags);
 	}
 
 	return OPAL_SUCCESS;
