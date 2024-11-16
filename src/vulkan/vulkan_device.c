@@ -3811,23 +3811,13 @@ static Opal_Result vulkan_deviceCmdCopyAccelerationStructure(Opal_Device this, O
 	const Vulkan_AccelerationStructure *dst_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)dst);
 	assert(dst_ptr);
 
-	switch (mode)
-	{
-		case OPAL_ACCELERATION_STRUCTURE_COPY_MODE_CLONE:
-		case OPAL_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT:
-		{
-			VkCopyAccelerationStructureInfoKHR copy_info = {0};
-			copy_info.sType = VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR;
-			copy_info.src = src_ptr->acceleration_structure;
-			copy_info.dst = dst_ptr->acceleration_structure;
-			copy_info.mode = vulkan_helperToAccelerationStructureCopyMode(mode);
+	VkCopyAccelerationStructureInfoKHR copy_info = {0};
+	copy_info.sType = VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR;
+	copy_info.src = src_ptr->acceleration_structure;
+	copy_info.dst = dst_ptr->acceleration_structure;
+	copy_info.mode = vulkan_helperToAccelerationStructureCopyMode(mode);
 
-			device_ptr->vk.vkCmdCopyAccelerationStructureKHR(command_buffer_ptr->command_buffer, &copy_info);
-		}
-		break;
-
-		default: assert(0);
-	}
+	device_ptr->vk.vkCmdCopyAccelerationStructureKHR(command_buffer_ptr->command_buffer, &copy_info);
 
 	return OPAL_SUCCESS;
 }
