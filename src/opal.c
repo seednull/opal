@@ -31,14 +31,14 @@ Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal
 		{
 			Opal_Result result = OPAL_NOT_SUPPORTED;
 
-#if OPAL_BACKEND_VULKAN
-			if (result != OPAL_SUCCESS)
-				result = vulkan_createInstance(desc, instance);
-#endif
-
 #if OPAL_BACKEND_DIRECTX12
 			if (result != OPAL_SUCCESS)
 				result = directx12_createInstance(desc, instance);
+#endif
+
+#if OPAL_BACKEND_VULKAN
+			if (result != OPAL_SUCCESS)
+				result = vulkan_createInstance(desc, instance);
 #endif
 
 #if OPAL_BACKEND_METAL
