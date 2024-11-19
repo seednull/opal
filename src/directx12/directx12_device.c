@@ -8,6 +8,17 @@ static Opal_Result directx12_deviceUpdateBindset(Opal_Device this, Opal_Bindset 
 
 /*
  */
+static void directx12_destroyBuffer(DirectX12_Device *device_ptr, DirectX12_Buffer *buffer_ptr)
+{
+	assert(device_ptr);
+	assert(buffer_ptr);
+
+	ID3D12Resource_Release(buffer_ptr->buffer);
+	directx12_allocatorFreeMemory(device_ptr, buffer_ptr->allocation);
+}
+
+/*
+ */
 static Opal_Result directx12_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 {
 	assert(this);
@@ -94,11 +105,58 @@ static Opal_Result directx12_deviceCreateSemaphore(Opal_Device this, const Opal_
 
 static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(buffer);
+	assert(this);
+	assert(desc);
+	assert(buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	ID3D12Resource *d3d12_buffer = NULL;
+	DirectX12_Allocation allocation = {0};
+
+	// fill allocation info
+	DirectX12_AllocationDesc allocation_desc = {0};
+	allocation_desc.size = desc->size;
+	allocation_desc.resource_type = DIRECTX12_RESOURCE_TYPE_BUFFER;
+	allocation_desc.allocation_type = desc->memory_type;
+	allocation_desc.hint = desc->hint;
+
+	Opal_Result opal_result = directx12_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
+
+	// fill buffer info
+	D3D12_RESOURCE_DESC buffer_info = {0};
+	buffer_info.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	buffer_info.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	buffer_info.Width = desc->size;
+	buffer_info.Height = 1;
+	buffer_info.DepthOrArraySize = 1;
+	buffer_info.MipLevels = 1;
+	buffer_info.Format = DXGI_FORMAT_UNKNOWN;
+	buffer_info.SampleDesc.Count = 1;
+	buffer_info.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	if (desc->usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE)
+		buffer_info.Flags = D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE;
+
+	D3D12_RESOURCE_STATES initial_state = directx12_helperToInitialBufferResourceState(desc->memory_type, desc->usage);
+
+	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &buffer_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_buffer);
+	if (!SUCCEEDED(hr))
+	{
+		directx12_allocatorFreeMemory(device_ptr, allocation);
+		return OPAL_DIRECX12_ERROR;
+	}
+
+	// create opal struct
+	DirectX12_Buffer result = {0};
+	result.buffer = d3d12_buffer;
+	result.allocation = allocation;
+
+	*buffer = (Opal_Buffer)opal_poolAddElement(&device_ptr->buffers, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_TextureDesc *desc, Opal_Texture *texture)
@@ -239,10 +297,20 @@ static Opal_Result directx12_deviceDestroySemaphore(Opal_Device this, Opal_Semap
 
 static Opal_Result directx12_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(buffer);
+	assert(this);
+	assert(buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)buffer;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, handle);
+	assert(buffer_ptr);
+
+	opal_poolRemoveElement(&device_ptr->buffers, handle);
+
+	directx12_destroyBuffer(device_ptr, buffer_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyTexture(Opal_Device this, Opal_Texture texture)
@@ -338,6 +406,25 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 	assert(this);
 
 	DirectX12_Device *ptr = (DirectX12_Device *)this;
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->buffers);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElementByIndex(&ptr->buffers, head);
+			directx12_destroyBuffer(ptr, buffer_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->buffers, head);
+		}
+
+		opal_poolShutdown(&ptr->buffers);
+	}
+
+	Opal_Result result = directx12_allocatorShutdown(ptr);
+	assert(result == OPAL_SUCCESS);
+
+	OPAL_UNUSED(result);
+
 	IDXGIAdapter1_Release(ptr->adapter);
 	ID3D12Device_Release(ptr->device);
 
@@ -442,19 +529,32 @@ static Opal_Result directx12_deviceResetBindsetPool(Opal_Device this, Opal_Binds
 
 static Opal_Result directx12_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(ptr);
+	assert(this);
+	assert(buffer);
+	assert(ptr);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
+	assert(buffer_ptr);
+
+	HRESULT hr = ID3D12Resource_Map(buffer_ptr->buffer, 0, NULL, ptr);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECX12_ERROR;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(buffer);
+	assert(this);
+	assert(buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
+	assert(buffer_ptr);
+
+	ID3D12Resource_Unmap(buffer_ptr->buffer, 0, NULL);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size)
@@ -983,5 +1083,52 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	device_ptr->adapter = adapter;
 	device_ptr->device = device;
 
+	// allocator
+	Opal_Result result = directx12_allocatorInitialize(device_ptr, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);
+	assert(result == OPAL_SUCCESS);
+
+	OPAL_UNUSED(result);
+
+	// pools
+	opal_poolInitialize(&device_ptr->buffers, sizeof(DirectX12_Buffer), 32);
+
 	return OPAL_SUCCESS;
+}
+
+Opal_Result directx12_deviceAllocateMemory(DirectX12_Device *device_ptr, const DirectX12_AllocationDesc *desc, DirectX12_Allocation *allocation)
+{
+	assert(device_ptr);
+
+	DirectX12_Allocator *allocator = &device_ptr->allocator;
+
+	// resolve allocation type (suballocated or dedicated)
+	uint32_t dedicated = (desc->hint == OPAL_ALLOCATION_HINT_PREFER_DEDICATED);
+	const float heap_threshold = 0.7f;
+
+	switch (desc->hint)
+	{
+		case OPAL_ALLOCATION_HINT_AUTO:
+		{
+			uint32_t too_big_for_heap = desc->size > allocator->heap_size * heap_threshold;
+			dedicated = too_big_for_heap;
+		}
+		break;
+
+		case OPAL_ALLOCATION_HINT_PREFER_HEAP:
+		{
+			uint32_t wont_fit_in_heap = desc->size > allocator->heap_size;
+			dedicated = wont_fit_in_heap;
+			break;
+		}
+	}
+
+	Opal_Result opal_result = OPAL_NO_MEMORY;
+
+	if (dedicated == 0)
+		opal_result = directx12_allocatorAllocateMemory(device_ptr, desc, 0, allocation);
+
+	if (opal_result == OPAL_NO_MEMORY)
+		opal_result = directx12_allocatorAllocateMemory(device_ptr, desc, 1, allocation);
+
+	return opal_result;
 }

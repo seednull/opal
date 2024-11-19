@@ -27,7 +27,7 @@ static Opal_Result directx12_initialize()
 			return OPAL_DIRECX12_ERROR;
 
 		opal_d3d12CreateDevice = (PFN_D3D12_CREATE_DEVICE)(void(*)(void))GetProcAddress(d3d12_module, "D3D12CreateDevice");
-		opal_dxgiCreateFactory1 = (PFN_DXGI_CREATE_FACTORY)(void(*)(void))GetProcAddress(dxgi_module, "CreateDXGIFactory");
+		opal_dxgiCreateFactory1 = (PFN_DXGI_CREATE_FACTORY)(void(*)(void))GetProcAddress(dxgi_module, "CreateDXGIFactory1");
 
 		once = 1;
 	}
@@ -85,11 +85,13 @@ static Opal_Result directx12_instanceCreateSurface(Opal_Instance this, void *han
 	assert(handle);
 	assert(surface);
 
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(handle);
-	OPAL_UNUSED(surface);
+	DirectX12_Instance *instance_ptr = (DirectX12_Instance *)this;
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Surface result = {0};
+	result.handle = (HWND)handle;
+
+	*surface = (Opal_Surface)opal_poolAddElement(&instance_ptr->surfaces, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
@@ -212,9 +214,12 @@ static Opal_Result directx12_instanceDestroySurface(Opal_Instance this, Opal_Sur
 	assert(this);
 	assert(surface);
 
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(surface);
+	Opal_PoolHandle handle = (Opal_PoolHandle)surface;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
 
+	DirectX12_Instance *instance_ptr = (DirectX12_Instance *)this;
+
+	opal_poolRemoveElement(&instance_ptr->surfaces, handle);
 	return OPAL_NOT_SUPPORTED;
 }
 
@@ -223,6 +228,9 @@ static Opal_Result directx12_instanceDestroy(Opal_Instance this)
 	assert(this);
 
 	DirectX12_Instance *ptr = (DirectX12_Instance *)this;
+
+	opal_poolShutdown(&ptr->surfaces);
+
 	IDXGIFactory1_Release(ptr->factory);
 
 	free(ptr);
@@ -271,6 +279,12 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 
 	// data
 	ptr->factory = factory;
+	ptr->heap_size = desc->heap_size;
+	ptr->max_heap_allocations = desc->max_heap_allocations;
+	ptr->max_heaps = desc->max_heaps;
+
+	// pools
+	opal_poolInitialize(&ptr->surfaces, sizeof(DirectX12_Surface), 32);
 
 	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;
