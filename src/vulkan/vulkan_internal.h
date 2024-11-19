@@ -12,14 +12,14 @@
 #include "common/heap.h"
 #include "common/pool.h"
 
-#define OPAL_VULKAN_HEAP_NULL 0xFFFFFFFF
-
 typedef struct VolkDeviceTable VolkDeviceTable;
 
 typedef enum Vulkan_ResourceType_t
 {
 	VULKAN_RESOURCE_TYPE_LINEAR = 1,
 	VULKAN_RESOURCE_TYPE_NONLINEAR = 2,
+
+	VULKAN_RESOURCE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Vulkan_ResourceType;
 
 typedef struct Vulkan_MemoryBlock_t
@@ -48,7 +48,7 @@ typedef struct Vulkan_Allocator_t
 	Opal_Pool blocks;
 
 	uint32_t first_heap[VK_MAX_MEMORY_TYPES];
-	uint32_t last_used_heaps[VK_MAX_MEMORY_TYPES];
+	uint32_t last_used_heap[VK_MAX_MEMORY_TYPES];
 
 	uint32_t heap_size;
 	uint32_t max_heaps;
@@ -64,7 +64,7 @@ typedef struct Vulkan_AllocationDesc_t
 	uint32_t required_flags;
 	uint32_t preferred_flags;
 	uint32_t not_preferred_flags;
-	uint32_t resource_type;
+	Vulkan_ResourceType resource_type;
 	Opal_AllocationHint hint;
 	VkBool32 prefers_dedicated;
 	VkBool32 requires_dedicated;
