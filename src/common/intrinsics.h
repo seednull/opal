@@ -16,7 +16,7 @@ static OPAL_INLINE uint32_t lzcnt(uint32_t value)
 	assert(value != 0);
 
 #ifdef _MSC_VER
-	uint32_t result = 0;
+	unsigned long result = 0;
 	_BitScanReverse(&result, value);
 	return 31 - result;
 #else
@@ -29,7 +29,7 @@ static OPAL_INLINE uint32_t tzcnt(uint32_t value)
 	assert(value != 0);
 
 #ifdef _MSC_VER
-	uint32_t result = 0;
+	unsigned long result = 0;
 	_BitScanForward(&result, value);
 	return result;
 #else
