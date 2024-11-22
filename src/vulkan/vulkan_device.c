@@ -995,7 +995,6 @@ static Opal_Result vulkan_deviceCreateCommandPool(Opal_Device this, Opal_Queue q
 
 	Vulkan_CommandPool result = {0};
 	result.pool = vulkan_command_pool;
-	result.queue = queue;
 
 	*command_pool = (Opal_CommandPool)opal_poolAddElement(&device_ptr->command_pools, &result);
 	return OPAL_SUCCESS;
@@ -2001,6 +2000,8 @@ static Opal_Result vulkan_deviceDestroyCommandPool(Opal_Device this, Opal_Comman
 	Vulkan_CommandPool *command_pool_ptr = (Vulkan_CommandPool *)opal_poolGetElement(&device_ptr->command_pools, handle);
 	assert(command_pool_ptr);
 
+	// TODO: fix memory leak caused by orphaned Vulkan_CommandBuffer instances
+
 	opal_poolRemoveElement(&device_ptr->command_pools, handle);
 
 	vulkan_destroyCommandPool(device_ptr, command_pool_ptr);
@@ -2463,6 +2464,8 @@ static Opal_Result vulkan_deviceAllocateCommandBuffer(Opal_Device this, Opal_Com
 	result.command_buffer = vulkan_command_buffer;
 	result.pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 
+	// TODO: add handle to Vulkan_CommandPool instance
+
 	*command_buffer = (Opal_CommandBuffer)opal_poolAddElement(&device_ptr->command_buffers, &result);
 	return OPAL_SUCCESS;
 }
@@ -2483,6 +2486,8 @@ static Opal_Result vulkan_deviceFreeCommandBuffer(Opal_Device this, Opal_Command
 	assert(command_buffer_ptr);
 
 	device_ptr->vk.vkFreeCommandBuffers(vulkan_device, command_pool_ptr->pool, 1, &command_buffer_ptr->command_buffer);
+
+	// TODO: remove handle from Vulkan_CommandPool instance
 
 	opal_poolRemoveElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	return OPAL_SUCCESS;

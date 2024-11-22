@@ -199,7 +199,6 @@ typedef struct Vulkan_AccelerationStructure_t
 typedef struct Vulkan_CommandPool_t
 {
 	VkCommandPool pool;
-	Opal_Queue queue;
 } Vulkan_CommandPool;
 
 typedef struct Vulkan_CommandBuffer_t
