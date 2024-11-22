@@ -349,6 +349,8 @@ static Opal_Result vulkan_deviceGetSupportedSurfaceFormats(Opal_Device this, Opa
 	{
 		VK_FORMAT_B8G8R8A8_UNORM,
 		VK_FORMAT_B8G8R8A8_SRGB,
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_FORMAT_R16G16B16A16_SFLOAT,
 		// TODO: add rgb10a2 support
 	};
@@ -358,6 +360,7 @@ static Opal_Result vulkan_deviceGetSupportedSurfaceFormats(Opal_Device this, Opa
 	{
 		VK_COLORSPACE_SRGB_NONLINEAR_KHR,
 		// TODO: add more color spaces
+		// TODO: add hdr10 color space
 	};
 	static uint32_t num_allowed_color_spaces = sizeof(allowed_color_spaces) / sizeof(VkColorSpaceKHR);
 
