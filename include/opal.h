@@ -95,7 +95,7 @@ typedef enum Opal_Result_t
 	OPAL_INTERNAL_ERROR,
 
 	// FIXME: add more error codes for dxgi / d3d12 stuff
-	OPAL_DIRECX12_ERROR,
+	OPAL_DIRECTX12_ERROR,
 
 	// FIXME: add more error codes for webgpu stuff
 	OPAL_WEBGPU_ERROR,
@@ -192,6 +192,8 @@ typedef enum Opal_AllocationHint_t
 	OPAL_ALLOCATION_HINT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_AllocationHint;
 
+// TODO: think about either removing this and using Opal_BufferUsageFlags / Opal_ImageUsageFlags directly in barriers
+//       or keep only Opal_ResourceState and use it in opalCreateBuffer / opalCreateImage
 typedef enum Opal_ResourceState_t
 {
 	OPAL_RESOURCE_STATE_GENERAL = 0x00000000,

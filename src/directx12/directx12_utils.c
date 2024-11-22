@@ -18,8 +18,9 @@ D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_Allocati
 	if (usage & OPAL_BUFFER_USAGE_TRANSFER_SRC)
 		result |= D3D12_RESOURCE_STATE_COPY_SOURCE;
 
-	if (usage & OPAL_BUFFER_USAGE_TRANSFER_DST)
-		result |= D3D12_RESOURCE_STATE_COPY_DEST;
+	// TODO: remove this check once there's clear API design for resource states & barriers
+	// if (usage & OPAL_BUFFER_USAGE_TRANSFER_DST)
+		// result |= D3D12_RESOURCE_STATE_COPY_DEST;
 
 	if (usage & OPAL_BUFFER_USAGE_VERTEX)
 		result |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
@@ -30,8 +31,9 @@ D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_Allocati
 	if (usage & OPAL_BUFFER_USAGE_UNIFORM)
 		result |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 
-	if (usage & OPAL_BUFFER_USAGE_STORAGE)
-		result |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	// TODO: remove this check once there's clear API design for resource states & barriers
+	// if (usage & OPAL_BUFFER_USAGE_STORAGE)
+		// result |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
 	if (usage & OPAL_BUFFER_USAGE_INDIRECT)
 		result |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
@@ -39,18 +41,177 @@ D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_Allocati
 	if (usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE)
 		result |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
-	if (usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT)
-		result |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+	// TODO: remove this check once there's clear API design for resource states & barriers
+	// if (usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT)
+	// 	result |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
-	if (usage & OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE)
-		result |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+	// TODO: remove this check once there's clear API design for resource states & barriers
+	// if (usage & OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE)
+	// 	result |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
 	return result;
 }
 
+DXGI_FORMAT directx12_helperToDXGIFormat(Opal_TextureFormat format)
+{
+	static DXGI_FORMAT dxgi_formats[] =
+	{
+		DXGI_FORMAT_UNKNOWN,
+
+		DXGI_FORMAT_R8_UNORM,
+		DXGI_FORMAT_R8_SNORM,
+		DXGI_FORMAT_R8_UINT,
+		DXGI_FORMAT_R8_SINT,
+
+		DXGI_FORMAT_R8G8_UNORM,
+		DXGI_FORMAT_R8G8_SNORM,
+		DXGI_FORMAT_R8G8_UINT,
+		DXGI_FORMAT_R8G8_SINT,
+
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		DXGI_FORMAT_R8G8B8A8_SNORM,
+		DXGI_FORMAT_R8G8B8A8_UINT,
+		DXGI_FORMAT_R8G8B8A8_SINT,
+
+		DXGI_FORMAT_R16_UINT,
+		DXGI_FORMAT_R16_SINT,
+		DXGI_FORMAT_R16_FLOAT,
+
+		DXGI_FORMAT_R16G16_UINT,
+		DXGI_FORMAT_R16G16_SINT,
+		DXGI_FORMAT_R16G16_FLOAT,
+
+		DXGI_FORMAT_R16G16B16A16_UINT,
+		DXGI_FORMAT_R16G16B16A16_SINT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+
+		DXGI_FORMAT_R32_UINT,
+		DXGI_FORMAT_R32_SINT,
+		DXGI_FORMAT_R32_FLOAT,
+
+		DXGI_FORMAT_R32G32_UINT,
+		DXGI_FORMAT_R32G32_SINT,
+		DXGI_FORMAT_R32G32_FLOAT,
+
+		DXGI_FORMAT_R32G32B32A32_UINT,
+		DXGI_FORMAT_R32G32B32A32_SINT,
+		DXGI_FORMAT_R32G32B32A32_FLOAT,
+
+		DXGI_FORMAT_B8G8R8A8_UNORM,
+		DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
+		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+
+		DXGI_FORMAT_R11G11B10_FLOAT,
+		DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
+
+		DXGI_FORMAT_BC1_UNORM,
+		DXGI_FORMAT_BC1_UNORM_SRGB,
+
+		DXGI_FORMAT_BC1_UNORM,
+		DXGI_FORMAT_BC1_UNORM_SRGB,
+		DXGI_FORMAT_BC1_UNORM,
+		DXGI_FORMAT_BC1_UNORM_SRGB,
+		DXGI_FORMAT_BC2_UNORM,
+		DXGI_FORMAT_BC2_UNORM_SRGB,
+		DXGI_FORMAT_BC3_UNORM,
+		DXGI_FORMAT_BC3_UNORM_SRGB,
+		DXGI_FORMAT_BC4_UNORM,
+		DXGI_FORMAT_BC4_SNORM,
+		DXGI_FORMAT_BC5_UNORM,
+		DXGI_FORMAT_BC5_SNORM,
+		DXGI_FORMAT_BC6H_UF16,
+		DXGI_FORMAT_BC6H_SF16,
+		DXGI_FORMAT_BC7_UNORM,
+		DXGI_FORMAT_BC7_UNORM_SRGB,
+
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_UNKNOWN,
+
+		DXGI_FORMAT_D16_UNORM,
+		DXGI_FORMAT_D32_FLOAT,
+		DXGI_FORMAT_UNKNOWN,
+		DXGI_FORMAT_D24_UNORM_S8_UINT,
+		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+	};
+
+	return dxgi_formats[format];
+}
+
+DXGI_USAGE directx12_helperToDXGIUsage(Opal_TextureUsageFlags usage)
+{
+	DXGI_USAGE result = DXGI_CPU_ACCESS_NONE;
+
+	if (usage & OPAL_TEXTURE_USAGE_SHADER_SAMPLED)
+		result |= DXGI_USAGE_SHADER_INPUT;
+	if (usage & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
+		result |= DXGI_USAGE_UNORDERED_ACCESS;
+	if (usage & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT)
+		result |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
+
+	return result;
+}
+
+DXGI_COLOR_SPACE_TYPE directx12_helperToDXGIColorSpace(Opal_ColorSpace color_space)
+{
+	static DXGI_COLOR_SPACE_TYPE dxgi_color_spaces[] =
+	{
+		DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709,
+	};
+
+	return dxgi_color_spaces[color_space];
+}
+
+Opal_Result directx12_helperFillDeviceEnginesInfo(DirectX12_DeviceEnginesInfo *info)
+{
+	assert(info);
+
+	info->queue_counts[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_counts[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_counts[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
+
+	return OPAL_SUCCESS;
+}
+
 /*
  */
-Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info)
+Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info)
 {
 	assert(adapter);
 	assert(device);
@@ -59,12 +220,12 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *devic
 	LARGE_INTEGER umd = {0};
 	HRESULT hr = IDXGIAdapter1_CheckInterfaceSupport(adapter, &IID_IDXGIDevice, &umd);
 	if (!SUCCEEDED(hr))
-		return OPAL_DIRECX12_ERROR;
+		return OPAL_DIRECTX12_ERROR;
 
 	DXGI_ADAPTER_DESC1 desc = {0};
 	hr = IDXGIAdapter1_GetDesc1(adapter, &desc);
 	if (!SUCCEEDED(hr))
-		return OPAL_DIRECX12_ERROR;
+		return OPAL_DIRECTX12_ERROR;
 
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
@@ -89,13 +250,15 @@ Opal_Result directx12_fillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *devic
 	}
 
 	// fill features
+	DirectX12_DeviceEnginesInfo device_engines_info = {0};
+	directx12_helperFillDeviceEnginesInfo(&device_engines_info);
+
+	memcpy(info->features.queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+
 	info->features.tessellation_shader = 1;
 	info->features.geometry_shader = 1;
 	info->features.compute_pipeline = 1;
 	info->features.texture_compression_bc = 1;
-	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
-	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
-	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS5 raytracing_options = {0};
 	hr = ID3D12Device_CheckFeatureSupport(device, D3D12_FEATURE_D3D12_OPTIONS5, &raytracing_options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5));
