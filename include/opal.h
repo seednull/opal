@@ -1476,8 +1476,6 @@ OPAL_APIENTRY Opal_Result opalGetDeviceTable(Opal_Device device, Opal_DeviceTabl
 
 OPAL_APIENTRY Opal_Result opalEnumerateDevices(Opal_Instance instance, uint32_t *device_count, Opal_DeviceInfo *infos);
 
-// TODO: get optimal color format from surface
-// TODO: get optimal present mode from surface
 OPAL_APIENTRY Opal_Result opalCreateSurface(Opal_Instance instance, void *handle, Opal_Surface *surface);
 OPAL_APIENTRY Opal_Result opalCreateDevice(Opal_Instance instance, uint32_t index, Opal_Device *device);
 OPAL_APIENTRY Opal_Result opalCreateDefaultDevice(Opal_Instance instance, Opal_DeviceHint hint, Opal_Device *device);
