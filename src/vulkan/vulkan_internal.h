@@ -132,16 +132,16 @@ typedef struct Vulkan_Device_t
 	Vulkan_Allocator allocator;
 } Vulkan_Device;
 
-typedef struct Vulkan_Semaphore_t
-{
-	VkSemaphore semaphore;
-} Vulkan_Semaphore;
-
 typedef struct Vulkan_Queue_t
 {
 	VkQueue queue;
 	uint32_t family_index;
 } Vulkan_Queue;
+
+typedef struct Vulkan_Semaphore_t
+{
+	VkSemaphore semaphore;
+} Vulkan_Semaphore;
 
 typedef struct Vulkan_Buffer_t
 {

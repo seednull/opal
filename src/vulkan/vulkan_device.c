@@ -4283,8 +4283,8 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	opal_bumpInitialize(&device_ptr->bump, 256);
 
 	// pools
-	opal_poolInitialize(&device_ptr->semaphores, sizeof(Vulkan_Semaphore), 32);
 	opal_poolInitialize(&device_ptr->queues, sizeof(Vulkan_Queue), 32);
+	opal_poolInitialize(&device_ptr->semaphores, sizeof(Vulkan_Semaphore), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(Vulkan_Buffer), 32);
 	opal_poolInitialize(&device_ptr->images, sizeof(Vulkan_Image), 32);
 	opal_poolInitialize(&device_ptr->image_views, sizeof(Vulkan_ImageView), 32);
