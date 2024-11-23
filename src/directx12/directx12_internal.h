@@ -96,6 +96,7 @@ typedef struct DirectX12_Device_t
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
 	Opal_Pool queues;
+	Opal_Pool semaphores;
 	Opal_Pool buffers;
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
@@ -107,8 +108,17 @@ typedef struct DirectX12_Device_t
 typedef struct DirectX12_Queue_t
 {
 	ID3D12CommandQueue *queue;
+	ID3D12Fence *fence;
+	UINT64 wanted_value;
+	HANDLE event;
 	D3D12_COMMAND_LIST_TYPE type;
 } DirectX12_Queue;
+
+typedef struct DirectX12_Semaphore_t
+{
+	ID3D12Fence *fence;
+	HANDLE event;
+} DirectX12_Semaphore;
 
 typedef struct DirectX12_Buffer_t
 {
@@ -137,6 +147,9 @@ typedef struct DirectX12_Surface_t
 typedef struct DirectX12_Swapchain_t
 {
 	IDXGISwapChain3 *swapchain;
+	UINT present_flags;
+	uint32_t current_index;
+	uint32_t num_textures;
 } DirectX12_Swapchain;
 
 Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info);

@@ -13,7 +13,18 @@ static void directx12_destroyQueue(DirectX12_Device *device_ptr, DirectX12_Queue
 	OPAL_UNUSED(device_ptr);
 	assert(queue_ptr);
 
+	CloseHandle(queue_ptr->event);
+	ID3D12Fence_Release(queue_ptr->fence);
 	ID3D12CommandQueue_Release(queue_ptr->queue);
+}
+
+static void directx12_destroySemaphore(DirectX12_Device *device_ptr, DirectX12_Semaphore *semaphore_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(semaphore_ptr);
+
+	CloseHandle(semaphore_ptr->event);
+	ID3D12Fence_Release(semaphore_ptr->fence);
 }
 
 static void directx12_destroyBuffer(DirectX12_Device *device_ptr, DirectX12_Buffer *buffer_ptr)
@@ -219,11 +230,26 @@ static Opal_Result directx12_deviceGetPreferredSurfacePresentMode(Opal_Device th
 
 static Opal_Result directx12_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(semaphore);
+	assert(this);
+	assert(desc);
+	assert(semaphore);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	ID3D12Fence *d3d12_fence = NULL;
+
+	D3D12_FENCE_FLAGS flags = D3D12_FENCE_FLAG_NONE;
+	HRESULT hr = ID3D12Device_CreateFence(d3d12_device, desc->initial_value, flags, &IID_ID3D12Fence, &d3d12_fence);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	DirectX12_Semaphore result = {0};
+	result.fence = d3d12_fence;
+	result.event = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+
+	*semaphore = (Opal_Semaphore)opal_poolAddElement(&device_ptr->semaphores, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
@@ -434,7 +460,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	assert(surface_ptr);
 
 	// surface capabilities
-	uint32_t num_images = (desc->mode == OPAL_PRESENT_MODE_MAILBOX) ? 3 : 2;
+	uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_MAILBOX) ? 3 : 2;
 
 	// present queue
 	Opal_Queue *queues = device_ptr->queue_handles[OPAL_DEVICE_ENGINE_TYPE_MAIN];
@@ -446,7 +472,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	// present mode
 	UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	if (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE)
-		flags |= DXGI_PRESENT_ALLOW_TEARING;
+		flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 	// surface format
 	DXGI_FORMAT format = directx12_helperToDXGIFormat(desc->format.texture_format);
@@ -459,7 +485,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	swapchain_info.SampleDesc.Count = 1;
 	swapchain_info.SampleDesc.Quality = 0;
 	swapchain_info.BufferUsage = directx12_helperToDXGIUsage(desc->usage);
-	swapchain_info.BufferCount = num_images;
+	swapchain_info.BufferCount = num_textures;
 	swapchain_info.Scaling = DXGI_SCALING_STRETCH;
 	swapchain_info.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapchain_info.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
@@ -500,9 +526,18 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 		return OPAL_DIRECTX12_ERROR;
 	}
 
+	// TODO: create texture views from swapchain buffers
+	// ID3D12Resource *d3d12_resource = NULL;
+	// IDXGISwapChain3_GetBuffer(d3d12_swapchain3, 0, &IID_ID3D12Resource, &d3d12_resource);
+
 	// create opal struct
 	DirectX12_Swapchain result = {0};
 	result.swapchain = d3d12_swapchain3;
+	result.current_index = IDXGISwapChain3_GetCurrentBackBufferIndex(d3d12_swapchain3);
+	result.num_textures = num_textures;
+
+	if (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE)
+		result.present_flags = DXGI_PRESENT_ALLOW_TEARING;
 
 	*swapchain = (Opal_Buffer)opal_poolAddElement(&device_ptr->swapchains, &result);
 	return OPAL_SUCCESS;
@@ -510,10 +545,20 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 
 static Opal_Result directx12_deviceDestroySemaphore(Opal_Device this, Opal_Semaphore semaphore)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
+	assert(this);
+	assert(semaphore);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)semaphore;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, handle);
+	assert(semaphore_ptr);
+
+	opal_poolRemoveElement(&device_ptr->semaphores, handle);
+
+	directx12_destroySemaphore(device_ptr, semaphore_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
@@ -700,6 +745,19 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->buffers);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->semaphores);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElementByIndex(&ptr->semaphores, head);
+			directx12_destroySemaphore(ptr, semaphore_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->semaphores, head);
+		}
+
+		opal_poolShutdown(&ptr->semaphores);
 	}
 
 	{
@@ -960,45 +1018,96 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 
 static Opal_Result directx12_deviceQuerySemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t *value)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
-	OPAL_UNUSED(value);
+	assert(this);
+	assert(semaphore);
+	assert(value);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
+	assert(semaphore_ptr);
+
+	*value = ID3D12Fence_GetCompletedValue(semaphore_ptr->fence);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceSignalSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
-	OPAL_UNUSED(value);
+	assert(this);
+	assert(semaphore);
+	assert(value);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
+	assert(semaphore_ptr);
+
+	HRESULT hr = ID3D12Fence_Signal(semaphore_ptr->fence, value);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t value, uint64_t timeout_milliseconds)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(semaphore);
-	OPAL_UNUSED(value);
-	OPAL_UNUSED(timeout_milliseconds);
+	assert(this);
+	assert(semaphore);
+	assert(value);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
+	assert(semaphore_ptr);
+
+	ID3D12Fence_SetEventOnCompletion(semaphore_ptr->fence, value, semaphore_ptr->event);
+	HRESULT hr = WaitForSingleObjectEx(semaphore_ptr->event, (DWORD)timeout_milliseconds, FALSE);
+	if (hr == WAIT_TIMEOUT)
+		return OPAL_WAIT_TIMEOUT;
+
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceWaitQueue(Opal_Device this, Opal_Queue queue)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(queue);
+	assert(this);
+	assert(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Queue *queue_ptr = (DirectX12_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	UINT64 current_value = ID3D12Fence_GetCompletedValue(queue_ptr->fence);
+	UINT64 wanted_value = queue_ptr->wanted_value;
+
+	if (wanted_value <= current_value)
+		return OPAL_SUCCESS;
+
+	ID3D12Fence_SetEventOnCompletion(queue_ptr->fence, wanted_value, queue_ptr->event);
+	WaitForSingleObjectEx(queue_ptr->event, INFINITE, FALSE);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceWaitIdle(Opal_Device this)
 {
-	OPAL_UNUSED(this);
+	assert(this);
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
-	return OPAL_NOT_SUPPORTED;
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+	{
+		uint32_t queue_count = device_ptr->device_engines_info.queue_counts[i];
+		const Opal_Queue *queues = device_ptr->queue_handles[i];
+
+		for (uint32_t j = 0; j < queue_count; ++j)
+			directx12_deviceWaitQueue(this, queues[j]);
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, const Opal_SubmitDesc *desc)
@@ -1012,14 +1121,15 @@ static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, co
 	DirectX12_Queue *queue_ptr = (DirectX12_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
 	assert(queue_ptr);
 
+	// NOTE: it seems that IDXGISwapChain is internally synchronized,
+	//       so no need to emulate it via waiting or signaling fences
+
 	for (uint32_t i = 0; i < desc->num_wait_semaphores; ++i)
 	{
-		// TODO: wait for semaphore values
-	}
+		DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->wait_semaphores[i]);
+		assert(semaphore_ptr);
 
-	for (uint32_t i = 0; i < desc->num_wait_swapchains; ++i)
-	{
-		// TODO: wait for swapchain semaphores
+		ID3D12CommandQueue_Wait(queue_ptr->queue, semaphore_ptr->fence, desc->wait_values[i]);
 	}
 
 	if (desc->num_command_buffers > 0)
@@ -1037,16 +1147,17 @@ static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, co
 		}
 
 		ID3D12CommandQueue_ExecuteCommandLists(queue_ptr->queue, desc->num_command_buffers, submit_command_buffers);
+
+		queue_ptr->wanted_value++;
+		ID3D12CommandQueue_Signal(queue_ptr->queue, queue_ptr->fence, queue_ptr->wanted_value);
 	}
 
 	for (uint32_t i = 0; i < desc->num_signal_semaphores; ++i)
 	{
-		// TODO: signal semaphore with new values
-	}
+		DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->signal_semaphores[i]);
+		assert(semaphore_ptr);
 
-	for (uint32_t i = 0; i < desc->num_signal_swapchains; ++i)
-	{
-		// TODO: signal swapchain semaphores
+		ID3D12CommandQueue_Signal(queue_ptr->queue, semaphore_ptr->fence, desc->signal_values[i]);
 	}
 
 	return OPAL_SUCCESS;
@@ -1054,19 +1165,37 @@ static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, co
 
 static Opal_Result directx12_deviceAcquire(Opal_Device this, Opal_Swapchain swapchain, Opal_TextureView *texture_view)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(swapchain);
-	OPAL_UNUSED(texture_view);
+	assert(this);
+	assert(swapchain);
+	assert(texture_view);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Swapchain *swapchain_ptr = (DirectX12_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
+	assert(swapchain_ptr);
+	assert(swapchain_ptr->current_index < swapchain_ptr->num_textures);
+
+	// *texture_view = swapchain_ptr->texture_views[swapchain_ptr->current_index];
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swapchain)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(swapchain);
+	assert(this);
+	assert(swapchain);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Swapchain *swapchain_ptr = (DirectX12_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
+	assert(swapchain_ptr);
+
+	HRESULT hr = IDXGISwapChain3_Present(swapchain_ptr->swapchain, 0, swapchain_ptr->present_flags);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	swapchain_ptr->current_index = IDXGISwapChain3_GetCurrentBackBufferIndex(swapchain_ptr->swapchain);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
@@ -1514,6 +1643,7 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 
 	// pools
 	opal_poolInitialize(&device_ptr->queues, sizeof(DirectX12_Queue), 32);
+	opal_poolInitialize(&device_ptr->semaphores, sizeof(DirectX12_Semaphore), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(DirectX12_Buffer), 32);
 	opal_poolInitialize(&device_ptr->command_pools, sizeof(DirectX12_CommandPool), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(DirectX12_CommandBuffer), 32);
@@ -1541,7 +1671,16 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 
 		for (uint32_t j = 0; j < queue_count; j++)
 		{
-			ID3D12Device_CreateCommandQueue(device_ptr->device, &desc, &IID_ID3D12CommandQueue, &queue.queue);
+			HRESULT hr = ID3D12Device_CreateCommandQueue(device_ptr->device, &desc, &IID_ID3D12CommandQueue, &queue.queue);
+			assert(SUCCEEDED(hr));
+
+			hr = ID3D12Device_CreateFence(device_ptr->device, 0, D3D12_FENCE_FLAG_NONE, &IID_ID3D12Fence, &queue.fence);
+			assert(SUCCEEDED(hr));
+
+			queue.event = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+			queue.wanted_value = 0;
+
+			OPAL_UNUSED(hr);
 			queue_handles[j] = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &queue);
 		}
 
