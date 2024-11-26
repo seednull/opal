@@ -1,7 +1,9 @@
 #ifdef OPAL_PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
+#define TARGET_API OPAL_API_DIRECTX12
 #include <windows.h>
 #elif OPAL_PLATFORM_WEB
+#define TARGET_API OPAL_API_WEBGPU
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #endif
@@ -12,15 +14,32 @@
 
 #define UNUSED(x) do { (void)(x); } while(0)
 
-#ifdef OPAL_PLATFORM_WINDOWS
-#define VERTEX_SHADER_PATH "samples/04_triangle/shaders/vulkan/main.vert.spv"
-#define FRAGMENT_SHADER_PATH "samples/04_triangle/shaders/vulkan/main.frag.spv"
-#define SHADER_TYPE OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY
-#elif OPAL_PLATFORM_WEB
-#define VERTEX_SHADER_PATH "samples/04_triangle/shaders/webgpu/main.vert.wgsl"
-#define FRAGMENT_SHADER_PATH "samples/04_triangle/shaders/webgpu/main.frag.wgsl"
-#define SHADER_TYPE OPAL_SHADER_SOURCE_TYPE_WGSL
-#endif
+static const char *vertex_paths[] =
+{
+	"samples/04_triangle/shaders/vulkan/main.vert.spv",
+	"samples/04_triangle/shaders/directx12/main.vert.cso",
+	NULL,
+	"samples/04_triangle/shaders/webgpu/main.vert.wgsl",
+	NULL,
+};
+
+static const char *fragment_paths[] =
+{
+	"samples/04_triangle/shaders/vulkan/main.frag.spv",
+	"samples/04_triangle/shaders/directx12/main.frag.cso",
+	NULL,
+	"samples/04_triangle/shaders/webgpu/main.frag.wgsl",
+	NULL,
+};
+
+static Opal_ShaderSourceType shader_types[] =
+{
+	OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
+	OPAL_SHADER_SOURCE_TYPE_DXIL_BINARY,
+	OPAL_SHADER_SOURCE_TYPE_MSL,
+	OPAL_SHADER_SOURCE_TYPE_WGSL,
+	OPAL_SHADER_SOURCE_ENUM_FORCE32,
+};
 
 bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device, Opal_Shader *shader)
 {
@@ -131,7 +150,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		OPAL_INSTANCE_CREATION_FLAGS_USE_VULKAN_VALIDATION_LAYERS,
 	};
 
-	Opal_Result result = opalCreateInstance(OPAL_API_AUTO, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(TARGET_API, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCreateSurface(instance, handle, &surface);
@@ -243,10 +262,10 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	assert(result == OPAL_SUCCESS);
 
 	// shaders
-	bool loaded = loadShader(VERTEX_SHADER_PATH, SHADER_TYPE, device, &vertex_shader);
+	bool loaded = loadShader(vertex_paths[TARGET_API], shader_types[TARGET_API], device, &vertex_shader);
 	assert(loaded == true);
 
-	loaded = loadShader(FRAGMENT_SHADER_PATH, SHADER_TYPE, device, &fragment_shader);
+	loaded = loadShader(fragment_paths[TARGET_API], shader_types[TARGET_API], device, &fragment_shader);
 	assert(loaded == true);
 
 	// pipeline
