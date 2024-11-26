@@ -100,6 +100,8 @@ typedef struct DirectX12_Device_t
 	Opal_Pool buffers;
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
+	Opal_Pool shaders;
+	Opal_Pool descriptor_heaps;
 	Opal_Pool swapchains;
 
 	DirectX12_Allocator allocator;
@@ -139,6 +141,19 @@ typedef struct DirectX12_CommandBuffer_t
 	Opal_CommandPool pool;
 } DirectX12_CommandBuffer;
 
+typedef struct DirectX12_Shader_t
+{
+	void *data;
+	SIZE_T size;
+} DirectX12_Shader;
+
+typedef struct DirectX12_DescriptorHeap_t
+{
+	ID3D12DescriptorHeap *memory;
+	D3D12_DESCRIPTOR_HEAP_TYPE type;
+	Opal_Heap heap;
+} DirectX12_DescriptorHeap;
+
 typedef struct DirectX12_Surface_t
 {
 	HWND handle;
@@ -158,7 +173,7 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 Opal_Result directx12_deviceAllocateMemory(DirectX12_Device *device_ptr, const DirectX12_AllocationDesc *desc, DirectX12_Allocation *allocation);
 
 D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags usage);
-
+D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type);
 DXGI_FORMAT directx12_helperToDXGIFormat(Opal_TextureFormat format);
 DXGI_USAGE directx12_helperToDXGIUsage(Opal_TextureUsageFlags usage);
 DXGI_COLOR_SPACE_TYPE directx12_helperToDXGIColorSpace(Opal_ColorSpace color_space);

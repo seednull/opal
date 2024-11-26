@@ -52,6 +52,17 @@ D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_Allocati
 	return result;
 }
 
+D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type)
+{
+	static D3D12_DESCRIPTOR_HEAP_TYPE d3d12_types[] =
+	{
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+	};
+
+	return d3d12_types[type];
+}
+
 DXGI_FORMAT directx12_helperToDXGIFormat(Opal_TextureFormat format)
 {
 	static DXGI_FORMAT dxgi_formats[] =

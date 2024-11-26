@@ -52,6 +52,23 @@ static void directx12_destroyCommandBuffer(DirectX12_Device *device_ptr, DirectX
 	ID3D12GraphicsCommandList_Release(command_buffer_ptr->list);
 }
 
+static void directx12_destroyShader(DirectX12_Device *device_ptr, DirectX12_Shader *shader_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(shader_ptr);
+
+	free(shader_ptr->data);
+}
+
+static void directx12_destroyDescriptorHeap(DirectX12_Device *device_ptr, DirectX12_DescriptorHeap *descriptor_heap_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(descriptor_heap_ptr);
+
+	ID3D12DescriptorHeap_Release(descriptor_heap_ptr->memory);
+	opal_heapShutdown(&descriptor_heap_ptr->heap);
+}
+
 static void directx12_destroySwapchain(DirectX12_Device *device_ptr, DirectX12_Swapchain *swapchain_ptr)
 {
 	OPAL_UNUSED(device_ptr);
@@ -371,11 +388,53 @@ static Opal_Result directx12_deviceCreateCommandPool(Opal_Device this, Opal_Queu
 
 static Opal_Result directx12_deviceCreateShader(Opal_Device this, const Opal_ShaderDesc *desc, Opal_Shader *shader)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(shader);
+	assert(this);
+	assert(desc);
+	assert(shader);
+	assert(desc->type == OPAL_SHADER_SOURCE_TYPE_DXIL_BINARY);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Shader result = {0};
+	result.data = malloc(desc->size);
+	result.size = desc->size;
+
+	memcpy(result.data, desc->data, desc->size);
+
+	*shader = (Opal_CommandPool)opal_poolAddElement(&device_ptr->shaders, &result);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceCreateDescriptorHeap(Opal_Device this, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_heap)
+{
+	assert(this);
+	assert(desc);
+	assert(descriptor_heap);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
+	heap_info.Type = directx12_helperToDescriptorHeapType(desc->type);
+	heap_info.NumDescriptors = desc->num_descriptors;
+	heap_info.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+	ID3D12DescriptorHeap *d3d12_heap = NULL;
+	HRESULT hr = ID3D12Device_CreateDescriptorHeap(d3d12_device, &heap_info, &IID_ID3D12DescriptorHeap, &d3d12_heap);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	DirectX12_DescriptorHeap result = {0};
+	result.memory = d3d12_heap;
+	result.type = heap_info.Type;
+
+	Opal_Result opal_result = opal_heapInitialize(&result.heap, desc->num_descriptors, desc->num_descriptors);
+	OPAL_UNUSED(opal_result);
+
+	assert(opal_result == OPAL_SUCCESS);
+
+	*descriptor_heap = (Opal_DescriptorHeap)opal_poolAddElement(&device_ptr->descriptor_heaps, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
@@ -633,10 +692,38 @@ static Opal_Result directx12_deviceDestroyCommandPool(Opal_Device this, Opal_Com
 
 static Opal_Result directx12_deviceDestroyShader(Opal_Device this, Opal_Shader shader)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(shader);
+	assert(this);
+	assert(shader);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)shader;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, handle);
+	assert(shader_ptr);
+
+	opal_poolRemoveElement(&device_ptr->shaders, handle);
+
+	directx12_destroyShader(device_ptr, shader_ptr);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceDestroyDescriptorHeap(Opal_Device this, Opal_DescriptorHeap descriptor_heap)
+{
+	assert(this);
+	assert(descriptor_heap);
+
+	Opal_PoolHandle handle = (Opal_PoolHandle)descriptor_heap;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, handle);
+	assert(descriptor_heap_ptr);
+
+	opal_poolRemoveElement(&device_ptr->descriptor_heaps, handle);
+
+	directx12_destroyDescriptorHeap(device_ptr, descriptor_heap_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyBindsetLayout(Opal_Device this, Opal_BindsetLayout bindset_layout)
@@ -675,7 +762,7 @@ static Opal_Result directx12_deviceDestroySwapchain(Opal_Device this, Opal_Swapc
 {
 	assert(this);
 	assert(swapchain);
- 
+
 	Opal_PoolHandle handle = (Opal_PoolHandle)swapchain;
 	assert(handle != OPAL_POOL_HANDLE_NULL);
 
@@ -706,6 +793,32 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->swapchains);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_heaps);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElementByIndex(&ptr->descriptor_heaps, head);
+			directx12_destroyDescriptorHeap(ptr, descriptor_heap_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->descriptor_heaps, head);
+		}
+
+		opal_poolShutdown(&ptr->descriptor_heaps);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->shaders);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElementByIndex(&ptr->shaders, head);
+			directx12_destroyShader(ptr, shader_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->shaders, head);
+		}
+
+		opal_poolShutdown(&ptr->shaders);
 	}
 
 	{
@@ -1529,6 +1642,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCreateAccelerationStructure,
 	directx12_deviceCreateCommandPool,
 	directx12_deviceCreateShader,
+	directx12_deviceCreateDescriptorHeap,
 	directx12_deviceCreateBindsetLayout,
 	directx12_deviceCreateBindsetPool,
 	directx12_deviceCreatePipelineLayout,
@@ -1545,6 +1659,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceDestroySampler,
 	directx12_deviceDestroyAccelerationStructure,
 	directx12_deviceDestroyCommandPool,
+	directx12_deviceDestroyDescriptorHeap,
 	directx12_deviceDestroyShader,
 	directx12_deviceDestroyBindsetLayout,
 	directx12_deviceDestroyBindsetPool,
@@ -1647,6 +1762,8 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	opal_poolInitialize(&device_ptr->buffers, sizeof(DirectX12_Buffer), 32);
 	opal_poolInitialize(&device_ptr->command_pools, sizeof(DirectX12_CommandPool), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(DirectX12_CommandBuffer), 32);
+	opal_poolInitialize(&device_ptr->shaders, sizeof(DirectX12_Shader), 32);
+	opal_poolInitialize(&device_ptr->descriptor_heaps, sizeof(DirectX12_DescriptorHeap), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(DirectX12_Swapchain), 32);
 
 	// queues
