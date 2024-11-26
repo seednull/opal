@@ -160,6 +160,15 @@ static Opal_Result null_deviceCreateShader(Opal_Device this, const Opal_ShaderDe
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCreateDescriptorHeap(Opal_Device this, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(desc);
+	OPAL_UNUSED(descriptor_heap);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
 {
 	OPAL_UNUSED(this);
@@ -294,6 +303,14 @@ static Opal_Result null_deviceDestroyShader(Opal_Device this, Opal_Shader shader
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(shader);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroyDescriptorHeap(Opal_Device this, Opal_DescriptorHeap descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(descriptor_heap);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -888,6 +905,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateAccelerationStructure,
 	null_deviceCreateCommandPool,
 	null_deviceCreateShader,
+	null_deviceCreateDescriptorHeap,
 	null_deviceCreateBindsetLayout,
 	null_deviceCreateBindsetPool,
 	null_deviceCreatePipelineLayout,
@@ -905,6 +923,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyAccelerationStructure,
 	null_deviceDestroyCommandPool,
 	null_deviceDestroyShader,
+	null_deviceDestroyDescriptorHeap,
 	null_deviceDestroyBindsetLayout,
 	null_deviceDestroyBindsetPool,
 	null_deviceDestroyPipelineLayout,

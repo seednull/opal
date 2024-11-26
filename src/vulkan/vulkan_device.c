@@ -1031,6 +1031,15 @@ static Opal_Result vulkan_deviceCreateShader(Opal_Device this, const Opal_Shader
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(desc);
+	OPAL_UNUSED(descriptor_heap);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result vulkan_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
 {
 	assert(this);
@@ -2027,6 +2036,14 @@ static Opal_Result vulkan_deviceDestroyShader(Opal_Device this, Opal_Shader shad
 
 	vulkan_destroyShader(device_ptr, shader_ptr);
 	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceDestroyDescriptorHeap(Opal_Device this, Opal_DescriptorHeap descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(descriptor_heap);
+
+	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result vulkan_deviceDestroyBindsetLayout(Opal_Device this, Opal_BindsetLayout bindset_layout)
@@ -4114,6 +4131,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCreateAccelerationStructure,
 	vulkan_deviceCreateCommandPool,
 	vulkan_deviceCreateShader,
+	vulkan_deviceCreateDescriptorHeap,
 	vulkan_deviceCreateBindsetLayout,
 	vulkan_deviceCreateBindsetPool,
 	vulkan_deviceCreatePipelineLayout,
@@ -4131,6 +4149,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyAccelerationStructure,
 	vulkan_deviceDestroyCommandPool,
 	vulkan_deviceDestroyShader,
+	vulkan_deviceDestroyDescriptorHeap,
 	vulkan_deviceDestroyBindsetLayout,
 	vulkan_deviceDestroyBindsetPool,
 	vulkan_deviceDestroyPipelineLayout,

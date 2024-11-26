@@ -364,6 +364,18 @@ Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Op
 	return ptr->vtbl->createShader(device, desc, shader);
 }
 
+Opal_Result opalCreateDescriptorHeap(Opal_Device device, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createDescriptorHeap);
+
+	return ptr->vtbl->createDescriptorHeap(device, desc, descriptor_buffer);
+}
+
 Opal_Result opalCreateBindsetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -556,6 +568,18 @@ Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
 	assert(ptr->vtbl->destroyShader);
 
 	return ptr->vtbl->destroyShader(device, shader);
+}
+
+Opal_Result opalDescriptorDescriptorHeap(Opal_Device device, Opal_DescriptorHeap descriptor_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyDescriptorHeap);
+
+	return ptr->vtbl->destroyDescriptorHeap(device, descriptor_buffer);
 }
 
 Opal_Result opalDestroyBindsetLayout(Opal_Device device, Opal_BindsetLayout bindset_layout)
