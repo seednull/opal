@@ -12,6 +12,7 @@
 #include "common/pool.h"
 
 #define D3D12_MAX_MEMORY_TYPES 16U
+#define D3D12_MAX_COMMAND_POOL_ALLOCATORS 8U
 
 typedef enum DirectX12_ResourceType_t
 {
@@ -135,7 +136,8 @@ typedef struct DirectX12_Buffer_t
 
 typedef struct DirectX12_CommandPool_t
 {
-	ID3D12CommandAllocator *allocator;
+	ID3D12CommandAllocator *allocators[D3D12_MAX_COMMAND_POOL_ALLOCATORS];
+	uint32_t usages[D3D12_MAX_COMMAND_POOL_ALLOCATORS];
 	D3D12_COMMAND_LIST_TYPE type;
 } DirectX12_CommandPool;
 
@@ -143,6 +145,8 @@ typedef struct DirectX12_CommandBuffer_t
 {
 	ID3D12GraphicsCommandList *list;
 	Opal_CommandPool pool;
+	uint32_t index;
+	uint32_t recording;
 } DirectX12_CommandBuffer;
 
 typedef struct DirectX12_Shader_t
