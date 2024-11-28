@@ -79,6 +79,7 @@ typedef struct DirectX12_Instance_t
 {
 	Opal_InstanceTable *vtbl;
 	IDXGIFactory2 *factory;
+	ID3D12Debug1 *debug;
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
@@ -166,6 +167,13 @@ typedef struct DirectX12_Swapchain_t
 	uint32_t current_index;
 	uint32_t num_textures;
 } DirectX12_Swapchain;
+
+typedef HRESULT (WINAPI* PFN_DXGI_CREATE_FACTORY)(REFIID, _COM_Outptr_ void **);
+
+extern PFN_D3D12_CREATE_DEVICE opal_d3d12CreateDevice;
+extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE opal_d3d12SerializeRootSignature;
+extern PFN_D3D12_GET_DEBUG_INTERFACE opal_d3d12GetDebugInterface;
+extern PFN_DXGI_CREATE_FACTORY opal_dxgiCreateFactory1;
 
 Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info);
 Opal_Result directx12_helperFillDeviceEnginesInfo(DirectX12_DeviceEnginesInfo *info);

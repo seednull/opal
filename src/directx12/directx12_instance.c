@@ -5,10 +5,10 @@
 
 /*
  */
-typedef HRESULT (WINAPI* PFN_DXGI_CREATE_FACTORY)(REFIID, _COM_Outptr_ void **);
-
-static PFN_D3D12_CREATE_DEVICE opal_d3d12CreateDevice = NULL;
-static PFN_DXGI_CREATE_FACTORY opal_dxgiCreateFactory1 = NULL;
+PFN_D3D12_CREATE_DEVICE opal_d3d12CreateDevice = NULL;
+PFN_D3D12_SERIALIZE_ROOT_SIGNATURE opal_d3d12SerializeRootSignature = NULL;
+PFN_D3D12_GET_DEBUG_INTERFACE opal_d3d12GetDebugInterface = NULL;
+PFN_DXGI_CREATE_FACTORY opal_dxgiCreateFactory1 = NULL;
 
 static Opal_Result directx12_initialize()
 {
@@ -26,8 +26,10 @@ static Opal_Result directx12_initialize()
 		if (!dxgi_module)
 			return OPAL_DIRECTX12_ERROR;
 
-		opal_d3d12CreateDevice = (PFN_D3D12_CREATE_DEVICE)(void(*)(void))GetProcAddress(d3d12_module, "D3D12CreateDevice");
-		opal_dxgiCreateFactory1 = (PFN_DXGI_CREATE_FACTORY)(void(*)(void))GetProcAddress(dxgi_module, "CreateDXGIFactory1");
+		opal_dxgiCreateFactory1 = (PFN_DXGI_CREATE_FACTORY)GetProcAddress(dxgi_module, "CreateDXGIFactory1");
+		opal_d3d12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12_module, "D3D12CreateDevice");
+		opal_d3d12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12_module, "D3D12GetDebugInterface");
+		opal_d3d12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(d3d12_module, "D3D12SerializeRootSignature");
 
 		once = 1;
 	}
@@ -231,6 +233,9 @@ static Opal_Result directx12_instanceDestroy(Opal_Instance this)
 
 	opal_poolShutdown(&ptr->surfaces);
 
+	if (ptr->debug)
+		ID3D12Debug1_Release(ptr->debug);
+
 	IDXGIFactory2_Release(ptr->factory);
 
 	free(ptr);
@@ -271,6 +276,25 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECTX12_ERROR;
 
+	// debug interface
+	ID3D12Debug1 *d3d12_debug1 = NULL;
+	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_DIRECTX12_DEBUG_LAYER)
+	{
+		ID3D12Debug *d3d12_debug = NULL;
+		hr = opal_d3d12GetDebugInterface(&IID_ID3D12Debug, &d3d12_debug);
+		if (!SUCCEEDED(hr))
+			return OPAL_DIRECTX12_ERROR;
+
+		hr = ID3D12Debug_QueryInterface(d3d12_debug, &IID_ID3D12Debug1, &d3d12_debug1);
+		ID3D12Debug_Release(d3d12_debug);
+
+		if (!SUCCEEDED(hr))
+			return OPAL_DIRECTX12_ERROR;
+
+		ID3D12Debug1_EnableDebugLayer(d3d12_debug1);
+		ID3D12Debug1_SetEnableGPUBasedValidation(d3d12_debug1, TRUE);
+	}
+
 	DirectX12_Instance *ptr = (DirectX12_Instance *)malloc(sizeof(DirectX12_Instance));
 	assert(ptr);
 
@@ -279,6 +303,7 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 
 	// data
 	ptr->factory = factory;
+	ptr->debug = d3d12_debug1;
 	ptr->heap_size = desc->heap_size;
 	ptr->max_heap_allocations = desc->max_heap_allocations;
 	ptr->max_heaps = desc->max_heaps;
