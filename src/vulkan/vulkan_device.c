@@ -1217,7 +1217,7 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	for (uint32_t i = 0; i < 5; ++i)
 	{
-		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
+		Vulkan_Shader *shader_ptr = (Vulkan_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
 		if (shader_ptr == NULL)
 			continue;
 
