@@ -1,21 +1,21 @@
 struct VertexInput
 {
-	float3 position: POSITION;
-	float3 color: COLOR;
+	float4 position: LOCATION0;
+	float4 color: LOCATION1;
 };
 
-struct VertexShaderOutput
+struct VertexOutput
 {
 	float4 position: SV_Position;
-	float4 color: COLOR;
+	float4 color: COLOR0;
 };
 
-VertexShaderOutput main(VertexInput input)
+VertexOutput main(VertexInput input)
 {
-	VertexShaderOutput result;
+	VertexOutput result;
 
-	result.position = float4(input.position, 1.0f);
-	result.color = float4(input.color, 1.0f);
+	result.position = float4(input.position.xyz, 1.0f);
+	result.color = input.color;
 
 	return result;
 }
