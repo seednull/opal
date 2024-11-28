@@ -1752,7 +1752,6 @@ static Opal_Result directx12_deviceSignalSemaphore(Opal_Device this, Opal_Semaph
 {
 	assert(this);
 	assert(semaphore);
-	assert(value);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
@@ -1770,7 +1769,6 @@ static Opal_Result directx12_deviceWaitSemaphore(Opal_Device this, Opal_Semaphor
 {
 	assert(this);
 	assert(semaphore);
-	assert(value);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
