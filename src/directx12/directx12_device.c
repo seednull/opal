@@ -69,6 +69,30 @@ static void directx12_destroyDescriptorHeap(DirectX12_Device *device_ptr, Direct
 	opal_heapShutdown(&descriptor_heap_ptr->heap);
 }
 
+static void directx12_destroyBindsetLayout(DirectX12_Device *device_ptr, DirectX12_BindsetLayout *bindset_layout_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(bindset_layout_ptr);
+
+	free(bindset_layout_ptr->descriptors);
+}
+
+static void directx12_destroyPipelineLayout(DirectX12_Device *device_ptr, DirectX12_PipelineLayout *pipeline_layout_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(pipeline_layout_ptr);
+
+	ID3D12RootSignature_Release(pipeline_layout_ptr->root_signature);
+}
+
+static void directx12_destroyPipeline(DirectX12_Device *device_ptr, DirectX12_Pipeline *pipeline_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(pipeline_ptr);
+
+	ID3D12PipelineState_Release(pipeline_ptr->pipeline_state);
+}
+
 static void directx12_destroySwapchain(DirectX12_Device *device_ptr, DirectX12_Swapchain *swapchain_ptr)
 {
 	OPAL_UNUSED(device_ptr);
@@ -439,12 +463,146 @@ static Opal_Result directx12_deviceCreateDescriptorHeap(Opal_Device this, const 
 
 static Opal_Result directx12_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_bindings);
-	OPAL_UNUSED(bindings);
-	OPAL_UNUSED(bindset_layout);
+	assert(this);
+	assert(num_bindings > 0);
+	assert(bindings);
+	assert(bindset_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_BindsetLayout result = {0};
+
+	for (uint32_t i = 0; i < num_bindings; ++i)
+	{
+		switch (bindings[i].type)
+		{
+			case OPAL_BINDING_TYPE_UNIFORM_BUFFER:
+			{
+				result.num_table_cbv_descriptors++;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_1D:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D_ARRAY:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_3D:
+			case OPAL_BINDING_TYPE_MULTISAMPLED_TEXTURE_2D:
+			case OPAL_BINDING_TYPE_ACCELERATION_STRUCTURE: // ?
+			{
+				result.num_table_srv_descriptors++;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER:
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_1D:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D_ARRAY:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_3D:
+			{
+				result.num_table_uav_descriptors++;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_SAMPLER:
+			case OPAL_BINDING_TYPE_COMPARE_SAMPLER:
+			{
+				result.num_table_sampler_descriptors++;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_UNIFORM_BUFFER_DYNAMIC:
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER_DYNAMIC:
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
+			{
+				result.num_inline_descriptors++;
+			}
+			break;
+
+			default: assert(0); break;
+		}
+	}
+
+	uint32_t table_cbv_descriptor_offset = 0;
+	uint32_t table_uav_descriptor_offset = table_cbv_descriptor_offset + result.num_table_cbv_descriptors;
+	uint32_t table_srv_descriptor_offset = table_uav_descriptor_offset + result.num_table_uav_descriptors;
+	uint32_t table_sampler_descriptor_offset = table_srv_descriptor_offset + result.num_table_srv_descriptors;
+	uint32_t inline_descriptor_offset = table_sampler_descriptor_offset + result.num_table_sampler_descriptors;
+
+	for (uint32_t i = 0; i < num_bindings; ++i)
+	{
+		uint32_t index = 0;
+		D3D12_DESCRIPTOR_RANGE_TYPE type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+
+		switch (bindings[i].type)
+		{
+			case OPAL_BINDING_TYPE_UNIFORM_BUFFER:
+			{
+				index = table_cbv_descriptor_offset++;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_1D:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D_ARRAY:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY:
+			case OPAL_BINDING_TYPE_SAMPLED_TEXTURE_3D:
+			case OPAL_BINDING_TYPE_MULTISAMPLED_TEXTURE_2D:
+			case OPAL_BINDING_TYPE_ACCELERATION_STRUCTURE: // ?
+			{
+				index = table_srv_descriptor_offset++;
+				type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER:
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_1D:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D_ARRAY:
+			case OPAL_BINDING_TYPE_STORAGE_TEXTURE_3D:
+			{
+				index = table_uav_descriptor_offset++;
+				type = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_SAMPLER:
+			case OPAL_BINDING_TYPE_COMPARE_SAMPLER:
+			{
+				index = table_sampler_descriptor_offset++;
+				type = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER_DYNAMIC:
+			case OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
+			{
+				type = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+				index = inline_descriptor_offset++;
+			}
+			break;
+
+			case OPAL_BINDING_TYPE_UNIFORM_BUFFER_DYNAMIC:
+			{
+				index = inline_descriptor_offset++;
+			}
+			break;
+
+			default: assert(0); break;
+		}
+
+		result.descriptors[index].type = type;
+		result.descriptors[index].binding = bindings[i].binding;
+		result.descriptors[index].visibility = directx12_helperToShaderVisibility(bindings[i].visibility);
+	}
+
+	result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_bindings * sizeof(DirectX12_DescriptorInfo));
+
+	*bindset_layout = (Opal_BindsetLayout)opal_poolAddElement(&device_ptr->bindset_layouts, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateBindsetPool(Opal_Device this, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool)
@@ -458,21 +616,324 @@ static Opal_Result directx12_deviceCreateBindsetPool(Opal_Device this, const Opa
 
 static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_bindset_layouts);
-	OPAL_UNUSED(bindset_layouts);
-	OPAL_UNUSED(pipeline_layout);
+	assert(this);
+	assert(pipeline_layout);
+	assert(num_bindset_layouts == 0 || bindset_layouts);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	D3D12_ROOT_PARAMETER *parameters = NULL;
+	D3D12_DESCRIPTOR_RANGE *ranges = NULL;
+	uint32_t num_inline_descriptors = 0;
+
+	if (num_bindset_layouts > 0)
+	{
+		uint32_t num_table_descriptors = 0;
+		for (uint32_t i = 0; i < num_bindset_layouts; ++i)
+		{
+			DirectX12_BindsetLayout *bindset_layout_ptr = (DirectX12_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, (Opal_PoolHandle)bindset_layouts[i]);
+			assert(bindset_layout_ptr);
+			assert(bindset_layout_ptr->descriptors);
+
+			num_inline_descriptors += bindset_layout_ptr->num_inline_descriptors;
+			num_table_descriptors += bindset_layout_ptr->num_table_cbv_descriptors;
+			num_table_descriptors += bindset_layout_ptr->num_table_uav_descriptors;
+			num_table_descriptors += bindset_layout_ptr->num_table_srv_descriptors;
+			num_table_descriptors += bindset_layout_ptr->num_table_sampler_descriptors;
+		}
+
+		opal_bumpReset(&device_ptr->bump);
+		uint32_t parameters_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_ROOT_PARAMETER) * (num_bindset_layouts + num_inline_descriptors));
+		uint32_t ranges_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_DESCRIPTOR_RANGE) * num_table_descriptors);
+
+		parameters = (D3D12_ROOT_PARAMETER *)(device_ptr->bump.data + parameters_offset);
+		ranges = (D3D12_DESCRIPTOR_RANGE *)(device_ptr->bump.data + ranges_offset);
+
+		D3D12_ROOT_PARAMETER *table_parameters = parameters;
+		for (uint32_t i = 0; i < num_bindset_layouts; ++i)
+		{
+			DirectX12_BindsetLayout *bindset_layout_ptr = (DirectX12_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, (Opal_PoolHandle)bindset_layouts[i]);
+			assert(bindset_layout_ptr);
+			assert(bindset_layout_ptr->descriptors);
+
+			DirectX12_DescriptorInfo *current_descriptor = bindset_layout_ptr->descriptors;
+
+			uint32_t num_ranges = 0;
+
+			for (uint32_t j = 0; j < bindset_layout_ptr->num_table_cbv_descriptors; ++j)
+			{
+				assert(current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_CBV);
+
+				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
+				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+				current_range->NumDescriptors = 1;
+				current_range->BaseShaderRegister = current_descriptor->binding;
+				current_range->RegisterSpace = i;
+				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
+
+				num_ranges++;
+				current_descriptor++;
+			}
+
+			for (uint32_t j = 0; j < bindset_layout_ptr->num_table_uav_descriptors; ++j)
+			{
+				assert(current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
+
+				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
+				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+				current_range->NumDescriptors = 1;
+				current_range->BaseShaderRegister = current_descriptor->binding;
+				current_range->RegisterSpace = i;
+				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
+
+				num_ranges++;
+				current_descriptor++;
+			}
+
+			for (uint32_t j = 0; j < bindset_layout_ptr->num_table_srv_descriptors; ++j)
+			{
+				assert(current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_SRV);
+
+				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
+				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+				current_range->NumDescriptors = 1;
+				current_range->BaseShaderRegister = current_descriptor->binding;
+				current_range->RegisterSpace = i;
+				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
+
+				num_ranges++;
+				current_descriptor++;
+			}
+
+			for (uint32_t j = 0; j < bindset_layout_ptr->num_table_sampler_descriptors; ++j)
+			{
+				assert(current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
+
+				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
+				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+				current_range->NumDescriptors = 1;
+				current_range->BaseShaderRegister = current_descriptor->binding;
+				current_range->RegisterSpace = i;
+				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
+
+				num_ranges++;
+				current_descriptor++;	
+			}
+
+			D3D12_ROOT_PARAMETER *parameter = &table_parameters[i];
+			parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+			parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			parameter->DescriptorTable.NumDescriptorRanges = num_ranges;
+			parameter->DescriptorTable.pDescriptorRanges = ranges;
+
+			ranges += num_ranges;
+		}
+
+		D3D12_ROOT_PARAMETER *inline_parameters = parameters + num_bindset_layouts;
+		for (uint32_t i = 0; i < num_bindset_layouts; ++i)
+		{
+			DirectX12_BindsetLayout *bindset_layout_ptr = (DirectX12_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, (Opal_PoolHandle)bindset_layouts[i]);
+			assert(bindset_layout_ptr);
+			assert(bindset_layout_ptr->descriptors);
+
+			DirectX12_DescriptorInfo *current_descriptor = bindset_layout_ptr->descriptors;
+
+			for (uint32_t j = 0; j < bindset_layout_ptr->num_inline_descriptors; ++j)
+			{
+				assert(current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_CBV || current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
+				D3D12_ROOT_PARAMETER *parameter = &inline_parameters[i];
+
+				parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+
+				if (current_descriptor->type == D3D12_DESCRIPTOR_RANGE_TYPE_UAV)
+					parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+
+				parameter->ShaderVisibility = current_descriptor->visibility;
+				parameter->Descriptor.RegisterSpace = i;
+				parameter->Descriptor.ShaderRegister = current_descriptor->binding;
+
+				current_descriptor++;
+			}
+		}
+	}
+
+	D3D12_ROOT_SIGNATURE_DESC layout_info = {0};
+	layout_info.NumParameters = num_bindset_layouts + num_inline_descriptors;
+	layout_info.pParameters = parameters;
+	layout_info.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	ID3DBlob *blob = NULL;
+	HRESULT hr = opal_d3d12SerializeRootSignature(&layout_info, D3D_ROOT_SIGNATURE_VERSION_1_0, &blob, NULL);
+
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	const void *data = ID3D10Blob_GetBufferPointer(blob);
+	SIZE_T size = ID3D10Blob_GetBufferSize(blob);
+
+	ID3D12RootSignature *d3d12_root_signature = NULL;
+
+	hr = ID3D12Device_CreateRootSignature(d3d12_device, 0, data, size, &IID_ID3D12RootSignature, &d3d12_root_signature);
+	ID3D10Blob_Release(blob);
+
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	DirectX12_PipelineLayout result = {0};
+	result.root_signature = d3d12_root_signature;
+
+	*pipeline_layout = (Opal_BindsetLayout)opal_poolAddElement(&device_ptr->pipeline_layouts, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(pipeline);
+	assert(this);
+	assert(desc);
+	assert(pipeline);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_info = {0};
+
+	// pipeline layout
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	pipeline_info.pRootSignature = pipeline_layout_ptr->root_signature;
+
+	// shaders
+	Opal_Shader shaders[5] =
+	{
+		desc->vertex_shader,
+		desc->tessellation_control_shader,
+		desc->tessellation_evaluation_shader,
+		desc->geometry_shader,
+		desc->fragment_shader
+	};
+
+	D3D12_SHADER_BYTECODE *shader_bytecodes[5] =
+	{
+		&pipeline_info.VS,
+		&pipeline_info.HS,
+		&pipeline_info.DS,
+		&pipeline_info.GS,
+		&pipeline_info.PS,
+	};
+
+	for (uint32_t i = 0; i < 5; ++i)
+	{
+		DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
+		if (shader_ptr == NULL)
+			continue;
+
+		shader_bytecodes[i]->pShaderBytecode = shader_ptr->data;
+		shader_bytecodes[i]->BytecodeLength = shader_ptr->size;
+	}
+
+
+	// blend state
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+	{
+		D3D12_RENDER_TARGET_BLEND_DESC *blend_state = &pipeline_info.BlendState.RenderTarget[i];
+		const Opal_BlendState *opal_blend_state = &desc->color_blend_states[i];
+
+		blend_state->BlendEnable = opal_blend_state->enable;
+		blend_state->SrcBlend = directx12_helperToBlendFactor(opal_blend_state->src_color);
+		blend_state->DestBlend = directx12_helperToBlendFactor(opal_blend_state->dst_color);
+		blend_state->BlendOp = directx12_helperToBlendOp(opal_blend_state->color_op);
+		blend_state->SrcBlendAlpha = directx12_helperToBlendFactor(opal_blend_state->src_alpha);
+		blend_state->DestBlendAlpha = directx12_helperToBlendFactor(opal_blend_state->dst_alpha);
+		blend_state->BlendOpAlpha = directx12_helperToBlendOp(opal_blend_state->alpha_op);
+		blend_state->RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	}
+
+	pipeline_info.SampleMask = 0xFFFFFFFF;
+
+	// rasterizer state
+	pipeline_info.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	pipeline_info.RasterizerState.CullMode = directx12_helperToCullMode(desc->cull_mode);
+	pipeline_info.RasterizerState.FrontCounterClockwise = (desc->front_face == OPAL_FRONT_FACE_COUNTER_CLOCKWISE);
+
+	// multisample state
+	pipeline_info.RasterizerState.MultisampleEnable = (desc->rasterization_samples != OPAL_SAMPLES_1);
+	pipeline_info.SampleDesc.Count = directx12_helperToSampleCount(desc->rasterization_samples);
+
+	// depthstencil state
+	pipeline_info.DepthStencilState.DepthEnable = desc->depth_enable;
+	pipeline_info.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	pipeline_info.DepthStencilState.DepthFunc = directx12_helperToComparisonFunc(desc->depth_compare_op);
+	pipeline_info.DepthStencilState.StencilEnable = desc->stencil_enable;
+	pipeline_info.DepthStencilState.StencilReadMask = (UINT8)desc->stencil_read_mask;
+	pipeline_info.DepthStencilState.StencilWriteMask = (UINT8)desc->stencil_write_mask;
+	pipeline_info.DepthStencilState.FrontFace.StencilFailOp = directx12_helperToStencilOp(desc->stencil_front.fail_op);
+	pipeline_info.DepthStencilState.FrontFace.StencilDepthFailOp = directx12_helperToStencilOp(desc->stencil_front.depth_fail_op);
+	pipeline_info.DepthStencilState.FrontFace.StencilPassOp = directx12_helperToStencilOp(desc->stencil_front.pass_op);
+	pipeline_info.DepthStencilState.FrontFace.StencilFunc = directx12_helperToComparisonFunc(desc->stencil_front.compare_op);
+	pipeline_info.DepthStencilState.BackFace.StencilFailOp = directx12_helperToStencilOp(desc->stencil_back.fail_op);
+	pipeline_info.DepthStencilState.BackFace.StencilDepthFailOp = directx12_helperToStencilOp(desc->stencil_back.depth_fail_op);
+	pipeline_info.DepthStencilState.BackFace.StencilPassOp = directx12_helperToStencilOp(desc->stencil_back.pass_op);
+	pipeline_info.DepthStencilState.BackFace.StencilFunc = directx12_helperToComparisonFunc(desc->stencil_back.compare_op);
+	
+	// vertex input state
+	uint32_t num_vertex_attributes = 0;
+	for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
+		num_vertex_attributes += desc->vertex_streams[i].num_vertex_attributes;
+
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t vertex_attributes_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_INPUT_ELEMENT_DESC) * num_vertex_attributes);
+
+	D3D12_INPUT_ELEMENT_DESC *vertex_attributes = (D3D12_INPUT_ELEMENT_DESC *)(device_ptr->bump.data + vertex_attributes_offset);
+
+	uint32_t num_attributes = 0;
+	for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
+	{
+		const Opal_VertexStream *vertex_stream = &desc->vertex_streams[i];
+		for (uint32_t j = 0; j < vertex_stream->num_vertex_attributes; ++j)
+		{
+			const Opal_VertexAttribute *vertex_attribute = &vertex_stream->attributes[j];
+
+			vertex_attributes[num_attributes].SemanticName = "LOCATION";
+			vertex_attributes[num_attributes].SemanticIndex = num_attributes;
+			vertex_attributes[num_attributes].Format = directx12_helperToDXGIVertexFormat(vertex_attribute->format);
+			vertex_attributes[num_attributes].InputSlot = i;
+			vertex_attributes[num_attributes].AlignedByteOffset = vertex_attribute->offset;
+			vertex_attributes[num_attributes].InputSlotClass = directx12_helperToInputSlotClass(vertex_stream->rate);
+			vertex_attributes[num_attributes].InstanceDataStepRate = directx12_helperToInstanceDataStepRate(vertex_stream->rate);
+			num_attributes++;
+		}
+	}
+
+	pipeline_info.InputLayout.NumElements = num_attributes;
+	pipeline_info.InputLayout.pInputElementDescs = vertex_attributes;
+
+	// primitive state
+	pipeline_info.PrimitiveTopologyType = directx12_helperToPrimitiveTopology(desc->primitive_type);
+
+	if (desc->primitive_type == OPAL_PRIMITIVE_TYPE_LINE_STRIP || desc->primitive_type == OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP)
+		pipeline_info.IBStripCutValue = directx12_helperToStripCutValue(desc->strip_index_format);
+
+	// render target state
+	pipeline_info.NumRenderTargets = desc->num_color_attachments;
+
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+		pipeline_info.RTVFormats[i] = directx12_helperToDXGITextureFormat(desc->color_attachment_formats[i]);
+
+	if (desc->depth_stencil_attachment_format)
+		pipeline_info.DSVFormat = directx12_helperToDXGITextureFormat(*desc->depth_stencil_attachment_format);
+
+	ID3D12PipelineState *d3d12_pipeline_state = NULL;
+	HRESULT hr = ID3D12Device_CreateGraphicsPipelineState(d3d12_device, &pipeline_info, &IID_ID3D12PipelineState, &d3d12_pipeline_state);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	DirectX12_Pipeline result = {0};
+	result.pipeline_state = d3d12_pipeline_state;
+
+	*pipeline = (Opal_BindsetLayout)opal_poolAddElement(&device_ptr->pipelines, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline)
@@ -534,7 +995,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 		flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 	// surface format
-	DXGI_FORMAT format = directx12_helperToDXGIFormat(desc->format.texture_format);
+	DXGI_FORMAT format = directx12_helperToDXGITextureFormat(desc->format.texture_format);
 	if (format == DXGI_FORMAT_UNKNOWN)
 		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
 
@@ -728,10 +1189,20 @@ static Opal_Result directx12_deviceDestroyDescriptorHeap(Opal_Device this, Opal_
 
 static Opal_Result directx12_deviceDestroyBindsetLayout(Opal_Device this, Opal_BindsetLayout bindset_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_layout);
+	assert(this);
+	assert(bindset_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)bindset_layout;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_BindsetLayout *bindset_layout_ptr = (DirectX12_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, handle);
+	assert(bindset_layout_ptr);
+
+	opal_poolRemoveElement(&device_ptr->bindset_layouts, handle);
+
+	directx12_destroyBindsetLayout(device_ptr, bindset_layout_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
@@ -744,18 +1215,38 @@ static Opal_Result directx12_deviceDestroyBindsetPool(Opal_Device this, Opal_Bin
 
 static Opal_Result directx12_deviceDestroyPipelineLayout(Opal_Device this, Opal_PipelineLayout pipeline_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(pipeline_layout);
+	assert(this);
+	assert(pipeline_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)pipeline_layout;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, handle);
+	assert(pipeline_layout_ptr);
+
+	opal_poolRemoveElement(&device_ptr->pipeline_layouts, handle);
+
+	directx12_destroyPipelineLayout(device_ptr, pipeline_layout_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline pipeline)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(pipeline);
+	assert(this);
+	assert(pipeline);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)pipeline;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, handle);
+	assert(pipeline_ptr);
+
+	opal_poolRemoveElement(&device_ptr->pipelines, handle);
+
+	directx12_destroyPipeline(device_ptr, pipeline_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain)
@@ -793,6 +1284,45 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->swapchains);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->pipelines);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElementByIndex(&ptr->pipelines, head);
+			directx12_destroyPipeline(ptr, pipeline_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->pipelines, head);
+		}
+
+		opal_poolShutdown(&ptr->pipelines);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->pipeline_layouts);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElementByIndex(&ptr->pipeline_layouts, head);
+			directx12_destroyPipelineLayout(ptr, pipeline_layout_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->pipeline_layouts, head);
+		}
+
+		opal_poolShutdown(&ptr->pipeline_layouts);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->bindset_layouts);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_BindsetLayout *bindset_layout_ptr = (DirectX12_BindsetLayout *)opal_poolGetElementByIndex(&ptr->bindset_layouts, head);
+			directx12_destroyBindsetLayout(ptr, bindset_layout_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->bindset_layouts, head);
+		}
+
+		opal_poolShutdown(&ptr->bindset_layouts);
 	}
 
 	{
@@ -1764,6 +2294,9 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(DirectX12_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(DirectX12_Shader), 32);
 	opal_poolInitialize(&device_ptr->descriptor_heaps, sizeof(DirectX12_DescriptorHeap), 32);
+	opal_poolInitialize(&device_ptr->bindset_layouts, sizeof(DirectX12_BindsetLayout), 32);
+	opal_poolInitialize(&device_ptr->pipeline_layouts, sizeof(DirectX12_PipelineLayout), 32);
+	opal_poolInitialize(&device_ptr->pipelines, sizeof(DirectX12_Pipeline), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(DirectX12_Swapchain), 32);
 
 	// queues

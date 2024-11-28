@@ -103,6 +103,9 @@ typedef struct DirectX12_Device_t
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool descriptor_heaps;
+	Opal_Pool bindset_layouts;
+	Opal_Pool pipeline_layouts;
+	Opal_Pool pipelines;
 	Opal_Pool swapchains;
 
 	DirectX12_Allocator allocator;
@@ -155,6 +158,33 @@ typedef struct DirectX12_DescriptorHeap_t
 	Opal_Heap heap;
 } DirectX12_DescriptorHeap;
 
+typedef struct DirectX12_DescriptorInfo_t
+{
+	D3D12_DESCRIPTOR_RANGE_TYPE type;
+	UINT binding;
+	D3D12_SHADER_VISIBILITY visibility;
+} DirectX12_DescriptorInfo;
+
+typedef struct DirectX12_BindsetLayout_t
+{
+	DirectX12_DescriptorInfo *descriptors;
+	uint32_t num_table_cbv_descriptors;
+	uint32_t num_table_uav_descriptors;
+	uint32_t num_table_srv_descriptors;
+	uint32_t num_table_sampler_descriptors;
+	uint32_t num_inline_descriptors;
+} DirectX12_BindsetLayout;
+
+typedef struct DirectX12_PipelineLayout_t
+{
+	ID3D12RootSignature *root_signature;
+} DirectX12_PipelineLayout;
+
+typedef struct DirectX12_Pipeline_t
+{
+	ID3D12PipelineState *pipeline_state;
+} DirectX12_Pipeline;
+
 typedef struct DirectX12_Surface_t
 {
 	HWND handle;
@@ -182,7 +212,20 @@ Opal_Result directx12_deviceAllocateMemory(DirectX12_Device *device_ptr, const D
 
 D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags usage);
 D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type);
-DXGI_FORMAT directx12_helperToDXGIFormat(Opal_TextureFormat format);
+D3D12_SHADER_VISIBILITY directx12_helperToShaderVisibility(Opal_ShaderStage stage);
+D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op);
+D3D12_COMPARISON_FUNC directx12_helperToComparisonFunc(Opal_CompareOp op);
+D3D12_BLEND_OP directx12_helperToBlendOp(Opal_BlendOp op);
+D3D12_BLEND directx12_helperToBlendFactor(Opal_BlendFactor factor);
+D3D12_CULL_MODE directx12_helperToCullMode(Opal_CullMode mode);
+UINT directx12_helperToSampleCount(Opal_Samples samples);
+UINT directx12_helperToInstanceDataStepRate(Opal_VertexInputRate rate);
+D3D12_INPUT_CLASSIFICATION directx12_helperToInputSlotClass(Opal_VertexInputRate rate);
+D3D12_INDEX_BUFFER_STRIP_CUT_VALUE directx12_helperToStripCutValue(Opal_IndexFormat format);
+D3D12_PRIMITIVE_TOPOLOGY_TYPE directx12_helperToPrimitiveTopology(Opal_PrimitiveType type);
+
+DXGI_FORMAT directx12_helperToDXGIVertexFormat(Opal_VertexFormat format);
+DXGI_FORMAT directx12_helperToDXGITextureFormat(Opal_TextureFormat format);
 DXGI_USAGE directx12_helperToDXGIUsage(Opal_TextureUsageFlags usage);
 DXGI_COLOR_SPACE_TYPE directx12_helperToDXGIColorSpace(Opal_ColorSpace color_space);
 
