@@ -58,4 +58,18 @@ opalMapBuffer / webgpu_deviceUnmapBuffer will return OPAL_BUFFER_NONMAPPABLE for
 
 ## DirectX 12
 
+### Automatic register space assignment
+
+To match Vulkan binding model, every descriptor in descriptor set will share the same register space. The value will match the index of corresponding descriptor set layout in pipeline layout. Opal will not allow setting register spaces manually.
+
+### Different semantics for binding indices
+
+DirectX 12 backend will use binding indices as-is. That allows setting the same binding index for different binding types which is not possible in other APIs.
+
+For example, buffer & texture could have the same binding index, because there're assigned to different register types in HLSL.
+
+### Hardcoded input element semantic name
+
+Intentionally introduced semantic name "LOCATION[n]" for vertex shader input attributes to match other shading language designs. This semantic only required for vertex shader inputs. Other inter-stage semantics could be used as usual.
+
 ## Metal
