@@ -1042,7 +1042,7 @@ Opal_Result opalCmdSetBindset(Opal_Device device, Opal_CommandBuffer command_buf
 	return ptr->vtbl->cmdSetBindset(device, command_buffer, pipeline_layout, index, bindset, num_dynamic_offsets, dynamic_offsets);
 }
 
-Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
+Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1054,7 +1054,7 @@ Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer comma
 	return ptr->vtbl->cmdSetVertexBuffers(device, command_buffer, num_vertex_buffers, vertex_buffers);
 }
 
-Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
+Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1063,7 +1063,7 @@ Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdSetIndexBuffer);
 
-	return ptr->vtbl->cmdSetIndexBuffer(device, command_buffer, index_buffer, index_format);
+	return ptr->vtbl->cmdSetIndexBuffer(device, command_buffer, index_buffer);
 }
 
 Opal_Result opalCmdSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)

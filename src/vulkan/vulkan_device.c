@@ -3406,7 +3406,7 @@ static Opal_Result vulkan_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuff
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
+static Opal_Result vulkan_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3438,7 +3438,7 @@ static Opal_Result vulkan_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Comma
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
+static Opal_Result vulkan_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3451,7 +3451,7 @@ static Opal_Result vulkan_deviceCmdSetIndexBuffer(Opal_Device this, Opal_Command
 	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)index_buffer.buffer);
 	assert(buffer_ptr);
 
-	VkIndexType index_type = vulkan_helperToIndexType(index_format);
+	VkIndexType index_type = vulkan_helperToIndexType(index_buffer.format);
 
 	device_ptr->vk.vkCmdBindIndexBuffer(command_buffer_ptr->command_buffer, buffer_ptr->buffer, index_buffer.offset, index_type);
 	return OPAL_SUCCESS;

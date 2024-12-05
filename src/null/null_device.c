@@ -656,7 +656,7 @@ static Opal_Result null_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_BufferView *vertex_buffers)
+static Opal_Result null_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -666,12 +666,11 @@ static Opal_Result null_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView index_buffer, Opal_IndexFormat index_format)
+static Opal_Result null_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(index_buffer);
-	OPAL_UNUSED(index_format);
 
 	return OPAL_NOT_SUPPORTED;
 }
