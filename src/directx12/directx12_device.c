@@ -306,21 +306,10 @@ static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_Buf
 	ID3D12Resource *d3d12_buffer = NULL;
 	DirectX12_Allocation allocation = {0};
 
-	// fill allocation info
-	DirectX12_AllocationDesc allocation_desc = {0};
-	allocation_desc.size = desc->size;
-	allocation_desc.resource_type = DIRECTX12_RESOURCE_TYPE_BUFFER;
-	allocation_desc.allocation_type = desc->memory_type;
-	allocation_desc.hint = desc->hint;
-
-	Opal_Result opal_result = directx12_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
-	if (opal_result != OPAL_SUCCESS)
-		return opal_result;
-
 	// fill buffer info
 	D3D12_RESOURCE_DESC buffer_info = {0};
 	buffer_info.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	buffer_info.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	buffer_info.Alignment = 0;
 	buffer_info.Width = desc->size;
 	buffer_info.Height = 1;
 	buffer_info.DepthOrArraySize = 1;
@@ -332,8 +321,24 @@ static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_Buf
 	if (desc->usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE)
 		buffer_info.Flags = D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE;
 
-	D3D12_RESOURCE_STATES initial_state = directx12_helperToInitialBufferResourceState(desc->memory_type, desc->usage);
+	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = {0};
+	ID3D12Device_GetResourceAllocationInfo(d3d12_device, &allocation_info, 0, 1, &buffer_info);
 
+	// fill allocation info
+	DirectX12_AllocationDesc allocation_desc = {0};
+	allocation_desc.size = allocation_info.SizeInBytes;
+	allocation_desc.alignment = allocation_info.Alignment;
+	allocation_desc.resource_type = DIRECTX12_RESOURCE_TYPE_BUFFER;
+	allocation_desc.allocation_type = desc->memory_type;
+	allocation_desc.hint = desc->hint;
+
+	Opal_Result opal_result = directx12_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
+
+	assert(allocation.offset % allocation_info.Alignment == 0);
+
+	D3D12_RESOURCE_STATES initial_state = directx12_helperToInitialBufferResourceState(desc->memory_type, desc->usage);
 	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &buffer_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_buffer);
 	if (!SUCCEEDED(hr))
 	{

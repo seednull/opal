@@ -11,17 +11,10 @@
 
 /*
  */
-static UINT64 directx12_heap_alignments[DIRECTX12_RESOURCE_TYPE_ENUM_MAX] =
-{
-	D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-	D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-	D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-	D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
-};
-
 static D3D12_HEAP_FLAGS directx12_heap_flags[DIRECTX12_RESOURCE_TYPE_ENUM_MAX] =
 {
 	D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,
+	D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES,
 	D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES,
 	D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES,
 	D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES,
@@ -58,7 +51,7 @@ static Opal_Result directx12_allocatorStageHeapAlloc(const DirectX12_Allocator *
 	assert(size > 0);
 	assert(size <= allocator->heap_size);
 
-	uint32_t alignment = (uint32_t)directx12_heap_alignments[desc->resource_type];
+	uint32_t alignment = (uint32_t)desc->alignment;
 	assert(alignment <= allocator->heap_size);
 	assert(isPow2ul(alignment));
 
@@ -81,7 +74,7 @@ static Opal_Result directx12_allocatorCommitHeapAlloc(DirectX12_Allocator *alloc
 	assert(size > 0);
 	assert(size <= allocator->heap_size);
 
-	uint32_t alignment = (uint32_t)directx12_heap_alignments[desc->resource_type];
+	uint32_t alignment = (uint32_t)desc->alignment;
 	assert(alignment <= allocator->heap_size);
 	assert(isPow2ul(alignment));
 
@@ -129,9 +122,11 @@ static Opal_Result directx12_allocatorBlockAlloc(DirectX12_Device *device, Direc
 
 	D3D12_HEAP_DESC info = {0};
 	info.SizeInBytes = block.size;
-	info.Alignment = directx12_heap_alignments[resource_type];
 	info.Flags = directx12_heap_flags[resource_type];
 	info.Properties.Type = directx12_heap_types[allocation_type];
+
+	if (resource_type == DIRECTX12_RESOURCE_TYPE_MSAA_DS_RT_TEXTURE || resource_type == DIRECTX12_RESOURCE_TYPE_MSAA_NON_DS_RT_TEXTURE)
+		info.Alignment = D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT;
 
 	HRESULT hr = ID3D12Device_CreateHeap(device->device, &info, &IID_ID3D12Heap, &block.memory);
 	if (!SUCCEEDED(hr))
