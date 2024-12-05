@@ -89,6 +89,12 @@ typedef struct DirectX12_Instance_t
 	Opal_Pool surfaces;
 } DirectX12_Instance;
 
+typedef struct DirectX12_FramebufferDescriptorHeap_t
+{
+	ID3D12DescriptorHeap *rtv_heap;
+	ID3D12DescriptorHeap *dsv_heap;
+} DirectX12_FramebufferDescriptorHeap;
+
 typedef struct DirectX12_Device_t
 {
 	Opal_DeviceTable *vtbl;
@@ -102,6 +108,8 @@ typedef struct DirectX12_Device_t
 	Opal_Pool queues;
 	Opal_Pool semaphores;
 	Opal_Pool buffers;
+	Opal_Pool textures;
+	Opal_Pool texture_views;
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -112,6 +120,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool swapchains;
 
 	DirectX12_Allocator allocator;
+	DirectX12_FramebufferDescriptorHeap framebuffer_descriptor_heap;
 } DirectX12_Device;
 
 typedef struct DirectX12_Queue_t
@@ -132,9 +141,27 @@ typedef struct DirectX12_Semaphore_t
 typedef struct DirectX12_Buffer_t
 {
 	ID3D12Resource *buffer;
+	D3D12_GPU_VIRTUAL_ADDRESS address;
 	uint32_t map_count;
 	DirectX12_Allocation allocation;
 } DirectX12_Buffer;
+
+typedef struct DirectX12_Texture_t
+{
+	ID3D12Resource *texture;
+	DXGI_FORMAT format;
+	UINT samples;
+	DirectX12_Allocation allocation;
+} DirectX12_Texture;
+
+typedef struct DirectX12_TextureView_t
+{
+	ID3D12Resource *texture;
+	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+	D3D12_RENDER_TARGET_VIEW_DESC rtv_desc;
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+} DirectX12_TextureView;
 
 typedef struct DirectX12_CommandPool_t
 {
@@ -145,7 +172,7 @@ typedef struct DirectX12_CommandPool_t
 
 typedef struct DirectX12_CommandBuffer_t
 {
-	ID3D12GraphicsCommandList *list;
+	ID3D12GraphicsCommandList4 *list;
 	Opal_CommandPool pool;
 	uint32_t index;
 	uint32_t recording;
@@ -189,6 +216,8 @@ typedef struct DirectX12_PipelineLayout_t
 typedef struct DirectX12_Pipeline_t
 {
 	ID3D12PipelineState *pipeline_state;
+	ID3D12RootSignature *root_signature;
+	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
 } DirectX12_Pipeline;
 
 typedef struct DirectX12_Surface_t
@@ -199,6 +228,7 @@ typedef struct DirectX12_Surface_t
 typedef struct DirectX12_Swapchain_t
 {
 	IDXGISwapChain3 *swapchain;
+	Opal_TextureView *texture_views;
 	UINT present_flags;
 	uint32_t current_index;
 	uint32_t num_textures;
@@ -216,7 +246,11 @@ Opal_Result directx12_helperFillDeviceEnginesInfo(DirectX12_DeviceEnginesInfo *i
 Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_Instance *instance_ptr, IDXGIAdapter1 *adapter, ID3D12Device *device);
 Opal_Result directx12_deviceAllocateMemory(DirectX12_Device *device_ptr, const DirectX12_AllocationDesc *desc, DirectX12_Allocation *allocation);
 
-D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags usage);
+D3D12_RESOURCE_STATES directx12_helperToResourceState(Opal_ResourceState state);
+D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags flags);
+D3D12_RESOURCE_FLAGS directx12_helperToTextureFlags(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
+D3D12_RESOURCE_DIMENSION directx12_helperToTextureDimension(Opal_TextureType type);
+DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFlags flags, Opal_Samples samples);
 D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type);
 D3D12_SHADER_VISIBILITY directx12_helperToShaderVisibility(Opal_ShaderStage stage);
 D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op);
@@ -228,10 +262,14 @@ UINT directx12_helperToSampleCount(Opal_Samples samples);
 UINT directx12_helperToInstanceDataStepRate(Opal_VertexInputRate rate);
 D3D12_INPUT_CLASSIFICATION directx12_helperToInputSlotClass(Opal_VertexInputRate rate);
 D3D12_INDEX_BUFFER_STRIP_CUT_VALUE directx12_helperToStripCutValue(Opal_IndexFormat format);
-D3D12_PRIMITIVE_TOPOLOGY_TYPE directx12_helperToPrimitiveTopology(Opal_PrimitiveType type);
+D3D12_PRIMITIVE_TOPOLOGY_TYPE directx12_helperToPrimitiveTopologyType(Opal_PrimitiveType type);
+D3D12_PRIMITIVE_TOPOLOGY directx12_helperToPrimitiveTopology(Opal_PrimitiveType type);
+D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE directx12_helperToBeginningAccessType(Opal_LoadOp op);
+D3D12_RENDER_PASS_ENDING_ACCESS_TYPE directx12_helperToEndingAccessType(Opal_StoreOp op);
 
 DXGI_FORMAT directx12_helperToDXGIVertexFormat(Opal_VertexFormat format);
 DXGI_FORMAT directx12_helperToDXGITextureFormat(Opal_TextureFormat format);
+DXGI_FORMAT directx12_helperToDXGIIndexFormat(Opal_IndexFormat format);
 DXGI_USAGE directx12_helperToDXGIUsage(Opal_TextureUsageFlags usage);
 DXGI_COLOR_SPACE_TYPE directx12_helperToDXGIColorSpace(Opal_ColorSpace color_space);
 
