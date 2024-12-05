@@ -222,7 +222,7 @@ static Opal_Result directx12_instanceDestroySurface(Opal_Instance this, Opal_Sur
 	DirectX12_Instance *instance_ptr = (DirectX12_Instance *)this;
 
 	opal_poolRemoveElement(&instance_ptr->surfaces, handle);
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_instanceDestroy(Opal_Instance this)
