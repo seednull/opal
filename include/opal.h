@@ -785,14 +785,14 @@ typedef struct Opal_DeviceLimits_t
 typedef struct Opal_DeviceFeatures_t
 {
 	uint32_t queue_count[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
-	uint8_t tessellation_shader : 1;
-	uint8_t geometry_shader : 1;
-	uint8_t compute_pipeline : 1;
-	uint8_t meshlet_pipeline : 1;
-	uint8_t raytrace_pipeline : 1;
-	uint8_t texture_compression_etc2 : 1;
-	uint8_t texture_compression_astc : 1;
-	uint8_t texture_compression_bc : 1;
+	uint8_t tessellation_shader;
+	uint8_t geometry_shader;
+	uint8_t compute_pipeline;
+	uint8_t meshlet_pipeline;
+	uint8_t raytrace_pipeline;
+	uint8_t texture_compression_etc2;
+	uint8_t texture_compression_astc;
+	uint8_t texture_compression_bc;
 } Opal_DeviceFeatures;
 
 typedef struct Opal_DeviceInfo_t
