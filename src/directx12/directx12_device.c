@@ -825,6 +825,8 @@ static Opal_Result directx12_deviceCreateBindsetLayout(Opal_Device this, uint32_
 	uint32_t table_sampler_descriptor_offset = table_srv_descriptor_offset + result.num_table_srv_descriptors;
 	uint32_t inline_descriptor_offset = table_sampler_descriptor_offset + result.num_table_sampler_descriptors;
 
+	result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_bindings * sizeof(DirectX12_DescriptorInfo));
+
 	for (uint32_t i = 0; i < num_bindings; ++i)
 	{
 		uint32_t index = 0;
@@ -893,8 +895,6 @@ static Opal_Result directx12_deviceCreateBindsetLayout(Opal_Device this, uint32_
 		result.descriptors[index].binding = bindings[i].binding;
 		result.descriptors[index].visibility = directx12_helperToShaderVisibility(bindings[i].visibility);
 	}
-
-	result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_bindings * sizeof(DirectX12_DescriptorInfo));
 
 	*bindset_layout = (Opal_BindsetLayout)opal_poolAddElement(&device_ptr->bindset_layouts, &result);
 	return OPAL_SUCCESS;
