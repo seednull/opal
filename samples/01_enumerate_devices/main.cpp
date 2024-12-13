@@ -45,7 +45,7 @@ void printDeviceInfo(const Opal_DeviceInfo *info)
 	std::cout << "\tMax Buffer Size: " << info->limits.max_buffer_size << "\n";
 	std::cout << "\tMin Uniform Buffer Offset Alignment: " << info->limits.min_uniform_buffer_offset_alignment << "\n";
 	std::cout << "\tMin Storage Buffer Offset Alignment: " << info->limits.min_storage_buffer_offset_alignment << "\n";
-	std::cout << "\tMax Bindsets: " << info->limits.max_bindsets << "\n";
+	std::cout << "\tMax Descriptor Sets: " << info->limits.max_descriptor_sets << "\n";
 	std::cout << "\tMax Uniform Buffer Binding Size: " << info->limits.max_uniform_buffer_binding_size << "\n";
 	std::cout << "\tMax Storage Buffer Binding Size: " << info->limits.max_storage_buffer_binding_size << "\n";
 	std::cout << "\tMax Vertex Buffers: " << info->limits.max_vertex_buffers << "\n";

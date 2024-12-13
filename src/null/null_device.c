@@ -6,8 +6,8 @@
 
 /*
  */
-static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);
-static Opal_Result null_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
+static Opal_Result null_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 
 /*
  */
@@ -169,30 +169,21 @@ static Opal_Result null_deviceCreateDescriptorHeap(Opal_Device this, const Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
+static Opal_Result null_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_bindings);
-	OPAL_UNUSED(bindings);
-	OPAL_UNUSED(bindset_layout);
+	OPAL_UNUSED(num_entries);
+	OPAL_UNUSED(entries);
+	OPAL_UNUSED(descriptor_set_layout);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateBindsetPool(Opal_Device this, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool)
+static Opal_Result null_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(bindset_pool);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_bindset_layouts);
-	OPAL_UNUSED(bindset_layouts);
+	OPAL_UNUSED(num_descriptor_set_layouts);
+	OPAL_UNUSED(descriptor_set_layouts);
 	OPAL_UNUSED(pipeline_layout);
 
 	return OPAL_NOT_SUPPORTED;
@@ -315,18 +306,10 @@ static Opal_Result null_deviceDestroyDescriptorHeap(Opal_Device this, Opal_Descr
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyBindsetLayout(Opal_Device this, Opal_BindsetLayout bindset_layout)
+static Opal_Result null_deviceDestroyDescriptorSetLayout(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_layout);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceDestroyBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_pool);
+	OPAL_UNUSED(descriptor_set_layout);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -415,47 +398,39 @@ static Opal_Result null_deviceResetCommandBuffer(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocateEmptyBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
+static Opal_Result null_deviceAllocateEmptyDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_layout);
-	OPAL_UNUSED(bindset_pool);
-	OPAL_UNUSED(bindset);
+	OPAL_UNUSED(descriptor_set_layout);
+	OPAL_UNUSED(descriptor_heap);
+	OPAL_UNUSED(descriptor_set);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocatePrefilledBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result null_deviceAllocatePrefilledDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set)
 {
-	Opal_Result result = null_deviceAllocateEmptyBindset(this, bindset_layout, bindset_pool, bindset);
+	Opal_Result result = null_deviceAllocateEmptyDescriptorSet(this, descriptor_set_layout, descriptor_heap, descriptor_set);
 	if (result != OPAL_SUCCESS)
 		return result;
 
-	assert(bindset);
-	result = null_deviceUpdateBindset(this, *bindset, num_bindings, bindings);
+	assert(descriptor_set);
+	result = null_deviceUpdateDescriptorSet(this, *descriptor_set, num_entries, entries);
 	if (result != OPAL_SUCCESS)
 	{
-		null_deviceFreeBindset(this, bindset_pool, *bindset);
-		*bindset = OPAL_NULL_HANDLE;
+		null_deviceFreeDescriptorSet(this, descriptor_heap, *descriptor_set);
+		*descriptor_set = OPAL_NULL_HANDLE;
 		return result;
 	}
 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result null_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_pool);
-	OPAL_UNUSED(bindset);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceResetBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset_pool);
+	OPAL_UNUSED(descriptor_heap);
+	OPAL_UNUSED(descriptor_set);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -488,12 +463,12 @@ static Opal_Result null_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer, 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
+static Opal_Result null_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(bindset);
-	OPAL_UNUSED(num_bindings);
-	OPAL_UNUSED(bindings);
+	OPAL_UNUSED(descriptor_set);
+	OPAL_UNUSED(num_entries);
+	OPAL_UNUSED(entries);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -643,13 +618,23 @@ static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffe
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result null_deviceCmdSetDescriptorHeaps(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(resource_descriptor_heap);
+	OPAL_UNUSED(sampler_descriptor_heap);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(pipeline_layout);
 	OPAL_UNUSED(index);
-	OPAL_UNUSED(bindset);
+	OPAL_UNUSED(descriptor_set);
 	OPAL_UNUSED(num_dynamic_offsets);
 	OPAL_UNUSED(dynamic_offsets);
 
@@ -905,8 +890,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateCommandPool,
 	null_deviceCreateShader,
 	null_deviceCreateDescriptorHeap,
-	null_deviceCreateBindsetLayout,
-	null_deviceCreateBindsetPool,
+	null_deviceCreateDescriptorSetLayout,
 	null_deviceCreatePipelineLayout,
 	null_deviceCreateGraphicsPipeline,
 	null_deviceCreateMeshletPipeline,
@@ -923,8 +907,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyCommandPool,
 	null_deviceDestroyShader,
 	null_deviceDestroyDescriptorHeap,
-	null_deviceDestroyBindsetLayout,
-	null_deviceDestroyBindsetPool,
+	null_deviceDestroyDescriptorSetLayout,
 	null_deviceDestroyPipelineLayout,
 	null_deviceDestroyPipeline,
 	null_deviceDestroySwapchain,
@@ -936,14 +919,13 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceFreeCommandBuffer,
 	null_deviceResetCommandPool,
 	null_deviceResetCommandBuffer,
-	null_deviceAllocateEmptyBindset,
-	null_deviceAllocatePrefilledBindset,
-	null_deviceFreeBindset,
-	null_deviceResetBindsetPool,
+	null_deviceAllocateEmptyDescriptorSet,
+	null_deviceAllocatePrefilledDescriptorSet,
+	null_deviceFreeDescriptorSet,
 	null_deviceMapBuffer,
 	null_deviceUnmapBuffer,
 	null_deviceWriteBuffer,
-	null_deviceUpdateBindset,
+	null_deviceUpdateDescriptorSet,
 	null_deviceBeginCommandBuffer,
 	null_deviceEndCommandBuffer,
 	null_deviceQuerySemaphore,
@@ -962,7 +944,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdBeginRaytracePass,
 	null_deviceCmdEndRaytracePass,
 	null_deviceCmdSetPipeline,
-	null_deviceCmdSetBindset,
+	null_deviceCmdSetDescriptorHeaps,
+	null_deviceCmdSetDescriptorSet,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,
 	null_deviceCmdSetViewport,
@@ -1007,7 +990,7 @@ Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info)
 	info->limits.max_buffer_size = 0xFFFFFFFF;
 	info->limits.min_uniform_buffer_offset_alignment = 16;
 	info->limits.min_storage_buffer_offset_alignment = 4;
-	info->limits.max_bindsets = 8;
+	info->limits.max_descriptor_sets = 8;
 	info->limits.max_uniform_buffer_binding_size = 0x0000FFFF;
 	info->limits.max_storage_buffer_binding_size = 0xFFFFFFFF;
 	info->limits.max_vertex_buffers = 32;

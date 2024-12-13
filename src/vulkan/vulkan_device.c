@@ -10,8 +10,8 @@
 static Opal_Result vulkan_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view);
 static Opal_Result vulkan_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr);
 static Opal_Result vulkan_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
-static Opal_Result vulkan_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);
-static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
+static Opal_Result vulkan_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 
 /*
  */
@@ -104,21 +104,13 @@ static void vulkan_destroyShader(Vulkan_Device *device_ptr, Vulkan_Shader *shade
 	device_ptr->vk.vkDestroyShaderModule(device_ptr->device, shader_ptr->shader, NULL);
 }
 
-static void vulkan_destroyBindsetLayout(Vulkan_Device *device_ptr, Vulkan_BindsetLayout *bindset_layout_ptr)
+static void vulkan_destroyDescriptorSetLayout(Vulkan_Device *device_ptr, Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr)
 {
 	assert(device_ptr);
-	assert(bindset_layout_ptr);
+	assert(descriptor_set_layout_ptr);
  
-	device_ptr->vk.vkDestroyDescriptorSetLayout(device_ptr->device, bindset_layout_ptr->layout, NULL);
-	free(bindset_layout_ptr->layout_bindings);
-}
-
-static void vulkan_destroyBindsetPool(Vulkan_Device *device_ptr, Vulkan_BindsetPool *bindset_pool_ptr)
-{
-	assert(device_ptr);
-	assert(bindset_pool_ptr);
- 
-	device_ptr->vk.vkDestroyDescriptorPool(device_ptr->device, bindset_pool_ptr->pool, NULL);
+	device_ptr->vk.vkDestroyDescriptorSetLayout(device_ptr->device, descriptor_set_layout_ptr->layout, NULL);
+	free(descriptor_set_layout_ptr->layout_entries);
 }
 
 static void vulkan_destroyPipelineLayout(Vulkan_Device *device_ptr, Vulkan_PipelineLayout *pipeline_layout_ptr)
@@ -1040,12 +1032,12 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceCreateBindsetLayout(Opal_Device this, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
+static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_bindings > 0);
-	assert(bindings);
-	assert(bindset_layout);
+	assert(num_entries > 0);
+	assert(entries);
+	assert(descriptor_set_layout);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
@@ -1054,79 +1046,38 @@ static Opal_Result vulkan_deviceCreateBindsetLayout(Opal_Device this, uint32_t n
 
 	VkDescriptorSetLayoutCreateInfo set_layout_info = {0};
 	set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set_layout_info.bindingCount = num_bindings;
+	set_layout_info.bindingCount = num_entries;
 
-	VkDescriptorSetLayoutBinding *vulkan_bindings = (VkDescriptorSetLayoutBinding *)malloc(sizeof(VkDescriptorSetLayoutBinding) * num_bindings);
-	for (uint32_t i = 0; i < num_bindings; ++i)
+	VkDescriptorSetLayoutBinding *vulkan_entries = (VkDescriptorSetLayoutBinding *)malloc(sizeof(VkDescriptorSetLayoutBinding) * num_entries);
+	for (uint32_t i = 0; i < num_entries; ++i)
 	{
-		vulkan_bindings[i].binding = bindings[i].binding;
-		vulkan_bindings[i].descriptorCount = 1;
-		vulkan_bindings[i].descriptorType = vulkan_helperToDescriptorType(bindings[i].type);
-		vulkan_bindings[i].pImmutableSamplers = NULL;
-		vulkan_bindings[i].stageFlags = vulkan_helperToShaderStageFlags(bindings[i].visibility);
+		vulkan_entries[i].binding = entries[i].binding;
+		vulkan_entries[i].descriptorCount = 1;
+		vulkan_entries[i].descriptorType = vulkan_helperToDescriptorType(entries[i].type);
+		vulkan_entries[i].pImmutableSamplers = NULL;
+		vulkan_entries[i].stageFlags = vulkan_helperToShaderStageFlags(entries[i].visibility);
 	}
 
-	set_layout_info.pBindings = vulkan_bindings;
+	set_layout_info.pBindings = vulkan_entries;
 
 	VkResult vulkan_result = device_ptr->vk.vkCreateDescriptorSetLayout(vulkan_device, &set_layout_info, NULL, &vulkan_set_layout);
 
 	if (vulkan_result != VK_SUCCESS)
 	{
-		free(vulkan_bindings);
+		free(vulkan_entries);
 		return OPAL_VULKAN_ERROR;
 	}
 
-	Vulkan_BindsetLayout result = {0};
+	Vulkan_DescriptorSetLayout result = {0};
 	result.layout = vulkan_set_layout;
-	result.layout_bindings = vulkan_bindings;
-	result.num_layout_bindings = num_bindings;
+	result.layout_entries = vulkan_entries;
+	result.num_layout_entries = num_entries;
 
-	*bindset_layout = (Opal_BindsetLayout)opal_poolAddElement(&device_ptr->bindset_layouts, &result);
+	*descriptor_set_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->descriptor_set_layouts, &result);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCreateBindsetPool(Opal_Device this, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool)
-{
-	assert(this);
-	assert(desc);
-	assert(bindset_pool);
-
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	VkDevice vulkan_device = device_ptr->device;
-
-	VkDescriptorPool vulkan_pool = VK_NULL_HANDLE;
-
-	VkDescriptorPoolCreateInfo pool_info = {0};
-	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	pool_info.maxSets = desc->max_bindsets;
-
-	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorPoolSize) * desc->num_entries);
-
-	VkDescriptorPoolSize *vulkan_pool_sizes = (VkDescriptorPoolSize *)device_ptr->bump.data;
-	for (uint32_t i = 0; i < desc->num_entries; ++i)
-	{
-		Opal_BindsetPoolEntry entry = desc->entries[i];
-		vulkan_pool_sizes[i].type = vulkan_helperToDescriptorType(entry.type);
-		vulkan_pool_sizes[i].descriptorCount = entry.count;
-	}
-
-	pool_info.poolSizeCount = desc->num_entries;
-	pool_info.pPoolSizes = vulkan_pool_sizes;
-
-	VkResult vulkan_result = device_ptr->vk.vkCreateDescriptorPool(vulkan_device, &pool_info, NULL, &vulkan_pool);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	Vulkan_BindsetPool result = {0};
-	result.pool = vulkan_pool;
-
-	*bindset_pool = (Opal_BindsetPool)opal_poolAddElement(&device_ptr->bindset_pools, &result);
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
+static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
 {
 	assert(this);
 	assert(pipeline_layout);
@@ -1136,21 +1087,21 @@ static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t 
 
 	VkDescriptorSetLayout *set_layouts = NULL;
 
-	if (num_bindset_layouts > 0)
+	if (num_descriptor_set_layouts > 0)
 	{
-		assert(bindset_layouts);
+		assert(descriptor_set_layouts);
 
 		opal_bumpReset(&device_ptr->bump);
-		opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorSetLayout) * num_bindset_layouts);
+		opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorSetLayout) * num_descriptor_set_layouts);
 		set_layouts = (VkDescriptorSetLayout *)device_ptr->bump.data;
 
-		for (uint32_t i = 0; i < num_bindset_layouts; ++i)
+		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
 		{
-			Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, (Opal_PoolHandle)bindset_layouts[i]);
-			assert(bindset_layout_ptr);
-			assert(bindset_layout_ptr->layout_bindings);
+			Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr = (Vulkan_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
+			assert(descriptor_set_layout_ptr);
+			assert(descriptor_set_layout_ptr->layout_entries);
 
-			set_layouts[i] = bindset_layout_ptr->layout;
+			set_layouts[i] = descriptor_set_layout_ptr->layout;
 		}
 	}
 
@@ -1158,7 +1109,7 @@ static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t 
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_info.setLayoutCount = num_bindset_layouts;
+	pipeline_layout_info.setLayoutCount = num_descriptor_set_layouts;
 	pipeline_layout_info.pSetLayouts = set_layouts;
 
 	VkResult vulkan_result = device_ptr->vk.vkCreatePipelineLayout(vulkan_device, &pipeline_layout_info, NULL, &vulkan_pipeline_layout);
@@ -2046,39 +1997,21 @@ static Opal_Result vulkan_deviceDestroyDescriptorHeap(Opal_Device this, Opal_Des
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceDestroyBindsetLayout(Opal_Device this, Opal_BindsetLayout bindset_layout)
+static Opal_Result vulkan_deviceDestroyDescriptorSetLayout(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout)
 {
 	assert(this);
-	assert(bindset_layout);
+	assert(descriptor_set_layout);
  
-	Opal_PoolHandle handle = (Opal_PoolHandle)bindset_layout;
+	Opal_PoolHandle handle = (Opal_PoolHandle)descriptor_set_layout;
 	assert(handle != OPAL_POOL_HANDLE_NULL);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, handle);
-	assert(bindset_layout_ptr);
+	Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr = (Vulkan_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, handle);
+	assert(descriptor_set_layout_ptr);
 
-	opal_poolRemoveElement(&device_ptr->bindset_layouts, handle);
+	opal_poolRemoveElement(&device_ptr->descriptor_set_layouts, handle);
 
-	vulkan_destroyBindsetLayout(device_ptr, bindset_layout_ptr);
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceDestroyBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
-{
-	assert(this);
-	assert(bindset_pool);
- 
-	Opal_PoolHandle handle = (Opal_PoolHandle)bindset_pool;
-	assert(handle != OPAL_POOL_HANDLE_NULL);
-
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElement(&device_ptr->bindset_pools, handle);
-	assert(bindset_pool_ptr);
-
-	opal_poolRemoveElement(&device_ptr->bindset_pools, handle);
-
-	vulkan_destroyBindsetPool(device_ptr, bindset_pool_ptr);
+	vulkan_destroyDescriptorSetLayout(device_ptr, descriptor_set_layout_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -2186,29 +2119,16 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 	}
 
 	{
-		uint32_t head = opal_poolGetHeadIndex(&ptr->bindset_pools);
+		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_set_layouts);
 		while (head != OPAL_POOL_HANDLE_NULL)
 		{
-			Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElementByIndex(&ptr->bindset_pools, head);
-			vulkan_destroyBindsetPool(ptr, bindset_pool_ptr);
+			Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr = (Vulkan_DescriptorSetLayout *)opal_poolGetElementByIndex(&ptr->descriptor_set_layouts, head);
+			vulkan_destroyDescriptorSetLayout(ptr, descriptor_set_layout_ptr);
 
-			head = opal_poolGetNextIndex(&ptr->bindset_pools, head);
+			head = opal_poolGetNextIndex(&ptr->descriptor_set_layouts, head);
 		}
 
-		opal_poolShutdown(&ptr->bindset_pools);
-	}
-
-	{
-		uint32_t head = opal_poolGetHeadIndex(&ptr->bindset_layouts);
-		while (head != OPAL_POOL_HANDLE_NULL)
-		{
-			Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElementByIndex(&ptr->bindset_layouts, head);
-			vulkan_destroyBindsetLayout(ptr, bindset_layout_ptr);
-
-			head = opal_poolGetNextIndex(&ptr->bindset_layouts, head);
-		}
-
-		opal_poolShutdown(&ptr->bindset_layouts);
+		opal_poolShutdown(&ptr->descriptor_set_layouts);
 	}
 
 	{
@@ -2319,7 +2239,7 @@ static Opal_Result vulkan_deviceDestroy(Opal_Device this)
 		free(ptr->queue_handles[i]);
 
 	opal_poolShutdown(&ptr->queues);
-	opal_poolShutdown(&ptr->bindsets);
+	opal_poolShutdown(&ptr->descriptor_sets);
 	opal_poolShutdown(&ptr->command_buffers);
 
 	opal_bumpShutdown(&ptr->bump);
@@ -2550,100 +2470,96 @@ static Opal_Result vulkan_deviceResetCommandBuffer(Opal_Device this, Opal_Comman
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceAllocateEmptyBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
+static Opal_Result vulkan_deviceAllocateEmptyDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set)
 {
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(descriptor_set_layout);
+	OPAL_UNUSED(descriptor_heap);
+	OPAL_UNUSED(descriptor_set);
+
+	/*
 	assert(this);
-	assert(bindset_pool);
-	assert(bindset);
+	assert(descriptor_heap);
+	assert(descriptor_set);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
 	VkDescriptorSet vulkan_descriptor_set = VK_NULL_HANDLE;
 
-	Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElement(&device_ptr->bindset_pools, (Opal_PoolHandle)bindset_pool);
-	assert(bindset_pool_ptr);
+	Vulkan_DescriptorHeap *descriptor_heap_ptr = (Vulkan_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_heap);
+	assert(descriptor_heap_ptr);
 
-	Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, (Opal_PoolHandle)bindset_layout);
-	assert(bindset_layout_ptr);
+	Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr = (Vulkan_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layout);
+	assert(descriptor_set_layout_ptr);
 
 	VkDescriptorSetAllocateInfo set_info = {0};
 	set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	set_info.descriptorPool = bindset_pool_ptr->pool;
+	set_info.descriptorPool = descriptor_heap_ptr->pool;
 	set_info.descriptorSetCount = 1;
-	set_info.pSetLayouts = &bindset_layout_ptr->layout;
+	set_info.pSetLayouts = &descriptor_set_layout_ptr->layout;
 
 	VkResult vulkan_result = device_ptr->vk.vkAllocateDescriptorSets(vulkan_device, &set_info, &vulkan_descriptor_set);
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
-	Vulkan_Bindset result = {0};
+	Vulkan_DescriptorSet result = {0};
 	result.set = vulkan_descriptor_set;
-	result.bindset_layout = bindset_layout;
+	result.layout = descriptor_set_layout;
 
-	*bindset = (Opal_Bindset)opal_poolAddElement(&device_ptr->bindsets, &result);
+	*descriptor_set = (Opal_DescriptorSet)opal_poolAddElement(&device_ptr->descriptor_sets, &result);
 	return OPAL_SUCCESS;
+	/**/
+
+	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceAllocatePrefilledBindset(Opal_Device this, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+static Opal_Result vulkan_deviceAllocatePrefilledDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set)
 {
-	Opal_Result result = vulkan_deviceAllocateEmptyBindset(this, bindset_layout, bindset_pool, bindset);
+	Opal_Result result = vulkan_deviceAllocateEmptyDescriptorSet(this, descriptor_set_layout, descriptor_heap, descriptor_set);
 	if (result != OPAL_SUCCESS)
 		return result;
 
-	assert(bindset);
-	result = vulkan_deviceUpdateBindset(this, *bindset, num_bindings, bindings);
+	assert(descriptor_set);
+	result = vulkan_deviceUpdateDescriptorSet(this, *descriptor_set, num_entries, entries);
 	if (result != OPAL_SUCCESS)
 	{
-		vulkan_deviceFreeBindset(this, bindset_pool, *bindset);
-		*bindset = OPAL_NULL_HANDLE;
+		vulkan_deviceFreeDescriptorSet(this, descriptor_heap, *descriptor_set);
+		*descriptor_set = OPAL_NULL_HANDLE;
 		return result;
 	}
 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceFreeBindset(Opal_Device this, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set)
 {
-	assert(this);
-	assert(bindset_pool);
-	assert(bindset);
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(descriptor_heap);
+	OPAL_UNUSED(descriptor_set);
  
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	/*
+	assert(this);
+	assert(descriptor_heap);
+	assert(descriptor_set);
+ 
+ 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
 
-	Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElement(&device_ptr->bindset_pools, (Opal_PoolHandle)bindset_pool);
-	assert(bindset_pool_ptr);
+	Vulkan_DescriptorHeap *descriptor_heap_ptr = (Vulkan_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_heap);
+	assert(descriptor_heap_ptr);
 
-	Vulkan_Bindset *bindset_ptr = (Vulkan_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindset);
-	assert(bindset_ptr);
+	Vulkan_DescriptorSet *descriptor_set_ptr = (Vulkan_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
+	assert(descriptor_set_ptr);
 
-	VkResult vulkan_result = device_ptr->vk.vkFreeDescriptorSets(vulkan_device, bindset_pool_ptr->pool, 1, &bindset_ptr->set);
+	VkResult vulkan_result = device_ptr->vk.vkFreeDescriptorSets(vulkan_device, descriptor_heap_ptr->pool, 1, &descriptor_set_ptr->set);
 	if (vulkan_result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 	
-	opal_poolRemoveElement(&device_ptr->bindsets, (Opal_PoolHandle)bindset);
+	opal_poolRemoveElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	return OPAL_SUCCESS;
-}
+	/**/
 
-static Opal_Result vulkan_deviceResetBindsetPool(Opal_Device this, Opal_BindsetPool bindset_pool)
-{
-	assert(this);
-	assert(bindset_pool);
- 
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	VkDevice vulkan_device = device_ptr->device;
-
-	Vulkan_BindsetPool *bindset_pool_ptr = (Vulkan_BindsetPool *)opal_poolGetElement(&device_ptr->bindset_pools, (Opal_PoolHandle)bindset_pool);
-	assert(bindset_pool_ptr);
-
-	VkResult vulkan_result = device_ptr->vk.vkResetDescriptorPool(vulkan_device, bindset_pool_ptr->pool, 0);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	// TODO: invalidate related Vulkan_Bindset instances
-	// TODO: fix memory leak caused by orphaned Vulkan_Bindset instances
-
-	return OPAL_SUCCESS;
+	return OPAL_NOT_SUPPORTED;
 }
 
 static Opal_Result vulkan_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr)
@@ -2714,63 +2630,63 @@ static Opal_Result vulkan_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
+static Opal_Result vulkan_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries)
 {
 	assert(this);
-	assert(bindset);
+	assert(descriptor_set);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
 
-	Vulkan_Bindset *bindset_ptr = (Vulkan_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindset);
-	assert(bindset_ptr);
+	Vulkan_DescriptorSet *descriptor_set_ptr = (Vulkan_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
+	assert(descriptor_set_ptr);
 
-	Vulkan_BindsetLayout *bindset_layout_ptr = (Vulkan_BindsetLayout *)opal_poolGetElement(&device_ptr->bindset_layouts, (Opal_PoolHandle)bindset_ptr->bindset_layout);
-	assert(bindset_layout_ptr);
+	Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr = (Vulkan_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
+	assert(descriptor_set_layout_ptr);
 
 	opal_bumpReset(&device_ptr->bump);
-	uint32_t descriptors_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkWriteDescriptorSet) * num_bindings);
-	uint32_t images_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorImageInfo) * num_bindings);
-	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_bindings);
-	uint32_t acceleration_structure_descriptors_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkWriteDescriptorSetAccelerationStructureKHR) * num_bindings);
+	uint32_t descriptors_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkWriteDescriptorSet) * num_entries);
+	uint32_t images_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorImageInfo) * num_entries);
+	uint32_t buffer_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkDescriptorBufferInfo) * num_entries);
+	uint32_t acceleration_structure_descriptors_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkWriteDescriptorSetAccelerationStructureKHR) * num_entries);
 
 	VkWriteDescriptorSet *vulkan_descriptor_writes = (VkWriteDescriptorSet *)(device_ptr->bump.data + descriptors_offset);
-	memset(vulkan_descriptor_writes, 0, sizeof(VkWriteDescriptorSet) * num_bindings);
+	memset(vulkan_descriptor_writes, 0, sizeof(VkWriteDescriptorSet) * num_entries);
 
 	VkDescriptorImageInfo *vulkan_image_writes = (VkDescriptorImageInfo *)(device_ptr->bump.data + images_offset);
-	memset(vulkan_image_writes, 0, sizeof(VkDescriptorImageInfo) * num_bindings);
+	memset(vulkan_image_writes, 0, sizeof(VkDescriptorImageInfo) * num_entries);
 
 	VkDescriptorBufferInfo *vulkan_buffer_writes = (VkDescriptorBufferInfo *)(device_ptr->bump.data + buffer_offset);
-	memset(vulkan_buffer_writes, 0, sizeof(VkDescriptorBufferInfo) * num_bindings);
+	memset(vulkan_buffer_writes, 0, sizeof(VkDescriptorBufferInfo) * num_entries);
 
 	VkWriteDescriptorSetAccelerationStructureKHR *vulkan_acceleration_structure_writes = (VkWriteDescriptorSetAccelerationStructureKHR *)(device_ptr->bump.data + acceleration_structure_descriptors_offset);
-	memset(vulkan_acceleration_structure_writes, 0, sizeof(VkWriteDescriptorSetAccelerationStructureKHR) * num_bindings);
+	memset(vulkan_acceleration_structure_writes, 0, sizeof(VkWriteDescriptorSetAccelerationStructureKHR) * num_entries);
 
 	uint32_t current_image = 0;
 	uint32_t current_buffer = 0;
 	uint32_t current_acceleration_structure = 0;
 
-	for (uint32_t i = 0; i < num_bindings; ++i)
+	for (uint32_t i = 0; i < num_entries; ++i)
 	{
-		uint32_t binding = bindings[i].binding;
+		uint32_t binding = entries[i].binding;
 		VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
 
 		// TODO: replace naive O(N) layout <-> binding search loop by O(1) hashmap lookup
-		for (uint32_t j = 0; j < bindset_layout_ptr->num_layout_bindings; ++j)
+		for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_layout_entries; ++j)
 		{
-			if (bindset_layout_ptr->layout_bindings[j].binding == binding)
+			if (descriptor_set_layout_ptr->layout_entries[j].binding == binding)
 			{
-				type = bindset_layout_ptr->layout_bindings[j].descriptorType;
+				type = descriptor_set_layout_ptr->layout_entries[j].descriptorType;
 				break;
 			}
 		}
 
-		if (type == OPAL_BINDING_TYPE_ENUM_MAX)
+		if (type == VK_DESCRIPTOR_TYPE_MAX_ENUM)
 			return OPAL_INVALID_BINDING_INDEX;
 
 		VkWriteDescriptorSet *write = &vulkan_descriptor_writes[i];
 		write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write->dstSet = bindset_ptr->set;
+		write->dstSet = descriptor_set_ptr->set;
 		write->dstBinding = binding;
 		write->descriptorCount = 1;
 		write->descriptorType = type;
@@ -2781,7 +2697,7 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 			case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 			{
 				VkDescriptorImageInfo *image_write = &vulkan_image_writes[current_image];
-				Opal_TextureView data = bindings[i].data.texture_view;
+				Opal_TextureView data = entries[i].data.texture_view;
 
 				Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)data);
 				assert(image_view_ptr);
@@ -2798,7 +2714,7 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 			case VK_DESCRIPTOR_TYPE_SAMPLER:
 			{
 				VkDescriptorImageInfo *image_write = &vulkan_image_writes[current_image];
-				Opal_Sampler data = bindings[i].data.sampler;
+				Opal_Sampler data = entries[i].data.sampler;
 
 				Vulkan_Sampler *sampler_ptr = (Vulkan_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)data);
 				assert(sampler_ptr);
@@ -2818,7 +2734,7 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
 			{
 				VkDescriptorBufferInfo *buffer_write = &vulkan_buffer_writes[current_buffer];
-				Opal_BufferView data = bindings[i].data.buffer_view;
+				Opal_BufferView data = entries[i].data.buffer_view;
 
 				Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)data.buffer);
 				assert(buffer_ptr);
@@ -2835,7 +2751,7 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 			case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
 			{
 				VkWriteDescriptorSetAccelerationStructureKHR *acceleration_structure_write = &vulkan_acceleration_structure_writes[current_acceleration_structure];
-				Opal_AccelerationStructure data = bindings[i].data.acceleration_structure;
+				Opal_AccelerationStructure data = entries[i].data.acceleration_structure;
 
 				Vulkan_AccelerationStructure *acceleration_structure_ptr = (Vulkan_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)data);
 				assert(acceleration_structure_ptr);
@@ -2854,7 +2770,7 @@ static Opal_Result vulkan_deviceUpdateBindset(Opal_Device this, Opal_Bindset bin
 		}
 	}
 
-	device_ptr->vk.vkUpdateDescriptorSets(vulkan_device, num_bindings, vulkan_descriptor_writes, 0, NULL);
+	device_ptr->vk.vkUpdateDescriptorSets(vulkan_device, num_entries, vulkan_descriptor_writes, 0, NULL);
 
 	return OPAL_SUCCESS;
 }
@@ -3379,12 +3295,22 @@ static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result vulkan_deviceCmdSetDescriptorHeaps(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(resource_descriptor_heap);
+	OPAL_UNUSED(sampler_descriptor_heap);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result vulkan_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	assert(this);
 	assert(command_buffer);
 	assert(pipeline_layout);
-	assert(bindset);
+	assert(descriptor_set);
 	assert(num_dynamic_offsets == 0 || dynamic_offsets);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
@@ -3395,14 +3321,14 @@ static Opal_Result vulkan_deviceCmdSetBindset(Opal_Device this, Opal_CommandBuff
 	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)pipeline_layout);
 	assert(pipeline_layout_ptr);
 
-	Vulkan_Bindset *bindset_ptr = (Vulkan_Bindset *)opal_poolGetElement(&device_ptr->bindsets, (Opal_PoolHandle)bindset);
-	assert(bindset_ptr);
+	Vulkan_DescriptorSet *descriptor_set_ptr = (Vulkan_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
+	assert(descriptor_set_ptr);
 
 	VkCommandBuffer vulkan_command_buffer = command_buffer_ptr->command_buffer;
 	VkPipelineBindPoint vulkan_bind_point = command_buffer_ptr->pipeline_bind_point;
 	VkPipelineLayout vulkan_pipeline_layout = pipeline_layout_ptr->layout;
 
-	device_ptr->vk.vkCmdBindDescriptorSets(vulkan_command_buffer, vulkan_bind_point, vulkan_pipeline_layout, index, 1, &bindset_ptr->set, num_dynamic_offsets, dynamic_offsets);
+	device_ptr->vk.vkCmdBindDescriptorSets(vulkan_command_buffer, vulkan_bind_point, vulkan_pipeline_layout, index, 1, &descriptor_set_ptr->set, num_dynamic_offsets, dynamic_offsets);
 	return OPAL_SUCCESS;
 }
 
@@ -4132,8 +4058,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCreateCommandPool,
 	vulkan_deviceCreateShader,
 	vulkan_deviceCreateDescriptorHeap,
-	vulkan_deviceCreateBindsetLayout,
-	vulkan_deviceCreateBindsetPool,
+	vulkan_deviceCreateDescriptorSetLayout,
 	vulkan_deviceCreatePipelineLayout,
 	vulkan_deviceCreateGraphicsPipeline,
 	vulkan_deviceCreateMeshletPipeline,
@@ -4150,8 +4075,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceDestroyCommandPool,
 	vulkan_deviceDestroyShader,
 	vulkan_deviceDestroyDescriptorHeap,
-	vulkan_deviceDestroyBindsetLayout,
-	vulkan_deviceDestroyBindsetPool,
+	vulkan_deviceDestroyDescriptorSetLayout,
 	vulkan_deviceDestroyPipelineLayout,
 	vulkan_deviceDestroyPipeline,
 	vulkan_deviceDestroySwapchain,
@@ -4163,14 +4087,13 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceFreeCommandBuffer,
 	vulkan_deviceResetCommandPool,
 	vulkan_deviceResetCommandBuffer,
-	vulkan_deviceAllocateEmptyBindset,
-	vulkan_deviceAllocatePrefilledBindset,
-	vulkan_deviceFreeBindset,
-	vulkan_deviceResetBindsetPool,
+	vulkan_deviceAllocateEmptyDescriptorSet,
+	vulkan_deviceAllocatePrefilledDescriptorSet,
+	vulkan_deviceFreeDescriptorSet,
 	vulkan_deviceMapBuffer,
 	vulkan_deviceUnmapBuffer,
 	vulkan_deviceWriteBuffer,
-	vulkan_deviceUpdateBindset,
+	vulkan_deviceUpdateDescriptorSet,
 	vulkan_deviceBeginCommandBuffer,
 	vulkan_deviceEndCommandBuffer,
 	vulkan_deviceQuerySemaphore,
@@ -4189,7 +4112,8 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdBeginRaytracePass,
 	vulkan_deviceCmdEndRaytracePass,
 	vulkan_deviceCmdSetPipeline,
-	vulkan_deviceCmdSetBindset,
+	vulkan_deviceCmdSetDescriptorHeaps,
+	vulkan_deviceCmdSetDescriptorSet,
 	vulkan_deviceCmdSetVertexBuffers,
 	vulkan_deviceCmdSetIndexBuffer,
 	vulkan_deviceCmdSetViewport,
@@ -4312,9 +4236,9 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	opal_poolInitialize(&device_ptr->command_pools, sizeof(Vulkan_CommandPool), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(Vulkan_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(Vulkan_Shader), 32);
-	opal_poolInitialize(&device_ptr->bindset_layouts, sizeof(Vulkan_BindsetLayout), 32);
-	opal_poolInitialize(&device_ptr->bindset_pools, sizeof(Vulkan_BindsetPool), 32);
-	opal_poolInitialize(&device_ptr->bindsets, sizeof(Vulkan_Bindset), 32);
+	opal_poolInitialize(&device_ptr->descriptor_set_layouts, sizeof(Vulkan_DescriptorSetLayout), 32);
+	// opal_poolInitialize(&device_ptr->descriptor_heaps, sizeof(Vulkan_DescriptorHeap), 32);
+	opal_poolInitialize(&device_ptr->descriptor_sets, sizeof(Vulkan_DescriptorSet), 32);
 	opal_poolInitialize(&device_ptr->pipeline_layouts, sizeof(Vulkan_PipelineLayout), 32);
 	opal_poolInitialize(&device_ptr->pipelines, sizeof(Vulkan_Pipeline), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(Vulkan_Swapchain), 32);

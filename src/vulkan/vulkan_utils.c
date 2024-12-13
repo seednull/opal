@@ -636,7 +636,7 @@ VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op)
 	return vk_compare_ops[op];
 }
 
-VkDescriptorType vulkan_helperToDescriptorType(Opal_BindingType type)
+VkDescriptorType vulkan_helperToDescriptorType(Opal_DescriptorType type)
 {
 	static VkDescriptorType vk_descriptor_types[] =
 	{
@@ -1502,7 +1502,7 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->limits.min_uniform_buffer_offset_alignment = properties.properties.limits.minUniformBufferOffsetAlignment;
 	info->limits.min_storage_buffer_offset_alignment = properties.properties.limits.minStorageBufferOffsetAlignment;
 
-	info->limits.max_bindsets = properties.properties.limits.maxBoundDescriptorSets;
+	info->limits.max_descriptor_sets = properties.properties.limits.maxBoundDescriptorSets;
 	info->limits.max_uniform_buffer_binding_size = properties.properties.limits.maxUniformBufferRange;
 	info->limits.max_storage_buffer_binding_size = properties.properties.limits.maxStorageBufferRange;
 

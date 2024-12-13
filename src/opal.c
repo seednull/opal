@@ -376,31 +376,19 @@ Opal_Result opalCreateDescriptorHeap(Opal_Device device, const Opal_DescriptorHe
 	return ptr->vtbl->createDescriptorHeap(device, desc, descriptor_buffer);
 }
 
-Opal_Result opalCreateBindsetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout)
+Opal_Result opalCreateDescriptorSetLayout(Opal_Device device, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->createBindsetLayout);
+	assert(ptr->vtbl->createDescriptorSetLayout);
 
-	return ptr->vtbl->createBindsetLayout(device, num_bindings, bindings, bindset_layout);
+	return ptr->vtbl->createDescriptorSetLayout(device, num_entries, entries, descriptor_set_layout);
 }
 
-Opal_Result opalCreateBindsetPool(Opal_Device device, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->createBindsetPool);
-
-	return ptr->vtbl->createBindsetPool(device, desc, bindset_pool);
-}
-
-Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout)
+Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -409,7 +397,7 @@ Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_bindset_la
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->createPipelineLayout);
 
-	return ptr->vtbl->createPipelineLayout(device, num_bindset_layouts, bindset_layouts, pipeline_layout);
+	return ptr->vtbl->createPipelineLayout(device, num_descriptor_set_layouts, descriptor_set_layouts, pipeline_layout);
 }
 
 Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
@@ -582,28 +570,16 @@ Opal_Result opalDescriptorDescriptorHeap(Opal_Device device, Opal_DescriptorHeap
 	return ptr->vtbl->destroyDescriptorHeap(device, descriptor_buffer);
 }
 
-Opal_Result opalDestroyBindsetLayout(Opal_Device device, Opal_BindsetLayout bindset_layout)
+Opal_Result opalDestroyDescriptorSetLayout(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyBindsetLayout);
+	assert(ptr->vtbl->destroyDescriptorSetLayout);
 
-	return ptr->vtbl->destroyBindsetLayout(device, bindset_layout);
-}
-
-Opal_Result opalDestroyBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyBindsetPool);
-
-	return ptr->vtbl->destroyBindsetPool(device, bindset_pool);
+	return ptr->vtbl->destroyDescriptorSetLayout(device, descriptor_set_layout);
 }
 
 Opal_Result opalDestroyPipelineLayout(Opal_Device device, Opal_PipelineLayout pipeline_layout)
@@ -728,52 +704,40 @@ Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->resetCommandBuffer(device, command_buffer);
 }
 
-Opal_Result opalAllocateEmptyBindset(Opal_Device device, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset)
+Opal_Result opalAllocateEmptyDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->allocateEmptyBindset);
+	assert(ptr->vtbl->allocateEmptyDescriptorSet);
 
-	return ptr->vtbl->allocateEmptyBindset(device, bindset_layout, bindset_pool, bindset);
+	return ptr->vtbl->allocateEmptyDescriptorSet(device, descriptor_set_layout, descriptor_heap, descriptor_set);
 }
 
-Opal_Result opalAllocatePrefilledBindset(Opal_Device device, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset)
+Opal_Result opalAllocatePrefilledDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->allocatePrefilledBindset);
+	assert(ptr->vtbl->allocatePrefilledDescriptorSet);
 
-	return ptr->vtbl->allocatePrefilledBindset(device, bindset_layout, bindset_pool, num_bindings, bindings, bindset);
+	return ptr->vtbl->allocatePrefilledDescriptorSet(device, descriptor_set_layout, descriptor_heap, num_entries, entries, descriptor_set);
 }
 
-Opal_Result opalFreeBindset(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset bindset)
+Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->freeBindset);
+	assert(ptr->vtbl->freeDescriptorSet);
 
-	return ptr->vtbl->freeBindset(device, bindset_pool, bindset);
-}
-
-Opal_Result opalResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->resetBindsetPool);
-
-	return ptr->vtbl->resetBindsetPool(device, bindset_pool);
+	return ptr->vtbl->freeDescriptorSet(device, descriptor_heap, descriptor_set);
 }
 
 Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **mapped_ptr)
@@ -812,16 +776,16 @@ Opal_Result opalWriteBuffer(Opal_Device device, Opal_Buffer buffer, uint64_t off
 	return ptr->vtbl->writeBuffer(device, buffer, offset, data, size);
 }
 
-Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings)
+Opal_Result opalUpdateDescriptorSet(Opal_Device device, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->updateBindset);
+	assert(ptr->vtbl->updateDescriptorSet);
 
-	return ptr->vtbl->updateBindset(device, bindset, num_bindings, bindings);
+	return ptr->vtbl->updateDescriptorSet(device, descriptor_set, num_entries, entries);
 }
 
 Opal_Result opalBeginCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
@@ -1030,16 +994,28 @@ Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_bu
 	return ptr->vtbl->cmdSetPipeline(device, command_buffer, pipeline);
 }
 
-Opal_Result opalCmdSetBindset(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+Opal_Result opalCmdSetDescriptorHeaps(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetBindset);
+	assert(ptr->vtbl->cmdSetDescriptorHeaps);
 
-	return ptr->vtbl->cmdSetBindset(device, command_buffer, pipeline_layout, index, bindset, num_dynamic_offsets, dynamic_offsets);
+	return ptr->vtbl->cmdSetDescriptorHeaps(device, command_buffer, resource_descriptor_heap, sampler_descriptor_heap);
+}
+
+Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdSetDescriptorSet);
+
+	return ptr->vtbl->cmdSetDescriptorSet(device, command_buffer, pipeline_layout, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
 }
 
 Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)

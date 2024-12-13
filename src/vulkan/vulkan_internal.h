@@ -118,9 +118,8 @@ typedef struct Vulkan_Device_t
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
-	Opal_Pool bindset_layouts;
-	Opal_Pool bindset_pools;
-	Opal_Pool bindsets;
+	Opal_Pool descriptor_set_layouts;
+	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
 	Opal_Pool pipelines;
 	Opal_Pool swapchains;
@@ -212,23 +211,18 @@ typedef struct Vulkan_Shader_t
 	VkShaderModule shader;
 } Vulkan_Shader;
 
-typedef struct Vulkan_BindsetLayout_t
+typedef struct Vulkan_DescriptorSetLayout_t
 {
 	VkDescriptorSetLayout layout;
-	VkDescriptorSetLayoutBinding *layout_bindings;
-	uint32_t num_layout_bindings;
-} Vulkan_BindsetLayout;
+	VkDescriptorSetLayoutBinding *layout_entries;
+	uint32_t num_layout_entries;
+} Vulkan_DescriptorSetLayout;
 
-typedef struct Vulkan_BindsetPool_t
-{
-	VkDescriptorPool pool;
-} Vulkan_BindsetPool;
-
-typedef struct Vulkan_Bindset_t
+typedef struct Vulkan_DescriptorSet_t
 {
 	VkDescriptorSet set;
-	Opal_BindsetLayout bindset_layout;
-} Vulkan_Bindset;
+	Opal_DescriptorSetLayout layout;
+} Vulkan_DescriptorSet;
 
 typedef struct Vulkan_PipelineLayout_t
 {
@@ -303,7 +297,7 @@ VkCopyAccelerationStructureModeKHR vulkan_helperToAccelerationStructureCopyMode(
 
 VkCompareOp vulkan_helperToCompareOp(Opal_CompareOp op);
 
-VkDescriptorType vulkan_helperToDescriptorType(Opal_BindingType type);
+VkDescriptorType vulkan_helperToDescriptorType(Opal_DescriptorType type);
 
 VkShaderStageFlags vulkan_helperToShaderStageFlags(Opal_ShaderStage stage);
 VkVertexInputRate vulkan_helperToVertexInputRate(Opal_VertexInputRate rate);

@@ -57,9 +57,8 @@ OPAL_DEFINE_HANDLE(Opal_CommandPool);
 OPAL_DEFINE_HANDLE(Opal_CommandBuffer);
 OPAL_DEFINE_HANDLE(Opal_Shader);
 OPAL_DEFINE_HANDLE(Opal_DescriptorHeap);
-OPAL_DEFINE_HANDLE(Opal_BindsetLayout);
-OPAL_DEFINE_HANDLE(Opal_BindsetPool);
-OPAL_DEFINE_HANDLE(Opal_Bindset);
+OPAL_DEFINE_HANDLE(Opal_DescriptorSetLayout);
+OPAL_DEFINE_HANDLE(Opal_DescriptorSet);
 OPAL_DEFINE_HANDLE(Opal_PipelineLayout);
 OPAL_DEFINE_HANDLE(Opal_Pipeline);
 OPAL_DEFINE_HANDLE(Opal_Swapchain);
@@ -696,32 +695,32 @@ typedef enum Opal_DescriptorHeapType_t
 	OPAL_DESCRIPTOR_HEAP_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_DescriptorHeapType;
 
-typedef enum Opal_BindingType_t
+typedef enum Opal_DescriptorType_t
 {
-	OPAL_BINDING_TYPE_UNIFORM_BUFFER = 0,
-	OPAL_BINDING_TYPE_UNIFORM_BUFFER_DYNAMIC,
-	OPAL_BINDING_TYPE_STORAGE_BUFFER,
-	OPAL_BINDING_TYPE_STORAGE_BUFFER_DYNAMIC,
-	OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY,
-	OPAL_BINDING_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC,
-	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_1D,
-	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D,
-	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_2D_ARRAY,
-	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE,
-	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY,
-	OPAL_BINDING_TYPE_SAMPLED_TEXTURE_3D,
-	OPAL_BINDING_TYPE_MULTISAMPLED_TEXTURE_2D,
-	OPAL_BINDING_TYPE_STORAGE_TEXTURE_1D,
-	OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D,
-	OPAL_BINDING_TYPE_STORAGE_TEXTURE_2D_ARRAY,
-	OPAL_BINDING_TYPE_STORAGE_TEXTURE_3D,
-	OPAL_BINDING_TYPE_SAMPLER,
-	OPAL_BINDING_TYPE_COMPARE_SAMPLER,
-	OPAL_BINDING_TYPE_ACCELERATION_STRUCTURE,
+	OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER = 0,
+	OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC,
+	OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_1D,
+	OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_2D,
+	OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_2D_ARRAY,
+	OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_CUBE,
+	OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY,
+	OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_3D,
+	OPAL_DESCRIPTOR_TYPE_MULTISAMPLED_TEXTURE_2D,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_1D,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D_ARRAY,
+	OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_3D,
+	OPAL_DESCRIPTOR_TYPE_SAMPLER,
+	OPAL_DESCRIPTOR_TYPE_COMPARE_SAMPLER,
+	OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE,
 
-	OPAL_BINDING_TYPE_ENUM_MAX,
-	OPAL_BINDING_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
-} Opal_BindingType;
+	OPAL_DESCRIPTOR_TYPE_ENUM_MAX,
+	OPAL_DESCRIPTOR_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_DescriptorType;
 
 typedef enum Opal_PrimitiveType_t {
 	OPAL_PRIMITIVE_TYPE_POINT_LIST = 0,
@@ -763,7 +762,7 @@ typedef struct Opal_DeviceLimits_t
 	uint64_t max_buffer_size;
 	uint64_t min_uniform_buffer_offset_alignment;
 	uint64_t min_storage_buffer_offset_alignment;
-	uint32_t max_bindsets;
+	uint32_t max_descriptor_sets;
 	uint64_t max_uniform_buffer_binding_size;
 	uint64_t max_storage_buffer_binding_size;
 	uint32_t max_vertex_buffers;
@@ -970,26 +969,13 @@ typedef struct Opal_VertexStream_t
 	Opal_VertexInputRate rate;
 } Opal_VertexStream;
 
-typedef struct Opal_BindsetLayoutBinding_t
+typedef struct Opal_DescriptorSetLayoutEntry_t
 {
 	uint32_t binding;
-	Opal_BindingType type;
+	Opal_DescriptorType type;
 	Opal_ShaderStage visibility;
 	Opal_TextureFormat texture_format;
-} Opal_BindsetLayoutBinding;
-
-typedef struct Opal_BindsetPoolEntry_t
-{
-	Opal_BindingType type;
-	uint32_t count;
-} Opal_BindsetPoolEntry;
-
-typedef struct Opal_BindsetPoolDesc_t
-{
-	uint32_t max_bindsets;
-	uint32_t num_entries;
-	const Opal_BindsetPoolEntry *entries;
-} Opal_BindsetPoolDesc;
+} Opal_DescriptorSetLayoutEntry;
 
 typedef struct Opal_DescriptorHeapDesc_t
 {
@@ -997,21 +983,22 @@ typedef struct Opal_DescriptorHeapDesc_t
 	uint32_t num_descriptors;
 } Opal_DescriptorHeapDesc;
 
-typedef union Opal_BindsetBindingData_t
+typedef union Opal_DescriptorSetEntryData_t
 {
 	Opal_BufferView buffer_view;
 	Opal_TextureView texture_view;
 	Opal_Sampler sampler;
 	Opal_AccelerationStructure acceleration_structure;
-} Opal_BindsetBindingData;
+} Opal_DescriptorSetEntryData;
 
-typedef struct Opal_BindsetBinding_t
+typedef struct Opal_DescriptorSetEntry_t
 {
 	uint32_t binding;
-	Opal_BindsetBindingData data;
-} Opal_BindsetBinding;
+	Opal_DescriptorSetEntryData data;
+} Opal_DescriptorSetEntry;
 
-typedef struct Opal_Viewport_t {
+typedef struct Opal_Viewport_t
+{
 	float x;
 	float y;
 	float width;
@@ -1020,7 +1007,8 @@ typedef struct Opal_Viewport_t {
 	float max_depth;
 } Opal_Viewport;
 
-typedef struct Opal_BlendState_t {
+typedef struct Opal_BlendState_t
+{
 	uint32_t enable;
 	Opal_BlendFactor src_color;
 	Opal_BlendFactor dst_color;
@@ -1030,7 +1018,8 @@ typedef struct Opal_BlendState_t {
 	Opal_BlendOp alpha_op;
 } Opal_BlendState;
 
-typedef struct Opal_StencilFaceState_t {
+typedef struct Opal_StencilFaceState_t
+{
 	Opal_StencilOp pass_op;
 	Opal_StencilOp depth_fail_op;
 	Opal_StencilOp fail_op;
@@ -1313,9 +1302,8 @@ typedef Opal_Result (*PFN_opalCreateAccelerationStructure)(Opal_Device device, c
 typedef Opal_Result (*PFN_opalCreateCommandPool)(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool);
 typedef Opal_Result (*PFN_opalCreateShader)(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 typedef Opal_Result (*PFN_opalCreateDescriptorHeap)(Opal_Device device, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_buffer);
-typedef Opal_Result (*PFN_opalCreateBindsetLayout)(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout);
-typedef Opal_Result (*PFN_opalCreateBindsetPool)(Opal_Device device, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool);
-typedef Opal_Result (*PFN_opalCreatePipelineLayout)(Opal_Device device, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout);
+typedef Opal_Result (*PFN_opalCreateDescriptorSetLayout)(Opal_Device device, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout);
+typedef Opal_Result (*PFN_opalCreatePipelineLayout)(Opal_Device device, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout);
 typedef Opal_Result (*PFN_opalCreateGraphicsPipeline)(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline);
 typedef Opal_Result (*PFN_opalCreateMeshletPipeline)(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline);
 typedef Opal_Result (*PFN_opalCreateComputePipeline)(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline);
@@ -1331,8 +1319,7 @@ typedef Opal_Result (*PFN_opalDestroyAccelerationStructure)(Opal_Device device, 
 typedef Opal_Result (*PFN_opalDestroyCommandPool)(Opal_Device device, Opal_CommandPool command_pool);
 typedef Opal_Result (*PFN_opalDestroyShader)(Opal_Device device, Opal_Shader shader);
 typedef Opal_Result (*PFN_opalDestroyDescriptorHeap)(Opal_Device device, Opal_DescriptorHeap descriptor_buffer);
-typedef Opal_Result (*PFN_opalDestroyBindsetLayout)(Opal_Device device, Opal_BindsetLayout bindset_layout);
-typedef Opal_Result (*PFN_opalDestroyBindsetPool)(Opal_Device device, Opal_BindsetPool bindset_pool);
+typedef Opal_Result (*PFN_opalDestroyDescriptorSetLayout)(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout);
 typedef Opal_Result (*PFN_opalDestroyPipelineLayout)(Opal_Device device, Opal_PipelineLayout pipeline_layout);
 typedef Opal_Result (*PFN_opalDestroyPipeline)(Opal_Device device, Opal_Pipeline pipeline);
 typedef Opal_Result (*PFN_opalDestroySwapchain)(Opal_Device device, Opal_Swapchain swapchain);
@@ -1344,14 +1331,13 @@ typedef Opal_Result (*PFN_opalAllocateCommandBuffer)(Opal_Device device, Opal_Co
 typedef Opal_Result (*PFN_opalFreeCommandBuffer)(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalResetCommandPool)(Opal_Device device, Opal_CommandPool command_pool);
 typedef Opal_Result (*PFN_opalResetCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalAllocateEmptyBindset)(Opal_Device device, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset);
-typedef Opal_Result (*PFN_opalAllocatePrefilledBindset)(Opal_Device device, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset);
-typedef Opal_Result (*PFN_opalFreeBindset)(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);
-typedef Opal_Result (*PFN_opalResetBindsetPool)(Opal_Device device, Opal_BindsetPool bindset_pool);
+typedef Opal_Result (*PFN_opalAllocateEmptyDescriptorSet)(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *DescriptorSet);
+typedef Opal_Result (*PFN_opalAllocatePrefilledDescriptorSet)(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *DescriptorSet);
+typedef Opal_Result (*PFN_opalFreeDescriptorSet)(Opal_Device device, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
 typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
 typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_opalWriteBuffer)(Opal_Device device, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size);
-typedef Opal_Result (*PFN_opalUpdateBindset)(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+typedef Opal_Result (*PFN_opalUpdateDescriptorSet)(Opal_Device device, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 typedef Opal_Result (*PFN_opalBeginCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalEndCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalQuerySemaphore)(Opal_Device device, Opal_Semaphore semaphore, uint64_t *value);
@@ -1370,7 +1356,8 @@ typedef Opal_Result (*PFN_opalCmdEndComputePass)(Opal_Device device, Opal_Comman
 typedef Opal_Result (*PFN_opalCmdBeginRaytracePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdEndRaytracePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdSetPipeline)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
-typedef Opal_Result (*PFN_opalCmdSetBindset)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
+typedef Opal_Result (*PFN_opalCmdSetDescriptorHeaps)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap);
+typedef Opal_Result (*PFN_opalCmdSetDescriptorSet)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
 typedef Opal_Result (*PFN_opalCmdSetVertexBuffers)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
 typedef Opal_Result (*PFN_opalCmdSetIndexBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer);
 typedef Opal_Result (*PFN_opalCmdSetViewport)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);
@@ -1426,8 +1413,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCreateCommandPool createCommandPool;
 	PFN_opalCreateShader createShader;
 	PFN_opalCreateDescriptorHeap createDescriptorHeap;
-	PFN_opalCreateBindsetLayout createBindsetLayout;
-	PFN_opalCreateBindsetPool createBindsetPool;
+	PFN_opalCreateDescriptorSetLayout createDescriptorSetLayout;
 	PFN_opalCreatePipelineLayout createPipelineLayout;
 	PFN_opalCreateGraphicsPipeline createGraphicsPipeline;
 	PFN_opalCreateMeshletPipeline createMeshletPipeline;
@@ -1444,8 +1430,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalDestroyCommandPool destroyCommandPool;
 	PFN_opalDestroyShader destroyShader;
 	PFN_opalDestroyDescriptorHeap destroyDescriptorHeap;
-	PFN_opalDestroyBindsetLayout destroyBindsetLayout;
-	PFN_opalDestroyBindsetPool destroyBindsetPool;
+	PFN_opalDestroyDescriptorSetLayout destroyDescriptorSetLayout;
 	PFN_opalDestroyPipelineLayout destroyPipelineLayout;
 	PFN_opalDestroyPipeline destroyPipeline;
 	PFN_opalDestroySwapchain destroySwapchain;
@@ -1457,14 +1442,13 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalFreeCommandBuffer freeCommandBuffer;
 	PFN_opalResetCommandPool resetCommandPool;
 	PFN_opalResetCommandBuffer resetCommandBuffer;
-	PFN_opalAllocateEmptyBindset allocateEmptyBindset;
-	PFN_opalAllocatePrefilledBindset allocatePrefilledBindset;
-	PFN_opalFreeBindset freeBindset;
-	PFN_opalResetBindsetPool resetBindsetPool;
+	PFN_opalAllocateEmptyDescriptorSet allocateEmptyDescriptorSet;
+	PFN_opalAllocatePrefilledDescriptorSet allocatePrefilledDescriptorSet;
+	PFN_opalFreeDescriptorSet freeDescriptorSet;
 	PFN_opalMapBuffer mapBuffer;
 	PFN_opalUnmapBuffer unmapBuffer;
 	PFN_opalWriteBuffer writeBuffer;
-	PFN_opalUpdateBindset updateBindset;
+	PFN_opalUpdateDescriptorSet updateDescriptorSet;
 	PFN_opalBeginCommandBuffer beginCommandBuffer;
 	PFN_opalEndCommandBuffer endCommandBuffer;
 	PFN_opalQuerySemaphore querySemaphore;
@@ -1483,7 +1467,8 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCmdBeginRaytracePass cmdBeginRaytracePass;
 	PFN_opalCmdEndRaytracePass cmdEndRaytracePass;
 	PFN_opalCmdSetPipeline cmdSetPipeline;
-	PFN_opalCmdSetBindset cmdSetBindset;
+	PFN_opalCmdSetDescriptorHeaps cmdSetDescriptorHeaps;
+	PFN_opalCmdSetDescriptorSet cmdSetDescriptorSet;
 	PFN_opalCmdSetVertexBuffers cmdSetVertexBuffers;
 	PFN_opalCmdSetIndexBuffer cmdSetIndexBuffer;
 	PFN_opalCmdSetViewport cmdSetViewport;
@@ -1541,9 +1526,8 @@ OPAL_APIENTRY Opal_Result opalCreateAccelerationStructure(Opal_Device device, co
 OPAL_APIENTRY Opal_Result opalCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool);
 OPAL_APIENTRY Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader);
 OPAL_APIENTRY Opal_Result opalCreateDescriptorHeap(Opal_Device device, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_buffer);
-OPAL_APIENTRY Opal_Result opalCreateBindsetLayout(Opal_Device device, uint32_t num_bindings, const Opal_BindsetLayoutBinding *bindings, Opal_BindsetLayout *bindset_layout);
-OPAL_APIENTRY Opal_Result opalCreateBindsetPool(Opal_Device device, const Opal_BindsetPoolDesc *desc, Opal_BindsetPool *bindset_pool);
-OPAL_APIENTRY Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_bindset_layouts, const Opal_BindsetLayout *bindset_layouts, Opal_PipelineLayout *pipeline_layout);
+OPAL_APIENTRY Opal_Result opalCreateDescriptorSetLayout(Opal_Device device, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout);
+OPAL_APIENTRY Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_descriptor_setlayouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout);
 OPAL_APIENTRY Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline);
 OPAL_APIENTRY Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline);
 OPAL_APIENTRY Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline);
@@ -1557,10 +1541,9 @@ OPAL_APIENTRY Opal_Result opalDestroyTextureView(Opal_Device device, Opal_Textur
 OPAL_APIENTRY Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sampler);
 OPAL_APIENTRY Opal_Result opalDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure);
 OPAL_APIENTRY Opal_Result opalDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool);
-OPAL_APIENTRY Opal_Result opalDestroyDescriptorHeap(Opal_Device device, Opal_DescriptorHeap descriptor_buffer);
 OPAL_APIENTRY Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader);
-OPAL_APIENTRY Opal_Result opalDestroyBindsetLayout(Opal_Device device, Opal_BindsetLayout bindset_layout);
-OPAL_APIENTRY Opal_Result opalDestroyBindsetPool(Opal_Device, Opal_BindsetPool bindset_pool);
+OPAL_APIENTRY Opal_Result opalDestroyDescriptorHeap(Opal_Device device, Opal_DescriptorHeap descriptor_buffer);
+OPAL_APIENTRY Opal_Result opalDestroyDescriptorSetLayout(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout);
 OPAL_APIENTRY Opal_Result opalDestroyPipelineLayout(Opal_Device device, Opal_PipelineLayout pipeline_layout);
 OPAL_APIENTRY Opal_Result opalDestroyPipeline(Opal_Device device, Opal_Pipeline pipeline);
 OPAL_APIENTRY Opal_Result opalDestroySwapchain(Opal_Device device, Opal_Swapchain swapchain);
@@ -1572,14 +1555,13 @@ OPAL_APIENTRY Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_Com
 OPAL_APIENTRY Opal_Result opalFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalResetCommandPool(Opal_Device device, Opal_CommandPool command_pool);
 OPAL_APIENTRY Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalAllocateEmptyBindset(Opal_Device device, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, Opal_Bindset *bindset);
-OPAL_APIENTRY Opal_Result opalAllocatePrefilledBindset(Opal_Device device, Opal_BindsetLayout bindset_layout, Opal_BindsetPool bindset_pool, uint32_t num_bindings, const Opal_BindsetBinding *bindings, Opal_Bindset *bindset);
-OPAL_APIENTRY Opal_Result opalFreeBindset(Opal_Device device, Opal_BindsetPool bindset_pool, Opal_Bindset bindset);
-OPAL_APIENTRY Opal_Result opalResetBindsetPool(Opal_Device device, Opal_BindsetPool bindset_pool);
+OPAL_APIENTRY Opal_Result opalAllocateEmptyDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set);
+OPAL_APIENTRY Opal_Result opalAllocatePrefilledDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set);
+OPAL_APIENTRY Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
 OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
 OPAL_APIENTRY Opal_Result opalWriteBuffer(Opal_Device device, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size);
-OPAL_APIENTRY Opal_Result opalUpdateBindset(Opal_Device device, Opal_Bindset bindset, uint32_t num_bindings, const Opal_BindsetBinding *bindings);
+OPAL_APIENTRY Opal_Result opalUpdateDescriptorSet(Opal_Device device, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 OPAL_APIENTRY Opal_Result opalBeginCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalEndCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalQuerySemaphore(Opal_Device device, Opal_Semaphore semaphore, uint64_t *value);
@@ -1598,7 +1580,8 @@ OPAL_APIENTRY Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_Command
 OPAL_APIENTRY Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
-OPAL_APIENTRY Opal_Result opalCmdSetBindset(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_Bindset bindset, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
+OPAL_APIENTRY Opal_Result opalCmdSetDescriptorHeaps(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap);
+OPAL_APIENTRY Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
 OPAL_APIENTRY Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
 OPAL_APIENTRY Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer);
 OPAL_APIENTRY Opal_Result opalCmdSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);

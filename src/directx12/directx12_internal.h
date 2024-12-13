@@ -114,7 +114,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool descriptor_heaps;
-	Opal_Pool bindset_layouts;
+	Opal_Pool descriptor_set_layouts;
 	Opal_Pool pipeline_layouts;
 	Opal_Pool pipelines;
 	Opal_Pool swapchains;
@@ -198,7 +198,7 @@ typedef struct DirectX12_DescriptorInfo_t
 	D3D12_SHADER_VISIBILITY visibility;
 } DirectX12_DescriptorInfo;
 
-typedef struct DirectX12_BindsetLayout_t
+typedef struct DirectX12_DescriptorSetLayout_t
 {
 	DirectX12_DescriptorInfo *descriptors;
 	uint32_t num_table_cbv_descriptors;
@@ -206,7 +206,7 @@ typedef struct DirectX12_BindsetLayout_t
 	uint32_t num_table_srv_descriptors;
 	uint32_t num_table_sampler_descriptors;
 	uint32_t num_inline_descriptors;
-} DirectX12_BindsetLayout;
+} DirectX12_DescriptorSetLayout;
 
 typedef struct DirectX12_PipelineLayout_t
 {
