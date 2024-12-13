@@ -558,7 +558,7 @@ Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
 	return ptr->vtbl->destroyShader(device, shader);
 }
 
-Opal_Result opalDescriptorDescriptorHeap(Opal_Device device, Opal_DescriptorHeap descriptor_buffer)
+Opal_Result opalDestroyDescriptorHeap(Opal_Device device, Opal_DescriptorHeap descriptor_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
