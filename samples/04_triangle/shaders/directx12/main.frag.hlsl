@@ -6,5 +6,5 @@ struct VertexOutput
 
 float4 main(VertexOutput input): SV_Target
 {
-	return input.color;
+	return float4(pow(input.color.rgb, 1.0f / 2.2f), input.color.a);
 }
