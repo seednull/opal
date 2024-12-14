@@ -812,6 +812,14 @@ typedef struct Opal_BufferView_t
 	uint64_t size;
 } Opal_BufferView;
 
+typedef struct Opal_StorageBufferView_t
+{
+	Opal_Buffer buffer;
+	uint64_t offset;
+	uint32_t element_size;
+	uint32_t num_elements;
+} Opal_StorageBufferView;
+
 typedef struct Opal_VertexBufferView_t
 {
 	Opal_Buffer buffer;
@@ -986,6 +994,7 @@ typedef struct Opal_DescriptorHeapDesc_t
 typedef union Opal_DescriptorSetEntryData_t
 {
 	Opal_BufferView buffer_view;
+	Opal_StorageBufferView storage_buffer_view;
 	Opal_TextureView texture_view;
 	Opal_Sampler sampler;
 	Opal_AccelerationStructure acceleration_structure;
