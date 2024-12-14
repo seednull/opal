@@ -26,6 +26,16 @@ typedef enum DirectX12_ResourceType_t
 	DIRECTX12_RESOURCE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } DirectX12_ResourceType;
 
+typedef enum DirectX12_PassType_t
+{
+	DIRECTX12_PASS_TYPE_NONE = 0,
+	DIRECTX12_PASS_TYPE_GRAPHICS,
+	DIRECTX12_PASS_TYPE_COMPUTE,
+
+	DIRECTX12_PASS_TYPE_ENUM_MAX,
+	DIRECTX12_PASS_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} DirectX12_PassType;
+
 typedef struct DirectX12_MemoryBlock_t
 {
 	ID3D12Heap *memory;
@@ -115,6 +125,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool shaders;
 	Opal_Pool descriptor_heaps;
 	Opal_Pool descriptor_set_layouts;
+	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
 	Opal_Pool pipelines;
 	Opal_Pool swapchains;
@@ -176,6 +187,8 @@ typedef struct DirectX12_CommandBuffer_t
 	Opal_CommandPool pool;
 	uint32_t index;
 	uint32_t recording;
+	DirectX12_PassType pass;
+	ID3D12RootSignature *root_signature;
 } DirectX12_CommandBuffer;
 
 typedef struct DirectX12_Shader_t
@@ -193,7 +206,8 @@ typedef struct DirectX12_DescriptorHeap_t
 
 typedef struct DirectX12_DescriptorInfo_t
 {
-	D3D12_DESCRIPTOR_RANGE_TYPE type;
+	Opal_DescriptorType type;
+	D3D12_DESCRIPTOR_RANGE_TYPE api_type;
 	UINT binding;
 	D3D12_SHADER_VISIBILITY visibility;
 } DirectX12_DescriptorInfo;
@@ -205,8 +219,21 @@ typedef struct DirectX12_DescriptorSetLayout_t
 	uint32_t num_table_uav_descriptors;
 	uint32_t num_table_srv_descriptors;
 	uint32_t num_table_sampler_descriptors;
-	uint32_t num_inline_descriptors;
+	uint32_t num_inline_cbv_descriptors;
+	uint32_t num_inline_uav_descriptors;
+	uint32_t num_inline_srv_descriptors;
 } DirectX12_DescriptorSetLayout;
+
+typedef struct DirectX12_DescriptorSet_t
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE resource_handle;
+	D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle;
+	Opal_HeapAllocation resource_allocation;
+	Opal_HeapAllocation sampler_allocation;
+	Opal_DescriptorSetLayout layout;
+	Opal_DescriptorHeap resource_heap;
+	Opal_DescriptorHeap sampler_heap;
+} DirectX12_DescriptorSet;
 
 typedef struct DirectX12_PipelineLayout_t
 {
@@ -216,7 +243,6 @@ typedef struct DirectX12_PipelineLayout_t
 typedef struct DirectX12_Pipeline_t
 {
 	ID3D12PipelineState *pipeline_state;
-	ID3D12RootSignature *root_signature;
 	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
 } DirectX12_Pipeline;
 
