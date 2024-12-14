@@ -144,6 +144,7 @@ static void directx12_destroyPipeline(DirectX12_Device *device_ptr, DirectX12_Pi
 	OPAL_UNUSED(device_ptr);
 	assert(pipeline_ptr);
 
+	ID3D12RootSignature_Release(pipeline_ptr->root_signature);
 	ID3D12PipelineState_Release(pipeline_ptr->pipeline_state);
 }
 
@@ -1071,10 +1072,10 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 			assert(descriptor_set_layout_ptr);
 			assert(descriptor_set_layout_ptr->descriptors);
 
-			uint32_t num_sampler_descriptors = 0;
-			num_sampler_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
+			uint32_t num_set_sampler_descriptors = 0;
+			num_set_sampler_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
 
-			if (num_sampler_descriptors == 0)
+			if (num_set_sampler_descriptors == 0)
 				continue;
 
 			uint32_t num_set_resource_descriptors = 0;
@@ -1124,15 +1125,15 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 			if (num_set_inline_descriptors == 0)
 				continue;
 
-			uint32_t num_sampler_descriptors = 0;
-			num_sampler_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
+			uint32_t num_set_sampler_descriptors = 0;
+			num_set_sampler_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
 
 			uint32_t num_set_resource_descriptors = 0;
 			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
 			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_srv_descriptors;
 			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_uav_descriptors;
 
-			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors + num_set_resource_descriptors + num_sampler_descriptors;
+			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors + num_set_resource_descriptors + num_set_sampler_descriptors;
 
 			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_inline_cbv_descriptors; ++j)
 			{
@@ -1346,8 +1347,11 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECTX12_ERROR;
 
+	ID3D12RootSignature_AddRef(pipeline_layout_ptr->root_signature);
+
 	DirectX12_Pipeline result = {0};
 	result.pipeline_state = d3d12_pipeline_state;
+	result.root_signature = pipeline_layout_ptr->root_signature;
 	result.primitive_topology = directx12_helperToPrimitiveTopology(desc->primitive_type);
 
 	*pipeline = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipelines, &result);
@@ -1388,8 +1392,11 @@ static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECTX12_ERROR;
 
+	ID3D12RootSignature_AddRef(pipeline_layout_ptr->root_signature);
+
 	DirectX12_Pipeline result = {0};
 	result.pipeline_state = d3d12_pipeline_state;
+	result.root_signature = pipeline_layout_ptr->root_signature;
 	result.primitive_topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 
 	*pipeline = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipelines, &result);
@@ -2404,8 +2411,6 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 				case OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
 				{
-					D3D12_SHADER_RESOURCE_VIEW_DESC desc = {0};
-
 					// TODO:
 				}
 				break;
@@ -2868,6 +2873,29 @@ static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_Command
 
 	DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
 	assert(pipeline_ptr);
+
+	switch (command_buffer_ptr->pass)
+	{
+		case DIRECTX12_PASS_TYPE_GRAPHICS:
+		{
+			if (command_buffer_ptr->root_signature != pipeline_ptr->root_signature)
+			{
+				command_buffer_ptr->root_signature = pipeline_ptr->root_signature;
+				ID3D12GraphicsCommandList4_SetGraphicsRootSignature(command_buffer_ptr->list, pipeline_ptr->root_signature);
+			}
+		}
+		break;
+
+		case DIRECTX12_PASS_TYPE_COMPUTE:
+		{
+			if (command_buffer_ptr->root_signature != pipeline_ptr->root_signature)
+			{
+				command_buffer_ptr->root_signature = pipeline_ptr->root_signature;
+				ID3D12GraphicsCommandList4_SetComputeRootSignature(command_buffer_ptr->list, pipeline_ptr->root_signature);
+			}
+		}
+		break;
+	}
 
 	ID3D12GraphicsCommandList4_SetPipelineState(command_buffer_ptr->list, pipeline_ptr->pipeline_state);
 	ID3D12GraphicsCommandList4_IASetPrimitiveTopology(command_buffer_ptr->list, pipeline_ptr->primitive_topology);
