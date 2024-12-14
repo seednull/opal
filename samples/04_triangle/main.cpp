@@ -236,10 +236,16 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalBeginCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_BufferView staging_buffer_view = { staging_buffer, 0 };
-	Opal_BufferView triangle_buffer_view = { triangle_buffer, 0 };
+	Opal_BufferView staging_buffer_view = { staging_buffer, 0, sizeof(TriangleData) };
+	Opal_BufferView triangle_buffer_view = { triangle_buffer, 0, sizeof(TriangleData) };
+
+	result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_GENERIC_READ, OPAL_RESOURCE_STATE_COPY_DEST);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdCopyBufferToBuffer(device, staging_command_buffer, staging_buffer_view, triangle_buffer_view, sizeof(TriangleData));
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_GENERIC_READ);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, staging_command_buffer);
@@ -431,7 +437,7 @@ void Application::render()
 		{0.4f, 0.4f, 0.4f, 1.0f}
 	};
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_GENERAL, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
+	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
