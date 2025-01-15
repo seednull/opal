@@ -10,7 +10,7 @@
 static Opal_Result vulkan_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view);
 static Opal_Result vulkan_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr);
 static Opal_Result vulkan_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
-static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
+static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
 static Opal_Result vulkan_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 
 /*
@@ -2470,11 +2470,10 @@ static Opal_Result vulkan_deviceResetCommandBuffer(Opal_Device this, Opal_Comman
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceAllocateEmptyDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set)
+static Opal_Result vulkan_deviceAllocateDescriptorSet(Opal_Device this, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(descriptor_set_layout);
-	OPAL_UNUSED(descriptor_heap);
+	OPAL_UNUSED(desc);
 	OPAL_UNUSED(descriptor_set);
 
 	/*
@@ -2513,28 +2512,9 @@ static Opal_Result vulkan_deviceAllocateEmptyDescriptorSet(Opal_Device this, Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result vulkan_deviceAllocatePrefilledDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set)
-{
-	Opal_Result result = vulkan_deviceAllocateEmptyDescriptorSet(this, descriptor_set_layout, descriptor_heap, descriptor_set);
-	if (result != OPAL_SUCCESS)
-		return result;
-
-	assert(descriptor_set);
-	result = vulkan_deviceUpdateDescriptorSet(this, *descriptor_set, num_entries, entries);
-	if (result != OPAL_SUCCESS)
-	{
-		vulkan_deviceFreeDescriptorSet(this, descriptor_heap, *descriptor_set);
-		*descriptor_set = OPAL_NULL_HANDLE;
-		return result;
-	}
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set)
+static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(descriptor_heap);
 	OPAL_UNUSED(descriptor_set);
  
 	/*
@@ -4087,8 +4067,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceFreeCommandBuffer,
 	vulkan_deviceResetCommandPool,
 	vulkan_deviceResetCommandBuffer,
-	vulkan_deviceAllocateEmptyDescriptorSet,
-	vulkan_deviceAllocatePrefilledDescriptorSet,
+	vulkan_deviceAllocateDescriptorSet,
 	vulkan_deviceFreeDescriptorSet,
 	vulkan_deviceMapBuffer,
 	vulkan_deviceUnmapBuffer,

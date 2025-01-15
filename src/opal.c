@@ -704,31 +704,19 @@ Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->resetCommandBuffer(device, command_buffer);
 }
 
-Opal_Result opalAllocateEmptyDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set)
+Opal_Result opalAllocateDescriptorSet(Opal_Device device, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->allocateEmptyDescriptorSet);
+	assert(ptr->vtbl->allocateDescriptorSet);
 
-	return ptr->vtbl->allocateEmptyDescriptorSet(device, descriptor_set_layout, descriptor_heap, descriptor_set);
+	return ptr->vtbl->allocateDescriptorSet(device, desc, descriptor_set);
 }
 
-Opal_Result opalAllocatePrefilledDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->allocatePrefilledDescriptorSet);
-
-	return ptr->vtbl->allocatePrefilledDescriptorSet(device, descriptor_set_layout, descriptor_heap, num_entries, entries, descriptor_set);
-}
-
-Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set)
+Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorSet descriptor_set)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -737,7 +725,7 @@ Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorHeap descri
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->freeDescriptorSet);
 
-	return ptr->vtbl->freeDescriptorSet(device, descriptor_heap, descriptor_set);
+	return ptr->vtbl->freeDescriptorSet(device, descriptor_set);
 }
 
 Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **mapped_ptr)

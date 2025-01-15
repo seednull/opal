@@ -6,7 +6,7 @@
 
 /*
  */
-static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
+static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
 static Opal_Result null_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 
 /*
@@ -398,38 +398,18 @@ static Opal_Result null_deviceResetCommandBuffer(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocateEmptyDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set)
+static Opal_Result null_deviceAllocateDescriptorSet(Opal_Device this, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(descriptor_set_layout);
-	OPAL_UNUSED(descriptor_heap);
+	OPAL_UNUSED(desc);
 	OPAL_UNUSED(descriptor_set);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocatePrefilledDescriptorSet(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set)
-{
-	Opal_Result result = null_deviceAllocateEmptyDescriptorSet(this, descriptor_set_layout, descriptor_heap, descriptor_set);
-	if (result != OPAL_SUCCESS)
-		return result;
-
-	assert(descriptor_set);
-	result = null_deviceUpdateDescriptorSet(this, *descriptor_set, num_entries, entries);
-	if (result != OPAL_SUCCESS)
-	{
-		null_deviceFreeDescriptorSet(this, descriptor_heap, *descriptor_set);
-		*descriptor_set = OPAL_NULL_HANDLE;
-		return result;
-	}
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set)
+static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(descriptor_heap);
 	OPAL_UNUSED(descriptor_set);
 
 	return OPAL_NOT_SUPPORTED;
@@ -919,8 +899,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceFreeCommandBuffer,
 	null_deviceResetCommandPool,
 	null_deviceResetCommandBuffer,
-	null_deviceAllocateEmptyDescriptorSet,
-	null_deviceAllocatePrefilledDescriptorSet,
+	null_deviceAllocateDescriptorSet,
 	null_deviceFreeDescriptorSet,
 	null_deviceMapBuffer,
 	null_deviceUnmapBuffer,

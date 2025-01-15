@@ -1014,6 +1014,15 @@ typedef struct Opal_DescriptorSetEntry_t
 	Opal_DescriptorSetEntryData data;
 } Opal_DescriptorSetEntry;
 
+typedef struct Opal_DescriptorSetAllocationDesc_t
+{
+	Opal_DescriptorSetLayout layout;
+	Opal_DescriptorHeap resource_heap;
+	Opal_DescriptorHeap sampler_heap;
+	uint32_t num_entries;
+	const Opal_DescriptorSetEntry *entries;
+} Opal_DescriptorSetAllocationDesc;
+
 typedef struct Opal_Viewport_t
 {
 	float x;
@@ -1348,9 +1357,8 @@ typedef Opal_Result (*PFN_opalAllocateCommandBuffer)(Opal_Device device, Opal_Co
 typedef Opal_Result (*PFN_opalFreeCommandBuffer)(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalResetCommandPool)(Opal_Device device, Opal_CommandPool command_pool);
 typedef Opal_Result (*PFN_opalResetCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalAllocateEmptyDescriptorSet)(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *DescriptorSet);
-typedef Opal_Result (*PFN_opalAllocatePrefilledDescriptorSet)(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *DescriptorSet);
-typedef Opal_Result (*PFN_opalFreeDescriptorSet)(Opal_Device device, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
+typedef Opal_Result (*PFN_opalAllocateDescriptorSet)(Opal_Device device, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set);
+typedef Opal_Result (*PFN_opalFreeDescriptorSet)(Opal_Device device, Opal_DescriptorSet descriptor_set);
 typedef Opal_Result (*PFN_opalMapBuffer)(Opal_Device device, Opal_Buffer buffer, void **ptr);
 typedef Opal_Result (*PFN_opalUnmapBuffer)(Opal_Device device, Opal_Buffer buffer);
 typedef Opal_Result (*PFN_opalWriteBuffer)(Opal_Device device, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size);
@@ -1459,8 +1467,7 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalFreeCommandBuffer freeCommandBuffer;
 	PFN_opalResetCommandPool resetCommandPool;
 	PFN_opalResetCommandBuffer resetCommandBuffer;
-	PFN_opalAllocateEmptyDescriptorSet allocateEmptyDescriptorSet;
-	PFN_opalAllocatePrefilledDescriptorSet allocatePrefilledDescriptorSet;
+	PFN_opalAllocateDescriptorSet allocateDescriptorSet;
 	PFN_opalFreeDescriptorSet freeDescriptorSet;
 	PFN_opalMapBuffer mapBuffer;
 	PFN_opalUnmapBuffer unmapBuffer;
@@ -1572,9 +1579,8 @@ OPAL_APIENTRY Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_Com
 OPAL_APIENTRY Opal_Result opalFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalResetCommandPool(Opal_Device device, Opal_CommandPool command_pool);
 OPAL_APIENTRY Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalAllocateEmptyDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet *descriptor_set);
-OPAL_APIENTRY Opal_Result opalAllocatePrefilledDescriptorSet(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout, Opal_DescriptorHeap descriptor_heap, uint32_t num_entries, const Opal_DescriptorSetEntry *entries, Opal_DescriptorSet *descriptor_set);
-OPAL_APIENTRY Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorHeap descriptor_heap, Opal_DescriptorSet descriptor_set);
+OPAL_APIENTRY Opal_Result opalAllocateDescriptorSet(Opal_Device device, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set);
+OPAL_APIENTRY Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorSet descriptor_set);
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);
 OPAL_APIENTRY Opal_Result opalUnmapBuffer(Opal_Device device, Opal_Buffer buffer);
 OPAL_APIENTRY Opal_Result opalWriteBuffer(Opal_Device device, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size);
