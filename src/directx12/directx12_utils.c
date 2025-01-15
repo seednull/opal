@@ -87,7 +87,7 @@ D3D12_RESOURCE_FLAGS directx12_helperToTextureFlags(Opal_TextureUsageFlags flags
 	{
 		if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
 			result |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		
+
 		if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
 			result |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 	}
@@ -115,6 +115,34 @@ DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFl
 	return (samples != OPAL_SAMPLES_1) ? DIRECTX12_RESOURCE_TYPE_MSAA_NON_DS_RT_TEXTURE : DIRECTX12_RESOURCE_TYPE_NON_DS_RT_TEXTURE;
 }
 
+D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip)
+{
+	static D3D12_FILTER d3d12_filters[] =
+	{
+		D3D12_FILTER_MIN_MAG_MIP_POINT,
+		D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT,
+		D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT,
+		D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
+		D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR,
+		D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
+		D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR,
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+	};
+
+	return d3d12_filters[min + mag * 2 + mip * 4];
+}
+D3D12_TEXTURE_ADDRESS_MODE directx12_helperToSamplerAddressMode(Opal_SamplerAddressMode mode)
+{
+	static D3D12_TEXTURE_ADDRESS_MODE d3d12_address_modes[] =
+	{
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE_MIRROR,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+	};
+
+	return d3d12_address_modes[mode];
+}
+
 D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type)
 {
 	static D3D12_DESCRIPTOR_HEAP_TYPE d3d12_types[] =
@@ -124,52 +152,6 @@ D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorH
 	};
 
 	return d3d12_types[type];
-}
-
-D3D12_SHADER_VISIBILITY directx12_helperToShaderVisibility(Opal_ShaderStage stage)
-{
-	if (stage & OPAL_SHADER_STAGE_COMPUTE)
-		return D3D12_SHADER_VISIBILITY_ALL;
-
-	if (stage & OPAL_SHADER_STAGE_RAYGEN)
-		return D3D12_SHADER_VISIBILITY_ALL;
-
-	if (stage & OPAL_SHADER_STAGE_ANY_HIT)
-		return D3D12_SHADER_VISIBILITY_ALL;
-
-	if (stage & OPAL_SHADER_STAGE_CLOSEST_HIT)
-		return D3D12_SHADER_VISIBILITY_ALL;
-
-	if (stage & OPAL_SHADER_STAGE_MISS)
-		return D3D12_SHADER_VISIBILITY_ALL;
-
-	if (stage & OPAL_SHADER_STAGE_INTERSECTION)
-		return D3D12_SHADER_VISIBILITY_ALL;
-
-	D3D12_SHADER_VISIBILITY result = 0;
-
-	if (stage & OPAL_SHADER_STAGE_VERTEX)
-		result |= D3D12_SHADER_VISIBILITY_VERTEX;
-
-	if (stage & OPAL_SHADER_STAGE_TESSELLATION_CONTROL)
-		result |= D3D12_SHADER_VISIBILITY_HULL;
-
-	if (stage & OPAL_SHADER_STAGE_TESSELLATION_EVALUATION)
-		result |= D3D12_SHADER_VISIBILITY_DOMAIN;
-
-	if (stage & OPAL_SHADER_STAGE_GEOMETRY)
-		result |= D3D12_SHADER_VISIBILITY_GEOMETRY;
-
-	if (stage & OPAL_SHADER_STAGE_FRAGMENT)
-		result |= D3D12_SHADER_VISIBILITY_PIXEL;
-
-	if (stage & OPAL_SHADER_STAGE_TASK)
-		result |= D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-
-	if (stage & OPAL_SHADER_STAGE_MESH)
-		result |= D3D12_SHADER_VISIBILITY_MESH;
-
-	return result;
 }
 
 D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op)

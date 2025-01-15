@@ -120,6 +120,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
+	Opal_Pool samplers;
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -174,6 +175,12 @@ typedef struct DirectX12_TextureView_t
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
 } DirectX12_TextureView;
 
+typedef struct DirectX12_Sampler_t
+{
+	D3D12_SAMPLER_DESC desc;
+} DirectX12_Sampler;
+
+// FIXME: move command allocator to command buffer
 typedef struct DirectX12_CommandPool_t
 {
 	ID3D12CommandAllocator *allocators[D3D12_MAX_COMMAND_POOL_ALLOCATORS];
@@ -209,7 +216,6 @@ typedef struct DirectX12_DescriptorInfo_t
 	Opal_DescriptorType type;
 	D3D12_DESCRIPTOR_RANGE_TYPE api_type;
 	UINT binding;
-	D3D12_SHADER_VISIBILITY visibility;
 } DirectX12_DescriptorInfo;
 
 typedef struct DirectX12_DescriptorSetLayout_t
@@ -219,9 +225,7 @@ typedef struct DirectX12_DescriptorSetLayout_t
 	uint32_t num_table_uav_descriptors;
 	uint32_t num_table_srv_descriptors;
 	uint32_t num_table_sampler_descriptors;
-	uint32_t num_inline_cbv_descriptors;
-	uint32_t num_inline_uav_descriptors;
-	uint32_t num_inline_srv_descriptors;
+	uint32_t num_inline_descriptors;
 } DirectX12_DescriptorSetLayout;
 
 typedef struct DirectX12_DescriptorSet_t
@@ -233,11 +237,18 @@ typedef struct DirectX12_DescriptorSet_t
 	Opal_DescriptorSetLayout layout;
 	Opal_DescriptorHeap resource_heap;
 	Opal_DescriptorHeap sampler_heap;
+	// TODO: think about using fixed array
+	uint32_t num_inline_descriptors;
+	Opal_DescriptorSetEntry *inline_descriptors;
 } DirectX12_DescriptorSet;
 
 typedef struct DirectX12_PipelineLayout_t
 {
 	ID3D12RootSignature *root_signature;
+	uint32_t num_layout_table_offsets;
+	uint32_t *layout_table_offsets;
+	uint32_t num_inline_descriptors;
+	uint32_t inline_offset;
 } DirectX12_PipelineLayout;
 
 typedef struct DirectX12_Pipeline_t
@@ -278,8 +289,9 @@ D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_Allocati
 D3D12_RESOURCE_FLAGS directx12_helperToTextureFlags(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
 D3D12_RESOURCE_DIMENSION directx12_helperToTextureDimension(Opal_TextureType type);
 DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFlags flags, Opal_Samples samples);
+D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip);
+D3D12_TEXTURE_ADDRESS_MODE directx12_helperToSamplerAddressMode(Opal_SamplerAddressMode mode);
 D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type);
-D3D12_SHADER_VISIBILITY directx12_helperToShaderVisibility(Opal_ShaderStage stage);
 D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op);
 D3D12_COMPARISON_FUNC directx12_helperToComparisonFunc(Opal_CompareOp op);
 D3D12_BLEND_OP directx12_helperToBlendOp(Opal_BlendOp op);
