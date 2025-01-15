@@ -465,15 +465,6 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	texture_info.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texture_info.Flags = directx12_helperToTextureFlags(desc->usage, desc->format);
 
-	if (desc->usage & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT)
-	{
-		texture_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		texture_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	}
-
-	if (desc->usage & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
-		texture_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
 	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = {0};
 	ID3D12Device_GetResourceAllocationInfo(d3d12_device, &allocation_info, 0, 1, &texture_info);
 
@@ -491,7 +482,7 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 
 	assert(allocation.offset % allocation_info.Alignment == 0);
 
-	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_GENERIC_READ;
+	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &texture_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_texture);
 	if (!SUCCEEDED(hr))
 	{
