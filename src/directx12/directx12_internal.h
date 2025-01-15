@@ -162,6 +162,9 @@ typedef struct DirectX12_Texture_t
 {
 	ID3D12Resource *texture;
 	DXGI_FORMAT format;
+	UINT16 depth;
+	UINT64 width;
+	UINT64 height;
 	UINT samples;
 	DirectX12_Allocation allocation;
 } DirectX12_Texture;

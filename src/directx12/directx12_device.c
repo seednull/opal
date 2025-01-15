@@ -503,6 +503,9 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	DirectX12_Texture result = {0};
 	result.texture = d3d12_texture;
 	result.format = texture_info.Format;
+	result.width = texture_info.Width;
+	result.height = texture_info.Height;
+	result.depth = (desc->type != OPAL_TEXTURE_TYPE_3D) ? texture_info.DepthOrArraySize : 1;
 	result.samples = texture_info.SampleDesc.Count;
 	result.allocation = allocation;
 
@@ -3427,12 +3430,46 @@ static Opal_Result directx12_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_
 
 static Opal_Result directx12_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
+	assert(src_buffer_ptr);
+
+	DirectX12_Texture *dst_texture_ptr = (DirectX12_Texture *)opal_poolGetElement(&device_ptr->textures, (Opal_PoolHandle)dst.texture);
+	assert(dst_texture_ptr);
+
+	D3D12_TEXTURE_COPY_LOCATION src_location = {0};
+	src_location.pResource = src_buffer_ptr->buffer;
+	src_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	src_location.PlacedFootprint.Offset = src.offset;
+	src_location.PlacedFootprint.Footprint.Format = dst_texture_ptr->format;
+	src_location.PlacedFootprint.Footprint.Depth = (UINT)dst_texture_ptr->depth;
+	src_location.PlacedFootprint.Footprint.Width = (UINT)dst_texture_ptr->width;
+	src_location.PlacedFootprint.Footprint.Height = (UINT)src.num_rows;
+	src_location.PlacedFootprint.Footprint.RowPitch = (UINT)src.row_size;
+
+	D3D12_TEXTURE_COPY_LOCATION dst_location = {0};
+	dst_location.pResource = dst_texture_ptr->texture;
+	dst_location.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	dst_location.SubresourceIndex = dst.base_mip;
+
+	ID3D12GraphicsCommandList4_CopyTextureRegion(
+		command_buffer_ptr->list,
+		&dst_location,
+		dst.offset_x,
+		dst.offset_y,
+		dst.offset_z,
+		&src_location,
+		NULL
+	);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
