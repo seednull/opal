@@ -3291,10 +3291,10 @@ static Opal_Result directx12_deviceCmdSetScissor(Opal_Device this, Opal_CommandB
 	assert(command_buffer_ptr);
 
 	D3D12_RECT rect = {0};
-	rect.top = x;
-	rect.left = y;
-	rect.bottom = rect.top + height;
+	rect.left = x;
 	rect.right = rect.left + width;
+	rect.top = y;
+	rect.bottom = rect.top + height;
 
 	ID3D12GraphicsCommandList4_RSSetScissorRects(command_buffer_ptr->list, 1, &rect);
 	return OPAL_SUCCESS;
