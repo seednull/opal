@@ -1187,6 +1187,9 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timeline_semaphore_features = {0};
 	timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
 
+	VkPhysicalDeviceDescriptorBufferFeaturesEXT descriptor_buffer_features = {0};
+	descriptor_buffer_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+
 	features.pNext = &dynamic_rendering_features;
 	dynamic_rendering_features.pNext = &acceleration_structure_features;
 	acceleration_structure_features.pNext = &buffer_device_address_features;
@@ -1194,6 +1197,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	raytracing_features.pNext = &raytracing_maintenance_features;
 	raytracing_maintenance_features.pNext = &mesh_features;
 	mesh_features.pNext = &timeline_semaphore_features;
+	timeline_semaphore_features.pNext = &descriptor_buffer_features;
 
 	vkGetPhysicalDeviceFeatures2(physical_device, &features);
 
@@ -1218,6 +1222,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkBool32 has_raytracing_maintenance = VK_FALSE;
 	VkBool32 has_meshlet = VK_FALSE;
 	VkBool32 has_timeline_semaphores = VK_FALSE;
+	VkBool32 has_descriptor_buffer = VK_FALSE;
 
 	for (uint32_t i = 0; i < num_device_extensions; ++i)
 	{
@@ -1243,12 +1248,15 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 
 		if (strcmp(device_extension_name, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0)
 			has_timeline_semaphores = timeline_semaphore_features.timelineSemaphore;
+
+		if (strcmp(device_extension_name, VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME) == 0)
+			has_descriptor_buffer = descriptor_buffer_features.descriptorBuffer;
 	}
 
 	free(device_extensions);
 
 	// fill required extensions
-	const char *extensions[16];
+	const char *extensions[32];
 	uint32_t num_extensions = 0;
 
 	extensions[num_extensions++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -1308,7 +1316,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 		paravozik->next = NULL;
 	}
 
-	if (has_raytracing_maintenance)
+	if (has_raytracing_maintenance == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME;
 
@@ -1338,6 +1346,16 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 		paravozik->next = &timeline_semaphore_features;
 
 		paravozik = (VkParavozikKHR *)&timeline_semaphore_features;
+		paravozik->next = NULL;
+	}
+
+	if (has_descriptor_buffer == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME;
+
+		paravozik->next = &descriptor_buffer_features;
+
+		paravozik = (VkParavozikKHR *)&descriptor_buffer_features;
 		paravozik->next = NULL;
 	}
 

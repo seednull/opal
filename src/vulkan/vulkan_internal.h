@@ -105,6 +105,8 @@ typedef struct Vulkan_Device_t
 	VkPhysicalDevice physical_device;
 	VkDevice device;
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytrace_properties;
+	VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptor_buffer_properties;
+	size_t max_descriptor_size;
 	Vulkan_DeviceEnginesInfo device_engines_info;
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
@@ -118,6 +120,7 @@ typedef struct Vulkan_Device_t
 	Opal_Pool command_pools;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
+	Opal_Pool descriptor_heaps;
 	Opal_Pool descriptor_set_layouts;
 	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
@@ -189,6 +192,7 @@ typedef struct Vulkan_Sampler_t
 typedef struct Vulkan_AccelerationStructure_t
 {
 	VkAccelerationStructureKHR acceleration_structure;
+	VkDeviceAddress device_address;
 	VkQueryPool size_pool;
 	VkQueryPool serialization_size_pool;
 	VkQueryPool compacted_size_pool;
@@ -211,10 +215,24 @@ typedef struct Vulkan_Shader_t
 	VkShaderModule shader;
 } Vulkan_Shader;
 
+typedef struct Vulkan_DescriptorHeap_t
+{
+	VkBuffer buffer;
+	VkBufferUsageFlags usage;
+	uint8_t *ptr;
+	Opal_Heap heap;
+#ifdef OPAL_HAS_VMA
+	VmaAllocation vma_allocation;
+#endif
+	Vulkan_Allocation allocation;
+	VkDeviceAddress device_address;
+} Vulkan_DescriptorHeap;
+
 typedef struct Vulkan_DescriptorSetLayout_t
 {
 	VkDescriptorSetLayout layout;
 	VkDescriptorSetLayoutBinding *layout_entries;
+	VkDeviceSize *layout_offsets;
 	uint32_t num_layout_entries;
 } Vulkan_DescriptorSetLayout;
 
@@ -222,6 +240,8 @@ typedef struct Vulkan_DescriptorSet_t
 {
 	VkDescriptorSet set;
 	Opal_DescriptorSetLayout layout;
+	Opal_DescriptorHeap heap;
+	Opal_HeapAllocation allocation;
 } Vulkan_DescriptorSet;
 
 typedef struct Vulkan_PipelineLayout_t

@@ -137,8 +137,17 @@ static void directx12_destroyDescriptorHeap(DirectX12_Device *device_ptr, Direct
 	OPAL_UNUSED(device_ptr);
 	assert(descriptor_heap_ptr);
 
-	ID3D12DescriptorHeap_Release(descriptor_heap_ptr->memory);
-	opal_heapShutdown(&descriptor_heap_ptr->heap);
+	if (descriptor_heap_ptr->resource_memory)
+	{
+		ID3D12DescriptorHeap_Release(descriptor_heap_ptr->resource_memory);
+		opal_heapShutdown(&descriptor_heap_ptr->resource_heap);
+	}
+
+	if (descriptor_heap_ptr->sampler_memory)
+	{
+		ID3D12DescriptorHeap_Release(descriptor_heap_ptr->sampler_memory);
+		opal_heapShutdown(&descriptor_heap_ptr->sampler_heap);
+	}
 }
 
 static void directx12_destroyDescriptorSetLayout(DirectX12_Device *device_ptr, DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr)
@@ -780,24 +789,45 @@ static Opal_Result directx12_deviceCreateDescriptorHeap(Opal_Device this, const 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	ID3D12Device *d3d12_device = device_ptr->device;
 
-	D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
-	heap_info.Type = directx12_helperToDescriptorHeapType(desc->type);
-	heap_info.NumDescriptors = desc->num_descriptors;
-	heap_info.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-
-	ID3D12DescriptorHeap *d3d12_heap = NULL;
-	HRESULT hr = ID3D12Device_CreateDescriptorHeap(d3d12_device, &heap_info, &IID_ID3D12DescriptorHeap, &d3d12_heap);
-	if (!SUCCEEDED(hr))
-		return OPAL_DIRECTX12_ERROR;
-
 	DirectX12_DescriptorHeap result = {0};
-	result.memory = d3d12_heap;
-	result.type = heap_info.Type;
 
-	Opal_Result opal_result = opal_heapInitialize(&result.heap, desc->num_descriptors, desc->num_descriptors);
-	OPAL_UNUSED(opal_result);
+	uint32_t num_fails = 0;
 
-	assert(opal_result == OPAL_SUCCESS);
+	if (desc->num_resource_descriptors > 0)
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
+		heap_info.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		heap_info.NumDescriptors = desc->num_resource_descriptors;
+		heap_info.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+		HRESULT hr = ID3D12Device_CreateDescriptorHeap(d3d12_device, &heap_info, &IID_ID3D12DescriptorHeap, &result.resource_memory);
+		if (!SUCCEEDED(hr))
+			num_fails++;
+
+		Opal_Result opal_result = opal_heapInitialize(&result.resource_heap, desc->num_resource_descriptors, desc->num_resource_descriptors);
+		OPAL_UNUSED(opal_result);
+	}
+
+	if (desc->num_sampler_descriptors > 0)
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
+		heap_info.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+		heap_info.NumDescriptors = desc->num_sampler_descriptors;
+		heap_info.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+		HRESULT hr = ID3D12Device_CreateDescriptorHeap(d3d12_device, &heap_info, &IID_ID3D12DescriptorHeap, &result.sampler_memory);
+		if (!SUCCEEDED(hr))
+			num_fails++;
+
+		Opal_Result opal_result = opal_heapInitialize(&result.sampler_heap, desc->num_sampler_descriptors, desc->num_sampler_descriptors);
+		OPAL_UNUSED(opal_result);
+	}
+
+	if (num_fails > 0)
+	{
+		directx12_destroyDescriptorHeap(device_ptr, &result);
+		return OPAL_DIRECTX12_ERROR;
+	}
 
 	*descriptor_heap = (Opal_DescriptorHeap)opal_poolAddElement(&device_ptr->descriptor_heaps, &result);
 	return OPAL_SUCCESS;
@@ -2179,37 +2209,33 @@ static Opal_Result directx12_deviceAllocateDescriptorSet(Opal_Device this, const
 
 	DirectX12_DescriptorSet result = {0};
 
+	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->heap);
+	assert(heap_ptr);
+
 	if (num_resource_descriptors > 0)
 	{
-		DirectX12_DescriptorHeap *resource_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->resource_heap);
-		assert(resource_heap_ptr);
-
-		Opal_Result opal_result = opal_heapAlloc(&resource_heap_ptr->heap, num_resource_descriptors, &result.resource_allocation);
+		Opal_Result opal_result = opal_heapAlloc(&heap_ptr->resource_heap, num_resource_descriptors, &result.resource_allocation);
 		if (opal_result != OPAL_SUCCESS)
 			return opal_result;
 
 		UINT stride = ID3D12Device_GetDescriptorHandleIncrementSize(device_ptr->device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart(resource_heap_ptr->memory, &result.resource_handle);
+		ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart(heap_ptr->resource_memory, &result.resource_handle);
 		result.resource_handle.ptr += stride * result.resource_allocation.offset;
-		result.resource_heap = desc->resource_heap;
 	}
 
 	if (num_sampler_descriptors > 0)
 	{
-		DirectX12_DescriptorHeap *sampler_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->sampler_heap);
-		assert(sampler_heap_ptr);
-
-		Opal_Result opal_result = opal_heapAlloc(&sampler_heap_ptr->heap, num_sampler_descriptors, &result.sampler_allocation);
+		Opal_Result opal_result = opal_heapAlloc(&heap_ptr->sampler_heap, num_sampler_descriptors, &result.sampler_allocation);
 		if (opal_result != OPAL_SUCCESS)
 			return opal_result;
 
 		UINT stride = ID3D12Device_GetDescriptorHandleIncrementSize(device_ptr->device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-		ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart(sampler_heap_ptr->memory, &result.sampler_handle);
+		ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart(heap_ptr->sampler_memory, &result.sampler_handle);
 		result.sampler_handle.ptr += stride * result.sampler_allocation.offset;
-		result.sampler_heap = desc->sampler_heap;
 	}
+
 
 	if (num_inline_descriptors > 0)
 	{
@@ -2218,6 +2244,7 @@ static Opal_Result directx12_deviceAllocateDescriptorSet(Opal_Device this, const
 	}
 
 	result.layout = desc->layout;
+	result.heap = desc->heap;
 
 	*descriptor_set = (Opal_DescriptorSet)opal_poolAddElement(&device_ptr->descriptor_sets, &result);
 
@@ -2246,21 +2273,18 @@ static Opal_Result directx12_deviceFreeDescriptorSet(Opal_Device this, Opal_Desc
 	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
 
-	if (descriptor_set_ptr->resource_heap)
+	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(heap_ptr);
+	
+	if (descriptor_set_ptr->resource_handle.ptr > 0)
 	{
-		DirectX12_DescriptorHeap *resource_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->resource_heap);
-		assert(resource_heap_ptr);
-
-		Opal_Result opal_result = opal_heapFree(&resource_heap_ptr->heap, descriptor_set_ptr->resource_allocation);
+		Opal_Result opal_result = opal_heapFree(&heap_ptr->resource_heap, descriptor_set_ptr->resource_allocation);
 		assert(opal_result == OPAL_SUCCESS);
 	}
 
-	if (descriptor_set_ptr->sampler_heap)
+	if (descriptor_set_ptr->sampler_handle.ptr > 0)
 	{
-		DirectX12_DescriptorHeap *sampler_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->sampler_heap);
-		assert(sampler_heap_ptr);
-
-		Opal_Result opal_result = opal_heapFree(&sampler_heap_ptr->heap, descriptor_set_ptr->sampler_allocation);
+		Opal_Result opal_result = opal_heapFree(&heap_ptr->sampler_heap, descriptor_set_ptr->sampler_allocation);
 		assert(opal_result == OPAL_SUCCESS);
 	}
 
@@ -2333,6 +2357,9 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 	DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
 	assert(descriptor_set_layout_ptr);
 
+	DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(descriptor_heap_ptr);
+
 	uint32_t num_descriptors = 0;
 	num_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
 	num_descriptors += descriptor_set_layout_ptr->num_table_srv_descriptors;
@@ -2364,6 +2391,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 	DescriptorIndices *layout_sampler_indices = (DescriptorIndices *)(device_ptr->bump.data + samplers_ptr_offset);
 	DescriptorIndices *layout_inline_indices = (DescriptorIndices *)(device_ptr->bump.data + inline_ptr_offset);
 
+	// TODO: replace naive O(N) layout <-> binding search loop by O(1) hashmap lookup
 	for (uint32_t i = 0; i < num_entries; ++i)
 	{
 		const Opal_DescriptorSetEntry *entry = &entries[i];
@@ -2402,9 +2430,6 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 	if (num_resources > 0)
 	{
-		DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->resource_heap);
-		assert(descriptor_heap_ptr);
-
 		D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
 		heap_info.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		heap_info.NumDescriptors = num_entries;
@@ -2423,7 +2448,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(src_heap, &src_start);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE dst_start = {0};
-		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptor_heap_ptr->memory, &dst_start);
+		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptor_heap_ptr->resource_memory, &dst_start);
 		dst_start.ptr += stride * offset;
 
 		D3D12_CPU_DESCRIPTOR_HANDLE *src_handles = (D3D12_CPU_DESCRIPTOR_HANDLE *)(device_ptr->bump.data + src_handles_ptr_offset);
@@ -2542,9 +2567,6 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 	if (num_samplers > 0)
 	{
-		DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->sampler_heap);
-		assert(descriptor_heap_ptr);
-
 		D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
 		heap_info.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 		heap_info.NumDescriptors = num_entries;
@@ -2563,7 +2585,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(src_heap, &src_start);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE dst_start = {0};
-		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptor_heap_ptr->memory, &dst_start);
+		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptor_heap_ptr->sampler_memory, &dst_start);
 		dst_start.ptr += stride * offset;
 
 		D3D12_CPU_DESCRIPTOR_HANDLE *src_handles = (D3D12_CPU_DESCRIPTOR_HANDLE *)(device_ptr->bump.data + src_handles_ptr_offset);
@@ -3043,7 +3065,7 @@ static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_Command
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdSetDescriptorHeaps(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap)
+static Opal_Result directx12_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3055,13 +3077,14 @@ static Opal_Result directx12_deviceCmdSetDescriptorHeaps(Opal_Device this, Opal_
 	ID3D12DescriptorHeap *heaps[2] = {0};
 	uint32_t num_heaps = 0;
 
-	DirectX12_DescriptorHeap *resource_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)resource_descriptor_heap);
-	if (resource_heap_ptr)
-		heaps[num_heaps++] = resource_heap_ptr->memory;
+	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_heap);
+	assert(heap_ptr);
 
-	DirectX12_DescriptorHeap *sampler_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)sampler_descriptor_heap);
-	if (sampler_heap_ptr)
-		heaps[num_heaps++] = sampler_heap_ptr->memory;
+	if (heap_ptr->resource_memory)
+		heaps[num_heaps++] = heap_ptr->resource_memory;
+
+	if (heap_ptr->sampler_memory)
+		heaps[num_heaps++] = heap_ptr->sampler_memory;
 	
 	ID3D12GraphicsCommandList4_SetDescriptorHeaps(command_buffer_ptr->list, num_heaps, heaps);
 	return OPAL_SUCCESS;
@@ -3638,7 +3661,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdBeginRaytracePass,
 	directx12_deviceCmdEndRaytracePass,
 	directx12_deviceCmdSetPipeline,
-	directx12_deviceCmdSetDescriptorHeaps,
+	directx12_deviceCmdSetDescriptorHeap,
 	directx12_deviceCmdSetDescriptorSet,
 	directx12_deviceCmdSetVertexBuffers,
 	directx12_deviceCmdSetIndexBuffer,
@@ -3708,8 +3731,8 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(DirectX12_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(DirectX12_Shader), 32);
 	opal_poolInitialize(&device_ptr->descriptor_heaps, sizeof(DirectX12_DescriptorHeap), 32);
-	opal_poolInitialize(&device_ptr->descriptor_sets, sizeof(DirectX12_DescriptorSet), 32);
 	opal_poolInitialize(&device_ptr->descriptor_set_layouts, sizeof(DirectX12_DescriptorSetLayout), 32);
+	opal_poolInitialize(&device_ptr->descriptor_sets, sizeof(DirectX12_DescriptorSet), 32);
 	opal_poolInitialize(&device_ptr->pipeline_layouts, sizeof(DirectX12_PipelineLayout), 32);
 	opal_poolInitialize(&device_ptr->pipelines, sizeof(DirectX12_Pipeline), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(DirectX12_Swapchain), 32);

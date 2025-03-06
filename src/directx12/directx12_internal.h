@@ -209,9 +209,10 @@ typedef struct DirectX12_Shader_t
 
 typedef struct DirectX12_DescriptorHeap_t
 {
-	ID3D12DescriptorHeap *memory;
-	D3D12_DESCRIPTOR_HEAP_TYPE type;
-	Opal_Heap heap;
+	ID3D12DescriptorHeap *resource_memory;
+	ID3D12DescriptorHeap *sampler_memory;
+	Opal_Heap resource_heap;
+	Opal_Heap sampler_heap;
 } DirectX12_DescriptorHeap;
 
 typedef struct DirectX12_DescriptorInfo_t
@@ -238,8 +239,7 @@ typedef struct DirectX12_DescriptorSet_t
 	Opal_HeapAllocation resource_allocation;
 	Opal_HeapAllocation sampler_allocation;
 	Opal_DescriptorSetLayout layout;
-	Opal_DescriptorHeap resource_heap;
-	Opal_DescriptorHeap sampler_heap;
+	Opal_DescriptorHeap heap;
 	// TODO: think about using fixed array
 	uint32_t num_inline_descriptors;
 	Opal_DescriptorSetEntry *inline_descriptors;
@@ -294,7 +294,6 @@ D3D12_RESOURCE_DIMENSION directx12_helperToTextureDimension(Opal_TextureType typ
 DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFlags flags, Opal_Samples samples);
 D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip);
 D3D12_TEXTURE_ADDRESS_MODE directx12_helperToSamplerAddressMode(Opal_SamplerAddressMode mode);
-D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type);
 D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op);
 D3D12_COMPARISON_FUNC directx12_helperToComparisonFunc(Opal_CompareOp op);
 D3D12_BLEND_OP directx12_helperToBlendOp(Opal_BlendOp op);

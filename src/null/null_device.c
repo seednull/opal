@@ -598,12 +598,11 @@ static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffe
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetDescriptorHeaps(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap)
+static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(resource_descriptor_heap);
-	OPAL_UNUSED(sampler_descriptor_heap);
+	OPAL_UNUSED(descriptor_heap);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -923,7 +922,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdBeginRaytracePass,
 	null_deviceCmdEndRaytracePass,
 	null_deviceCmdSetPipeline,
-	null_deviceCmdSetDescriptorHeaps,
+	null_deviceCmdSetDescriptorHeap,
 	null_deviceCmdSetDescriptorSet,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,

@@ -982,16 +982,16 @@ Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_bu
 	return ptr->vtbl->cmdSetPipeline(device, command_buffer, pipeline);
 }
 
-Opal_Result opalCmdSetDescriptorHeaps(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap resource_descriptor_heap, Opal_DescriptorHeap sampler_descriptor_heap)
+Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetDescriptorHeaps);
+	assert(ptr->vtbl->cmdSetDescriptorHeap);
 
-	return ptr->vtbl->cmdSetDescriptorHeaps(device, command_buffer, resource_descriptor_heap, sampler_descriptor_heap);
+	return ptr->vtbl->cmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 }
 
 Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)

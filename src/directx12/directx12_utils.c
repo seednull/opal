@@ -143,17 +143,6 @@ D3D12_TEXTURE_ADDRESS_MODE directx12_helperToSamplerAddressMode(Opal_SamplerAddr
 	return d3d12_address_modes[mode];
 }
 
-D3D12_DESCRIPTOR_HEAP_TYPE directx12_helperToDescriptorHeapType(Opal_DescriptorHeapType type)
-{
-	static D3D12_DESCRIPTOR_HEAP_TYPE d3d12_types[] =
-	{
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-	};
-
-	return d3d12_types[type];
-}
-
 D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op)
 {
 	static D3D12_STENCIL_OP d3d12_ops[] =
