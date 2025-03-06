@@ -31,6 +31,9 @@ static void vulkan_destroyBuffer(Vulkan_Device *device_ptr, Vulkan_Buffer *buffe
 #if OPAL_HAS_VMA
 	if (device_ptr->use_vma)
 	{
+		if (buffer_ptr->map_count > 0)
+			vmaUnmapMemory(device_ptr->vma_allocator, buffer_ptr->vma_allocation);
+
 		vmaDestroyBuffer(device_ptr->vma_allocator, buffer_ptr->buffer, buffer_ptr->vma_allocation);
 		return;
 	}
