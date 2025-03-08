@@ -862,7 +862,7 @@ VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state)
 	VkPipelineStageFlags result = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
-		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | all_non_fragment;
 
 	if (state & OPAL_RESOURCE_STATE_INDEX_BUFFER)
 		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
@@ -914,7 +914,7 @@ VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state)
 	VkPipelineStageFlags result = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
 	if (state & OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER)
-		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | all_non_fragment;
 
 	if (state & OPAL_RESOURCE_STATE_INDEX_BUFFER)
 		result |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
