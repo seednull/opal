@@ -80,11 +80,27 @@ static OPAL_INLINE uint32_t alignDown(uint32_t value, uint32_t alignment)
 	return value & ~mask;
 }
 
+static OPAL_INLINE uint64_t alignDownul(uint64_t value, uint64_t alignment)
+{
+	assert(isPow2ul(alignment));
+
+	uint64_t mask = alignment - 1;
+	return value & ~mask;
+}
+
 static OPAL_INLINE uint32_t alignUp(uint32_t value, uint32_t alignment)
 {
 	assert(isPow2u(alignment));
 
 	uint32_t mask = alignment - 1;
+	return (value + mask) & ~mask;
+}
+
+static OPAL_INLINE uint64_t alignUpul(uint64_t value, uint64_t alignment)
+{
+	assert(isPow2ul(alignment));
+
+	uint64_t mask = alignment - 1;
 	return (value + mask) & ~mask;
 }
 

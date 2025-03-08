@@ -219,7 +219,7 @@ typedef struct Vulkan_DescriptorHeap_t
 {
 	VkBuffer buffer;
 	VkBufferUsageFlags usage;
-	uint8_t *ptr;
+	uint8_t *buffer_ptr;
 	Opal_Heap heap;
 #ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
@@ -231,9 +231,10 @@ typedef struct Vulkan_DescriptorHeap_t
 typedef struct Vulkan_DescriptorSetLayout_t
 {
 	VkDescriptorSetLayout layout;
-	VkDescriptorSetLayoutBinding *layout_entries;
-	VkDeviceSize *layout_offsets;
-	uint32_t num_layout_entries;
+	uint32_t num_blocks;
+	uint32_t num_entries;
+	VkDescriptorSetLayoutBinding *entries;
+	VkDeviceSize *offsets;
 } Vulkan_DescriptorSetLayout;
 
 typedef struct Vulkan_DescriptorSet_t
