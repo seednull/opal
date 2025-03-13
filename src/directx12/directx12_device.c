@@ -2292,6 +2292,7 @@ static Opal_Result directx12_deviceFreeDescriptorSet(Opal_Device this, Opal_Desc
 	{
 		free(descriptor_set_ptr->inline_descriptors);
 		descriptor_set_ptr->inline_descriptors = NULL;
+		descriptor_set_ptr->num_inline_descriptors = 0;
 	}
 
 	opal_poolRemoveElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
