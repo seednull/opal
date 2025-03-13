@@ -641,11 +641,11 @@ VkDescriptorType vulkan_helperToDescriptorType(Opal_DescriptorType type)
 	static VkDescriptorType vk_descriptor_types[] =
 	{
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 		VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 		VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -1352,6 +1352,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	if (has_descriptor_buffer == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME;
+		extensions[num_extensions++] = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME;
 
 		paravozik->next = &descriptor_buffer_features;
 

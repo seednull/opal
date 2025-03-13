@@ -235,6 +235,8 @@ typedef struct Vulkan_DescriptorSetLayout_t
 	uint32_t num_entries;
 	VkDescriptorSetLayoutBinding *entries;
 	VkDeviceSize *offsets;
+	uint32_t num_static_descriptors;
+	uint32_t num_dynamic_descriptors;
 } Vulkan_DescriptorSetLayout;
 
 typedef struct Vulkan_DescriptorSet_t
@@ -243,11 +245,16 @@ typedef struct Vulkan_DescriptorSet_t
 	Opal_DescriptorSetLayout layout;
 	Opal_DescriptorHeap heap;
 	Opal_HeapAllocation allocation;
+	// TODO: think about using fixed array
+	uint32_t num_static_descriptors;
+	uint32_t num_dynamic_descriptors;
+	Opal_DescriptorSetEntry *dynamic_descriptors;
 } Vulkan_DescriptorSet;
 
 typedef struct Vulkan_PipelineLayout_t
 {
 	VkPipelineLayout layout;
+	uint32_t num_dynamic_descriptors;
 } Vulkan_PipelineLayout;
 
 typedef struct Vulkan_Pipeline_t
