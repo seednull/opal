@@ -128,6 +128,8 @@ Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
 	bool is_mac2 = family == MTLGPUFamilyMac2;
 
 	strncpy(info->name, device.name.UTF8String, 256);
+
+	info->api = OPAL_API_METAL;
 	info->driver_version = 0; // FIXME: fill with hardcoded Opal version
 
 	if (family)

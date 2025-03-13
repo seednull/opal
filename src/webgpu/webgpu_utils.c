@@ -775,6 +775,7 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	if (adapter_info.description)
 		strncpy(info->name, adapter_info.description, 256);
 
+	info->api = OPAL_API_WEBGPU;
 	info->driver_version = 0; // FIXME: is it possible to get uint32 / uint64 driver version for WGPU adapter?
 	info->device_id = adapter_info.deviceID;
 	info->vendor_id = adapter_info.vendorID;

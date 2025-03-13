@@ -1491,6 +1491,7 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 		default: info->device_type = OPAL_DEVICE_TYPE_UNKNOWN; break;
 	}
 
+	info->api = OPAL_API_VULKAN;
 	info->driver_version = properties.properties.driverVersion;
 	info->vendor_id = properties.properties.vendorID;
 	info->device_id = properties.properties.deviceID;

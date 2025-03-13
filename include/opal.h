@@ -796,6 +796,7 @@ typedef struct Opal_DeviceFeatures_t
 typedef struct Opal_DeviceInfo_t
 {
 	char name[256];
+	Opal_Api api;
 	Opal_DeviceType device_type;
 	uint64_t driver_version;
 	uint32_t vendor_id;

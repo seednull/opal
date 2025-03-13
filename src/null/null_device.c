@@ -958,6 +958,7 @@ Opal_Result null_fillDeviceInfo(Opal_DeviceInfo *info)
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 	memcpy(info->name, device_name, sizeof(char) * 12);
 
+	info->api = OPAL_API_NULL;
 	info->device_type = OPAL_DEVICE_TYPE_UNKNOWN;
 	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 1;
 

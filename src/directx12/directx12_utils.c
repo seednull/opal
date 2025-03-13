@@ -567,6 +567,7 @@ Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device 
 	WideCharToMultiByte(CP_UTF8, 0, &desc.Description[0], 128, info->name, 256, NULL, NULL);
 
 	// fill basic info
+	info->api = OPAL_API_DIRECTX12;
 	info->device_type = OPAL_DEVICE_TYPE_DISCRETE;
 	info->driver_version = umd.QuadPart;
 	info->vendor_id = desc.VendorId;
