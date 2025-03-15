@@ -12,7 +12,6 @@
 #include "common/pool.h"
 
 #define D3D12_MAX_MEMORY_TYPES 20U
-#define D3D12_MAX_COMMAND_POOL_ALLOCATORS 8U
 
 typedef enum DirectX12_ResourceType_t
 {
@@ -121,7 +120,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
-	Opal_Pool command_pools;
+	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool descriptor_heaps;
@@ -183,19 +182,16 @@ typedef struct DirectX12_Sampler_t
 	D3D12_SAMPLER_DESC desc;
 } DirectX12_Sampler;
 
-// FIXME: move command allocator to command buffer
-typedef struct DirectX12_CommandPool_t
+typedef struct DirectX12_CommandAllocator_t
 {
-	ID3D12CommandAllocator *allocators[D3D12_MAX_COMMAND_POOL_ALLOCATORS];
-	uint32_t usages[D3D12_MAX_COMMAND_POOL_ALLOCATORS];
+	ID3D12CommandAllocator *allocator;
 	D3D12_COMMAND_LIST_TYPE type;
-} DirectX12_CommandPool;
+} DirectX12_CommandAllocator;
 
 typedef struct DirectX12_CommandBuffer_t
 {
 	ID3D12GraphicsCommandList4 *list;
-	Opal_CommandPool pool;
-	uint32_t index;
+	Opal_CommandAllocator allocator;
 	uint32_t recording;
 	DirectX12_PassType pass;
 	ID3D12RootSignature *root_signature;

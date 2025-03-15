@@ -142,11 +142,21 @@ static Opal_Result null_deviceCreateAccelerationStructure(Opal_Device this, cons
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateCommandPool(Opal_Device this, Opal_Queue queue, Opal_CommandPool *command_pool)
+static Opal_Result null_deviceCreateCommandAllocator(Opal_Device this, Opal_Queue queue, Opal_CommandAllocator *command_allocator)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(queue);
-	OPAL_UNUSED(command_pool);
+	OPAL_UNUSED(command_allocator);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+
+static Opal_Result null_deviceCreateCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer *command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_allocator);
+	OPAL_UNUSED(command_buffer);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -282,10 +292,19 @@ static Opal_Result null_deviceDestroyAccelerationStructure(Opal_Device this, Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyCommandPool(Opal_Device this, Opal_CommandPool command_pool)
+static Opal_Result null_deviceDestroyCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_pool);
+	OPAL_UNUSED(command_allocator);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_allocator);
+	OPAL_UNUSED(command_buffer);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -364,36 +383,10 @@ static Opal_Result null_deviceBuildAccelerationStructureInstanceBuffer(Opal_Devi
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceAllocateCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
+static Opal_Result null_deviceResetCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_pool);
-	OPAL_UNUSED(command_buffer);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceFreeCommandBuffer(Opal_Device this, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_pool);
-	OPAL_UNUSED(command_buffer);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceResetCommandPool(Opal_Device this, Opal_CommandPool command_pool)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_pool);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceResetCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(command_allocator);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -866,7 +859,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateTextureView,
 	null_deviceCreateSampler,
 	null_deviceCreateAccelerationStructure,
-	null_deviceCreateCommandPool,
+	null_deviceCreateCommandAllocator,
+	null_deviceCreateCommandBuffer,
 	null_deviceCreateShader,
 	null_deviceCreateDescriptorHeap,
 	null_deviceCreateDescriptorSetLayout,
@@ -883,7 +877,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyTextureView,
 	null_deviceDestroySampler,
 	null_deviceDestroyAccelerationStructure,
-	null_deviceDestroyCommandPool,
+	null_deviceDestroyCommandAllocator,
+	null_deviceDestroyCommandBuffer,
 	null_deviceDestroyShader,
 	null_deviceDestroyDescriptorHeap,
 	null_deviceDestroyDescriptorSetLayout,
@@ -894,10 +889,7 @@ static Opal_DeviceTable device_vtbl =
 
 	null_deviceBuildShaderBindingTable,
 	null_deviceBuildAccelerationStructureInstanceBuffer,
-	null_deviceAllocateCommandBuffer,
-	null_deviceFreeCommandBuffer,
-	null_deviceResetCommandPool,
-	null_deviceResetCommandBuffer,
+	null_deviceResetCommandAllocator,
 	null_deviceAllocateDescriptorSet,
 	null_deviceFreeDescriptorSet,
 	null_deviceMapBuffer,

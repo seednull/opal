@@ -24,6 +24,10 @@ Both API allow creating an arbitary number of queues, however, in order to keep 
 
 Intentionally removed api as there is no practical use for the end user.
 
+### Command buffer memory management
+
+Opal command buffers will rely on command allocators for memory storage. User is free to create multiple command buffers for a single command allocator but only one command buffer is allowed to be in the recording state (via opalBeginCommandBuffer). Also, opalResetCommandAllocator requires all command buffers to be either in the initial state or executed. This design is similar to DirectX 12.
+
 ## Vulkan
 
 ### No support for queue priorities

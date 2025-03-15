@@ -340,16 +340,28 @@ Opal_Result opalCreateAccelerationStructure(Opal_Device device, const Opal_Accel
 	return ptr->vtbl->createAccelerationStructure(device, desc, acceleration_structure);
 }
 
-Opal_Result opalCreateCommandPool(Opal_Device device, Opal_Queue queue, Opal_CommandPool *command_pool)
+Opal_Result opalCreateCommandAllocator(Opal_Device device, Opal_Queue queue, Opal_CommandAllocator *command_allocator)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->createCommandPool);
+	assert(ptr->vtbl->createCommandAllocator);
 
-	return ptr->vtbl->createCommandPool(device, queue, command_pool);
+	return ptr->vtbl->createCommandAllocator(device, queue, command_allocator);
+}
+
+Opal_Result opalCreateCommandBuffer(Opal_Device device, Opal_CommandAllocator command_allocator, Opal_CommandBuffer *command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createCommandBuffer);
+
+	return ptr->vtbl->createCommandBuffer(device, command_allocator, command_buffer);
 }
 
 Opal_Result opalCreateShader(Opal_Device device, const Opal_ShaderDesc *desc, Opal_Shader *shader)
@@ -534,16 +546,28 @@ Opal_Result opalDestroyAccelerationStructure(Opal_Device device, Opal_Accelerati
 	return ptr->vtbl->destroyAccelerationStructure(device, acceleration_structure);
 }
 
-Opal_Result opalDestroyCommandPool(Opal_Device device, Opal_CommandPool command_pool)
+Opal_Result opalDestroyCommandAllocator(Opal_Device device, Opal_CommandAllocator command_allocator)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyCommandPool);
+	assert(ptr->vtbl->destroyCommandAllocator);
 
-	return ptr->vtbl->destroyCommandPool(device, command_pool);
+	return ptr->vtbl->destroyCommandAllocator(device, command_allocator);
+}
+
+Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyCommandBuffer);
+
+	return ptr->vtbl->destroyCommandBuffer(device, command_allocator, command_buffer);
 }
 
 Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)
@@ -656,52 +680,16 @@ Opal_Result opalBuildAccelerationStructureInstanceBuffer(Opal_Device device, con
 	return ptr->vtbl->buildAccelerationStructureInstanceBuffer(device, desc);
 }
 
-Opal_Result opalAllocateCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer *command_buffer)
+Opal_Result opalResetCommandAllocator(Opal_Device device, Opal_CommandAllocator command_allocator)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->allocateCommandBuffer);
+	assert(ptr->vtbl->resetCommandAllocator);
 
-	return ptr->vtbl->allocateCommandBuffer(device, command_pool, command_buffer);
-}
-
-Opal_Result opalFreeCommandBuffer(Opal_Device device, Opal_CommandPool command_pool, Opal_CommandBuffer command_buffer)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->freeCommandBuffer);
-
-	return ptr->vtbl->freeCommandBuffer(device, command_pool, command_buffer);
-}
-
-Opal_Result opalResetCommandPool(Opal_Device device, Opal_CommandPool command_pool)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->resetCommandPool);
-
-	return ptr->vtbl->resetCommandPool(device, command_pool);
-}
-
-Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->resetCommandBuffer);
-
-	return ptr->vtbl->resetCommandBuffer(device, command_buffer);
+	return ptr->vtbl->resetCommandAllocator(device, command_allocator);
 }
 
 Opal_Result opalAllocateDescriptorSet(Opal_Device device, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set)

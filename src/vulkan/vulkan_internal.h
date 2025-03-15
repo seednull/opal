@@ -117,7 +117,7 @@ typedef struct Vulkan_Device_t
 	Opal_Pool image_views;
 	Opal_Pool samplers;
 	Opal_Pool acceleration_structures;
-	Opal_Pool command_pools;
+	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool descriptor_heaps;
@@ -199,10 +199,10 @@ typedef struct Vulkan_AccelerationStructure_t
 	uint32_t allow_compaction;
 } Vulkan_AccelerationStructure;
 
-typedef struct Vulkan_CommandPool_t
+typedef struct Vulkan_CommandAllocator_t
 {
 	VkCommandPool pool;
-} Vulkan_CommandPool;
+} Vulkan_CommandAllocator;
 
 typedef struct Vulkan_CommandBuffer_t
 {
