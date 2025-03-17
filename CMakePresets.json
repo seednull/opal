@@ -16,12 +16,28 @@
             "displayName": "Visual Studio 2022 | x64"
         },
         {
-            "name": "emscripten-ninja",
-            "hidden": false,
+            "name": "emscripten-ninja-common",
+            "hidden": true,
             "generator": "Ninja",
             "binaryDir": "${workspaceFolder}/build",
             "installDir": "${workspaceFolder}/build",
             "toolchainFile": "$penv{EMROOT}/cmake/Modules/Platform/Emscripten.cmake"
+        },
+        {
+            "name": "emscripten-ninja",
+            "inherits": "emscripten-ninja-common",
+            "hidden": false,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "emscripten-ninja-debug",
+            "inherits": "emscripten-ninja-common",
+            "hidden": false,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
         }
     ],
     "buildPresets": [
@@ -41,6 +57,12 @@
         },
         {
             "name": "build-emscripten-debug",
+            "hidden": false,
+            "configurePreset": "emscripten-ninja-debug",
+            "targets": ["all", "install"]
+        },
+        {
+            "name": "build-emscripten-release",
             "hidden": false,
             "configurePreset": "emscripten-ninja",
             "targets": ["all", "install"]

@@ -57,6 +57,11 @@ if (WIN32)
 	set(CMAKE_CXX_FLAGS "/W4 /external:W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /EHsc /GR-")
 endif()
 
+if (EMSCRIPTEN)
+	set(CMAKE_C_FLAGS_DEBUG "-g")
+	set(CMAKE_CXX_FLAGS_DEBUG "-g")
+endif()
+
 # ==================================================================================================
 # General includes
 # ==================================================================================================
