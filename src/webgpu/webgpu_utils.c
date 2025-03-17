@@ -562,7 +562,7 @@ WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage)
 	return result;
 }
 
-WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type)
+WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_DescriptorType type)
 {
 	static WGPUBufferBindingType wgpu_buffer_binding_types[] =
 	{
@@ -692,7 +692,7 @@ WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_TextureFormat format
 	return wgpu_texture_sample_types[format];
 }
 
-WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType type)
+WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_DescriptorType type)
 {
 	static WGPUTextureViewDimension wgpu_texture_view_dimensions[] =
 	{
@@ -805,7 +805,7 @@ Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 	info->limits.min_uniform_buffer_offset_alignment = adapter_limits.limits.minUniformBufferOffsetAlignment;
 	info->limits.min_storage_buffer_offset_alignment = adapter_limits.limits.minStorageBufferOffsetAlignment;
 
-	info->limits.max_bindsets = adapter_limits.limits.maxBindGroups;
+	info->limits.max_descriptor_sets = adapter_limits.limits.maxBindGroups;
 	info->limits.max_uniform_buffer_binding_size = adapter_limits.limits.maxUniformBufferBindingSize;
 	info->limits.max_storage_buffer_binding_size = adapter_limits.limits.maxStorageBufferBindingSize;
 

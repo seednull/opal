@@ -32,12 +32,12 @@ typedef struct WebGPU_Device_t
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
-	Opal_Pool command_pools;
+	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
-	Opal_Pool bindset_layouts;
-	Opal_Pool bindset_pools;
-	Opal_Pool bindsets;
+	Opal_Pool descriptor_heaps;
+	Opal_Pool descriptor_set_layouts;
+	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
 	Opal_Pool pipelines;
 	Opal_Pool swapchains;
@@ -87,10 +87,10 @@ typedef struct WebGPU_Sampler_t
 	WGPUSampler sampler;
 } WebGPU_Sampler;
 
-typedef struct WebGPU_CommandPool_t
+typedef struct WebGPU_CommandAllocator_t
 {
 	uint32_t command_buffer_usage;
-} WebGPU_CommandPool;
+} WebGPU_CommandAllocator;
 
 typedef struct WebGPU_CommandBuffer_t
 {
@@ -105,33 +105,35 @@ typedef struct WebGPU_Shader_t
 	WGPUShaderModule shader;
 } WebGPU_Shader;
 
-typedef struct WebGPU_BindsetLayoutBinding_t
+typedef struct WebGPU_DescriptorSetLayoutBinding_t
 {
 	uint32_t binding;
-	Opal_BindingType type;
-} WebGPU_BindsetLayoutBinding;
+	Opal_DescriptorType type;
+} WebGPU_DescriptorSetLayoutBinding;
 
-typedef struct WebGPU_BindsetLayout_t
+typedef struct WebGPU_DescriptorSetLayout_t
 {
 	WGPUBindGroupLayout layout;
+	uint32_t num_resource_descriptors;
+	uint32_t num_sampler_descriptors;
 	uint32_t num_bindings;
-	WebGPU_BindsetLayoutBinding *bindings;
-	uint32_t bindings_requirements[OPAL_BINDING_TYPE_ENUM_MAX];
-} WebGPU_BindsetLayout;
+	WebGPU_DescriptorSetLayoutBinding *bindings;
+} WebGPU_DescriptorSetLayout;
 
-typedef struct WebGPU_BindsetPool_t
+typedef struct WebGPU_DescriptorHeap_t
 {
-	uint32_t bindset_usage;
-	uint32_t bindset_limit;
-	uint32_t bindings_usages[OPAL_BINDING_TYPE_ENUM_MAX];
-	uint32_t bindings_limits[OPAL_BINDING_TYPE_ENUM_MAX];
-} WebGPU_BindsetPool;
+	uint32_t resource_usage;
+	uint32_t resource_limit;
+	uint32_t sampler_usage;
+	uint32_t sampler_limit;
+} WebGPU_DescriptorHeap;
 
-typedef struct WebGPU_Bindset_t
+typedef struct WebGPU_DescriptorSet_t
 {
-	WGPUBindGroup bindset;
-	Opal_BindsetLayout layout;
-} WebGPU_Bindset;
+	WGPUBindGroup group;
+	Opal_DescriptorSetLayout layout;
+	Opal_DescriptorHeap heap;
+} WebGPU_DescriptorSet;
 
 typedef struct WebGPU_PipelineLayout_t
 {
@@ -184,9 +186,9 @@ Opal_PresentMode webgpu_helperFromPresentMode(WGPUPresentMode mode);
 
 WGPUShaderStageFlags webgpu_helperToShaderStage(Opal_ShaderStage stage);
 
-WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_BindingType type);
+WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_DescriptorType type);
 WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_TextureFormat format);
-WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_BindingType type);
+WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_DescriptorType type);
 
 WGPULoadOp webgpu_helperToLoadOp(Opal_LoadOp op);
 WGPUStoreOp webgpu_helperToStoreOp(Opal_StoreOp op);
