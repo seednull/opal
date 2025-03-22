@@ -253,6 +253,7 @@ typedef struct DirectX12_PipelineLayout_t
 typedef struct DirectX12_Pipeline_t
 {
 	ID3D12PipelineState *pipeline_state;
+	ID3D12StateObject *state_object;
 	ID3D12RootSignature *root_signature;
 	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
 } DirectX12_Pipeline;
