@@ -1692,6 +1692,8 @@ static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Op
 
 static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
+	// TODO: add support for desc->max_ray_payload_size & desc->max_hit_attribute_size
+
 	assert(this);
 	assert(desc);
 	assert(pipeline);

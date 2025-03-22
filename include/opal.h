@@ -1253,6 +1253,8 @@ typedef struct Opal_RaytracePipelineDesc_t
 	const Opal_Shader *miss_shaders;
 
 	uint32_t max_recursion_depth;
+	uint32_t max_ray_payload_size;
+	uint32_t max_hit_attribute_size;
 } Opal_RaytracePipelineDesc;
 
 typedef struct Opal_SurfaceFormat_t
