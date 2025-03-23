@@ -2605,7 +2605,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 			uint32_t layout_index = layout_resource_indices[i].layout;
 			uint32_t entry_index = layout_resource_indices[i].entry;
 
-			src_handles[i].ptr = src_start.ptr + stride * layout_index;
+			src_handles[i].ptr = src_start.ptr + stride * entry_index;
 			dst_handles[i].ptr = dst_start.ptr + stride * layout_index;
 
 			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
