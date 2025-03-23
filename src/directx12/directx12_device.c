@@ -717,7 +717,7 @@ static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_Sa
 	if (desc->compare_enable)
 		result.desc.ComparisonFunc = directx12_helperToComparisonFunc(desc->compare_op);
 
-	*sampler = (Opal_TextureView)opal_poolAddElement(&device_ptr->samplers, &result);
+	*sampler = (Opal_Sampler)opal_poolAddElement(&device_ptr->samplers, &result);
 	return OPAL_SUCCESS;
 }
 
