@@ -794,6 +794,7 @@ static Opal_Result directx12_deviceCreateTextureView(Opal_Device this, const Opa
 	// create opal struct
 	DirectX12_TextureView result = {0};
 	result.texture = texture_ptr->texture;
+	result.format = texture_ptr->format;
 	result.subresource_index = desc->base_mip + desc->base_layer * desc->mip_count;
 	memcpy(&result.srv_desc, &srv_desc, sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC));
 	memcpy(&result.uav_desc, &uav_desc, sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC));
@@ -1962,6 +1963,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 			break;
 		}
 
+		result.format = format;
 		result.srv_desc.Format = format;
 		result.srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		result.srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -4132,7 +4134,7 @@ static Opal_Result directx12_deviceCmdCopyBufferToTexture(Opal_Device this, Opal
 	src_location.pResource = src_buffer_ptr->buffer;
 	src_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 	src_location.PlacedFootprint.Offset = src.offset;
-	src_location.PlacedFootprint.Footprint.Format = DXGI_FORMAT_UNKNOWN;
+	src_location.PlacedFootprint.Footprint.Format = dst_texture_view_ptr->format;
 	src_location.PlacedFootprint.Footprint.Depth = (UINT)size.depth;
 	src_location.PlacedFootprint.Footprint.Width = size.width;
 	src_location.PlacedFootprint.Footprint.Height = size.height;
