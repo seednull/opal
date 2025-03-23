@@ -2661,7 +2661,6 @@ static Opal_Result vulkan_deviceBuildAccelerationStructureInstanceBuffer(Opal_De
 	assert(desc);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	VkDevice vulkan_device = device_ptr->device;
 
 	uint8_t *dst_data;
 	Opal_Result result = vulkan_deviceMapBuffer(this, desc->buffer.buffer, &dst_data);
@@ -2678,16 +2677,12 @@ static Opal_Result vulkan_deviceBuildAccelerationStructureInstanceBuffer(Opal_De
 		Vulkan_AccelerationStructure *blas_ptr = (Vulkan_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)opal_instance->blas);
 		assert(blas_ptr);
 
-		VkAccelerationStructureDeviceAddressInfoKHR info = {0};
-		info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-		info.accelerationStructure = blas_ptr->acceleration_structure;
-
 		memcpy(&vulkan_instance->transform, opal_instance->transform, sizeof(VkTransformMatrixKHR));
 		vulkan_instance->instanceCustomIndex = opal_instance->custom_index;
 		vulkan_instance->mask = opal_instance->mask;
 		vulkan_instance->instanceShaderBindingTableRecordOffset = opal_instance->sbt_hitgroup_index_offset;
 		vulkan_instance->flags = vulkan_helperToAccelerationStructureGeometryInstanceFlags(opal_instance->flags);
-		vulkan_instance->accelerationStructureReference = vkGetAccelerationStructureDeviceAddressKHR(vulkan_device, &info);
+		vulkan_instance->accelerationStructureReference = blas_ptr->device_address;
 
 		dst_data += sizeof(VkAccelerationStructureInstanceKHR);
 	}
