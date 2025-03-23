@@ -80,6 +80,9 @@ typedef struct WebGPU_Texture_t
 typedef struct WebGPU_TextureView_t
 {
 	WGPUTextureView texture_view;
+	WGPUTexture texture;
+	WGPUTextureAspect aspect;
+	uint32_t base_mip;
 } WebGPU_TextureView;
 
 typedef struct WebGPU_Sampler_t

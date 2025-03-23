@@ -496,6 +496,9 @@ static Opal_Result webgpu_deviceCreateTextureView(Opal_Device this, const Opal_T
 
 	WebGPU_TextureView result = {0};
 	result.texture_view = webgpu_texture_view;
+	result.texture = texture_ptr->texture;
+	result.aspect = texture_ptr->aspect;
+	result.base_mip = desc->base_mip;
 
 	*texture_view = (Opal_TextureView)opal_poolAddElement(&device_ptr->texture_views, &result);
 	return OPAL_SUCCESS;
@@ -2424,12 +2427,38 @@ static Opal_Result webgpu_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
+static Opal_Result webgpu_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
+{
+	assert(this);
+	assert(command_buffer);
+	assert(src_buffer);
+	assert(dst_buffer);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WebGPU_Buffer *src_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_buffer);
+	assert(src_buffer_ptr);
+
+	WebGPU_Buffer *dst_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_buffer);
+	assert(dst_buffer_ptr);
+
+	wgpuCommandEncoderCopyBufferToBuffer(webgpu_encoder, src_buffer_ptr->buffer, src_offset, dst_buffer_ptr->buffer, dst_offset, size);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
 	assert(this);
 	assert(command_buffer);
 	assert(src.buffer);
-	assert(dst.buffer);
+	assert(dst.texture_view);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
@@ -2443,63 +2472,37 @@ static Opal_Result webgpu_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Com
 	WebGPU_Buffer *src_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
 	assert(src_buffer_ptr);
 
-	WebGPU_Buffer *dst_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
-	assert(dst_buffer_ptr);
+	WebGPU_TextureView *dst_texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)dst.texture_view);
+	assert(dst_texture_view_ptr);
 
-	wgpuCommandEncoderCopyBufferToBuffer(webgpu_encoder, src_buffer_ptr->buffer, src.offset, dst_buffer_ptr->buffer, dst.offset, size);
-	return OPAL_SUCCESS;
-}
+	WGPUImageCopyBuffer src_buffer_info = {0};
+	src_buffer_info.layout.offset = src.offset;
+	src_buffer_info.layout.bytesPerRow = src.row_size;
+	src_buffer_info.layout.rowsPerImage = src.num_rows;
+	src_buffer_info.buffer = src_buffer_ptr->buffer;
 
-static Opal_Result webgpu_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(src.buffer);
-	assert(dst.texture);
-
-	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
-	WGPUDevice webgpu_device = device_ptr->device;
-
-	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-	assert(command_buffer_ptr->command_encoder);
-
-	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
-
-	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
-	assert(buffer_ptr);
-
-	WebGPU_Texture *texture_ptr = (WebGPU_Texture *)opal_poolGetElement(&device_ptr->textures, (Opal_PoolHandle)dst.texture);
-	assert(texture_ptr);
-
-	WGPUImageCopyBuffer buffer_info = {0};
-	buffer_info.layout.offset = src.offset;
-	buffer_info.layout.bytesPerRow = src.row_size;
-	buffer_info.layout.rowsPerImage = src.num_rows;
-	buffer_info.buffer = buffer_ptr->buffer;
-
-	WGPUImageCopyTexture texture_info = {0};
-	texture_info.texture = texture_ptr->texture;
-	texture_info.mipLevel = dst.base_mip;
-	texture_info.origin.x = dst.offset_x;
-	texture_info.origin.y = dst.offset_y;
-	texture_info.origin.z = dst.offset_z;
-	texture_info.aspect = texture_ptr->aspect;
+	WGPUImageCopyTexture dst_texture_info = {0};
+	dst_texture_info.texture = dst_texture_view_ptr->texture;
+	dst_texture_info.mipLevel = dst_texture_view_ptr->base_mip;
+	dst_texture_info.origin.x = dst.offset.x;
+	dst_texture_info.origin.y = dst.offset.y;
+	dst_texture_info.origin.z = dst.offset.z;
+	dst_texture_info.aspect = dst_texture_view_ptr->aspect;
 
 	WGPUExtent3D copy_info = {0};
-	copy_info.width = dst.width;
-	copy_info.height = dst.height;
-	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? dst.depth : dst.layer_count;
+	copy_info.width = size.width;
+	copy_info.height = size.height;
+	copy_info.depthOrArrayLayers = size.depth;
 
-	wgpuCommandEncoderCopyBufferToTexture(webgpu_encoder, &buffer_info, &texture_info, &copy_info);
+	wgpuCommandEncoderCopyBufferToTexture(webgpu_encoder, &src_buffer_info, &dst_texture_info, &copy_info);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
+static Opal_Result webgpu_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst, Opal_Extent3D size)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(src.texture);
+	assert(src.texture_view);
 	assert(dst.buffer);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
@@ -2511,32 +2514,79 @@ static Opal_Result webgpu_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_Co
 
 	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
 
-	WebGPU_Texture *texture_ptr = (WebGPU_Texture *)opal_poolGetElement(&device_ptr->textures, (Opal_PoolHandle)src.texture);
-	assert(texture_ptr);
+	WebGPU_TextureView *src_texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)src.texture_view);
+	assert(src_texture_view_ptr);
 
-	WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
-	assert(buffer_ptr);
+	WebGPU_Buffer *dst_buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
+	assert(dst_buffer_ptr);
 
-	WGPUImageCopyBuffer buffer_info = {0};
-	buffer_info.layout.offset = dst.offset;
-	buffer_info.layout.bytesPerRow = dst.row_size;
-	buffer_info.layout.rowsPerImage = dst.num_rows;
-	buffer_info.buffer = buffer_ptr->buffer;
+	WGPUImageCopyTexture src_texture_info = {0};
+	src_texture_info.texture = src_texture_view_ptr->texture;
+	src_texture_info.mipLevel = src_texture_view_ptr->base_mip;
+	src_texture_info.origin.x = src.offset.x;
+	src_texture_info.origin.y = src.offset.y;
+	src_texture_info.origin.z = src.offset.z;
+	src_texture_info.aspect = src_texture_view_ptr->aspect;
 
-	WGPUImageCopyTexture texture_info = {0};
-	texture_info.texture = texture_ptr->texture;
-	texture_info.mipLevel = src.base_mip;
-	texture_info.origin.x = src.offset_x;
-	texture_info.origin.y = src.offset_y;
-	texture_info.origin.z = src.offset_z;
-	texture_info.aspect = texture_ptr->aspect;
+	WGPUImageCopyBuffer dst_buffer_info = {0};
+	dst_buffer_info.layout.offset = dst.offset;
+	dst_buffer_info.layout.bytesPerRow = dst.row_size;
+	dst_buffer_info.layout.rowsPerImage = dst.num_rows;
+	dst_buffer_info.buffer = dst_buffer_ptr->buffer;
 
 	WGPUExtent3D copy_info = {0};
-	copy_info.width = src.width;
-	copy_info.height = src.height;
-	copy_info.depthOrArrayLayers = (texture_ptr->dimension == WGPUTextureDimension_3D) ? src.depth : src.layer_count;
+	copy_info.width = size.width;
+	copy_info.height = size.height;
+	copy_info.depthOrArrayLayers = size.depth;
 
-	wgpuCommandEncoderCopyTextureToBuffer(webgpu_encoder, &texture_info, &buffer_info, &copy_info);
+	wgpuCommandEncoderCopyTextureToBuffer(webgpu_encoder, &src_texture_info, &dst_buffer_info, &copy_info);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
+{
+	assert(this);
+	assert(command_buffer);
+	assert(src.texture_view);
+	assert(dst.texture_view);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	WGPUDevice webgpu_device = device_ptr->device;
+
+	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_encoder);
+
+	WGPUCommandEncoder webgpu_encoder = command_buffer_ptr->command_encoder;
+
+	WebGPU_TextureView *src_texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)src.texture_view);
+	assert(src_texture_view_ptr);
+
+	WebGPU_TextureView *dst_texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)dst.texture_view);
+	assert(dst_texture_view_ptr);
+
+	WGPUImageCopyTexture src_texture_info = {0};
+	src_texture_info.texture = src_texture_view_ptr->texture;
+	src_texture_info.mipLevel = src_texture_view_ptr->base_mip;
+	src_texture_info.origin.x = src.offset.x;
+	src_texture_info.origin.y = src.offset.y;
+	src_texture_info.origin.z = src.offset.z;
+	src_texture_info.aspect = src_texture_view_ptr->aspect;
+
+	WGPUImageCopyTexture dst_texture_info = {0};
+	dst_texture_info.texture = dst_texture_view_ptr->texture;
+	dst_texture_info.mipLevel = dst_texture_view_ptr->base_mip;
+	dst_texture_info.origin.x = dst.offset.x;
+	dst_texture_info.origin.y = dst.offset.y;
+	dst_texture_info.origin.z = dst.offset.z;
+	dst_texture_info.aspect = dst_texture_view_ptr->aspect;
+
+	WGPUExtent3D copy_info = {0};
+	copy_info.width = size.width;
+	copy_info.height = size.height;
+	copy_info.depthOrArrayLayers = size.depth;
+
+	wgpuCommandEncoderCopyTextureToTexture(webgpu_encoder, &src_texture_info, &dst_texture_info, &copy_info);
 	return OPAL_SUCCESS;
 }
 
@@ -2694,6 +2744,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdCopyBufferToBuffer,
 	webgpu_deviceCmdCopyBufferToTexture,
 	webgpu_deviceCmdCopyTextureToBuffer,
+	webgpu_deviceCmdCopyTextureToTexture,
 	webgpu_deviceCmdBufferTransitionBarrier,
 	webgpu_deviceCmdBufferQueueGrabBarrier,
 	webgpu_deviceCmdBufferQueueReleaseBarrier,

@@ -171,6 +171,7 @@ typedef struct DirectX12_Texture_t
 typedef struct DirectX12_TextureView_t
 {
 	ID3D12Resource *texture;
+	UINT subresource_index;
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 	D3D12_RENDER_TARGET_VIEW_DESC rtv_desc;

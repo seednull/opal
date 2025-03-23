@@ -1138,7 +1138,7 @@ Opal_Result opalCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, O
 	return ptr->vtbl->cmdCopyAccelerationStructuresPostbuildInfo(device, command_buffer, num_src_acceleration_structures, src_acceleration_structures, dst_buffer);
 }
 
-Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
+Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1147,10 +1147,10 @@ Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer com
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdCopyBufferToBuffer);
 
-	return ptr->vtbl->cmdCopyBufferToBuffer(device, command_buffer, src, dst, size);
+	return ptr->vtbl->cmdCopyBufferToBuffer(device, command_buffer, src_buffer, src_offset, dst_buffer, dst_offset, size);
 }
 
-Opal_Result opalCmdCopyBufferToTexture(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
+Opal_Result opalCmdCopyBufferToTexture(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1159,10 +1159,10 @@ Opal_Result opalCmdCopyBufferToTexture(Opal_Device device, Opal_CommandBuffer co
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdCopyBufferToTexture);
 
-	return ptr->vtbl->cmdCopyBufferToTexture(device, command_buffer, src, dst);
+	return ptr->vtbl->cmdCopyBufferToTexture(device, command_buffer, src, dst, size);
 }
 
-Opal_Result opalCmdCopyTextureToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
+Opal_Result opalCmdCopyTextureToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst, Opal_Extent3D size)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1171,7 +1171,19 @@ Opal_Result opalCmdCopyTextureToBuffer(Opal_Device device, Opal_CommandBuffer co
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdCopyTextureToBuffer);
 
-	return ptr->vtbl->cmdCopyTextureToBuffer(device, command_buffer, src, dst);
+	return ptr->vtbl->cmdCopyTextureToBuffer(device, command_buffer, src, dst, size);
+}
+
+Opal_Result opalCmdCopyTextureToTexture(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdCopyTextureToTexture);
+
+	return ptr->vtbl->cmdCopyTextureToTexture(device, command_buffer, src, dst, size);
 }
 
 Opal_Result opalCmdBufferTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)

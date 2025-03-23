@@ -746,7 +746,20 @@ static Opal_Result null_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_De
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
+static Opal_Result null_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(src_buffer);
+	OPAL_UNUSED(src_offset);
+	OPAL_UNUSED(dst_buffer);
+	OPAL_UNUSED(dst_offset);
+	OPAL_UNUSED(size);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -757,22 +770,24 @@ static Opal_Result null_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
+static Opal_Result null_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst, Opal_Extent3D size)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(src);
 	OPAL_UNUSED(dst);
+	OPAL_UNUSED(size);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
+static Opal_Result null_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(src);
 	OPAL_UNUSED(dst);
+	OPAL_UNUSED(size);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -931,6 +946,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdCopyBufferToBuffer,
 	null_deviceCmdCopyBufferToTexture,
 	null_deviceCmdCopyTextureToBuffer,
+	null_deviceCmdCopyTextureToTexture,
 	null_deviceCmdBufferTransitionBarrier,
 	null_deviceCmdBufferQueueGrabBarrier,
 	null_deviceCmdBufferQueueReleaseBarrier,

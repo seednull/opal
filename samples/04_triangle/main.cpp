@@ -242,7 +242,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_GENERIC_READ, OPAL_RESOURCE_STATE_COPY_DEST);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdCopyBufferToBuffer(device, staging_command_buffer, staging_buffer_view, triangle_buffer_view, sizeof(TriangleData));
+	result = opalCmdCopyBufferToBuffer(device, staging_command_buffer, staging_buffer, 0, triangle_buffer, 0, sizeof(TriangleData));
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_GENERIC_READ);

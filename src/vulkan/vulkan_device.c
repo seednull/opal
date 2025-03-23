@@ -4189,7 +4189,7 @@ static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView src, Opal_BufferView dst, uint64_t size)
+static Opal_Result vulkan_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4199,15 +4199,15 @@ static Opal_Result vulkan_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Com
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	Vulkan_Buffer *src_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
+	Vulkan_Buffer *src_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_buffer);
 	assert(src_buffer_ptr);
 
-	Vulkan_Buffer *dst_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
+	Vulkan_Buffer *dst_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_buffer);
 	assert(dst_buffer_ptr);
 
 	VkBufferCopy copy_region = {0};
-	copy_region.srcOffset = src.offset;
-	copy_region.dstOffset = dst.offset;
+	copy_region.srcOffset = src_offset;
+	copy_region.dstOffset = dst_offset;
 	copy_region.size = size;
 
 	device_ptr->vk.vkCmdCopyBuffer(command_buffer_ptr->command_buffer, src_buffer_ptr->buffer, dst_buffer_ptr->buffer, 1, &copy_region);
@@ -4215,7 +4215,7 @@ static Opal_Result vulkan_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst)
+static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4228,28 +4228,28 @@ static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Co
 	Vulkan_Buffer *src_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
 	assert(src_buffer_ptr);
 
-	Vulkan_Image *dst_image_ptr = (Vulkan_Image *)opal_poolGetElement(&device_ptr->images, (Opal_PoolHandle)dst.texture);
-	assert(dst_image_ptr);
+	Vulkan_ImageView *dst_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)dst.texture_view);
+	assert(dst_image_view_ptr);
 
 	VkBufferImageCopy copy_region = {0};
 	copy_region.bufferOffset = src.offset;
-	copy_region.imageExtent.width = dst.width;
-	copy_region.imageExtent.height = dst.height;
-	copy_region.imageExtent.depth = dst.depth;
-	copy_region.imageOffset.x = dst.offset_x;
-	copy_region.imageOffset.z = dst.offset_y;
-	copy_region.imageOffset.y = dst.offset_z;
-	copy_region.imageSubresource.aspectMask = dst_image_ptr->aspect_mask;
-	copy_region.imageSubresource.mipLevel = dst.base_mip;
-	copy_region.imageSubresource.baseArrayLayer = 0;
-	copy_region.imageSubresource.layerCount = dst.layer_count;
+	copy_region.imageExtent.width = size.width;
+	copy_region.imageExtent.height = size.height;
+	copy_region.imageExtent.depth = size.depth;
+	copy_region.imageOffset.x = dst.offset.x;
+	copy_region.imageOffset.z = dst.offset.y;
+	copy_region.imageOffset.y = dst.offset.z;
+	copy_region.imageSubresource.aspectMask = dst_image_view_ptr->aspect_mask;
+	copy_region.imageSubresource.mipLevel = dst_image_view_ptr->base_mip;
+	copy_region.imageSubresource.baseArrayLayer = dst_image_view_ptr->base_layer;
+	copy_region.imageSubresource.layerCount = dst_image_view_ptr->num_layers;
 
-	device_ptr->vk.vkCmdCopyBufferToImage(command_buffer_ptr->command_buffer, src_buffer_ptr->buffer, dst_image_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+	device_ptr->vk.vkCmdCopyBufferToImage(command_buffer_ptr->command_buffer, src_buffer_ptr->buffer, dst_image_view_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst)
+static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst, Opal_Extent3D size)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4259,26 +4259,70 @@ static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_Co
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
+	Vulkan_ImageView *src_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)src.texture_view);
+	assert(src_image_view_ptr);
+
 	Vulkan_Buffer *dst_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
 	assert(dst_buffer_ptr);
 
-	Vulkan_Image *src_image_ptr = (Vulkan_Image *)opal_poolGetElement(&device_ptr->images, (Opal_PoolHandle)src.texture);
-	assert(src_image_ptr);
-
 	VkBufferImageCopy copy_region = {0};
 	copy_region.bufferOffset = dst.offset;
-	copy_region.imageExtent.width = src.width;
-	copy_region.imageExtent.height = src.height;
-	copy_region.imageExtent.depth = src.depth;
-	copy_region.imageOffset.x = src.offset_x;
-	copy_region.imageOffset.z = src.offset_y;
-	copy_region.imageOffset.y = src.offset_z;
-	copy_region.imageSubresource.aspectMask = src_image_ptr->aspect_mask;
-	copy_region.imageSubresource.mipLevel = src.base_mip;
-	copy_region.imageSubresource.baseArrayLayer = 0;
-	copy_region.imageSubresource.layerCount = src.layer_count;
+	copy_region.imageExtent.width = size.width;
+	copy_region.imageExtent.height = size.height;
+	copy_region.imageExtent.depth = size.depth;
+	copy_region.imageOffset.x = src.offset.x;
+	copy_region.imageOffset.z = src.offset.y;
+	copy_region.imageOffset.y = src.offset.z;
+	copy_region.imageSubresource.aspectMask = src_image_view_ptr->aspect_mask;
+	copy_region.imageSubresource.mipLevel = src_image_view_ptr->base_mip;
+	copy_region.imageSubresource.baseArrayLayer = src_image_view_ptr->base_layer;
+	copy_region.imageSubresource.layerCount = src_image_view_ptr->num_layers;
 
-	device_ptr->vk.vkCmdCopyImageToBuffer(command_buffer_ptr->command_buffer, src_image_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_buffer_ptr->buffer, 1, &copy_region);
+	device_ptr->vk.vkCmdCopyImageToBuffer(command_buffer_ptr->command_buffer, src_image_view_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_buffer_ptr->buffer, 1, &copy_region);
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	Vulkan_ImageView *src_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)src.texture_view);
+	assert(src_image_view_ptr);
+
+	Vulkan_ImageView *dst_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)dst.texture_view);
+	assert(dst_image_view_ptr);
+
+	VkImageCopy copy_region = {0};
+	copy_region.extent.width = size.width;
+	copy_region.extent.height = size.height;
+	copy_region.extent.depth = size.depth;
+
+	copy_region.srcOffset.x = src.offset.x;
+	copy_region.srcOffset.z = src.offset.y;
+	copy_region.srcOffset.y = src.offset.z;
+
+	copy_region.srcSubresource.aspectMask = src_image_view_ptr->aspect_mask;
+	copy_region.srcSubresource.mipLevel = src_image_view_ptr->base_mip;
+	copy_region.srcSubresource.baseArrayLayer = src_image_view_ptr->base_layer;
+	copy_region.srcSubresource.layerCount = src_image_view_ptr->num_layers;
+
+	copy_region.dstOffset.x = dst.offset.x;
+	copy_region.dstOffset.z = dst.offset.y;
+	copy_region.dstOffset.y = dst.offset.z;
+
+	copy_region.dstSubresource.aspectMask = dst_image_view_ptr->aspect_mask;
+	copy_region.dstSubresource.mipLevel = dst_image_view_ptr->base_mip;
+	copy_region.dstSubresource.baseArrayLayer = dst_image_view_ptr->base_layer;
+	copy_region.dstSubresource.layerCount = dst_image_view_ptr->num_layers;
+
+	device_ptr->vk.vkCmdCopyImage(command_buffer_ptr->command_buffer, src_image_view_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_image_view_ptr->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
 	return OPAL_SUCCESS;
 }
@@ -4496,6 +4540,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdCopyBufferToBuffer,
 	vulkan_deviceCmdCopyBufferToTexture,
 	vulkan_deviceCmdCopyTextureToBuffer,
+	vulkan_deviceCmdCopyTextureToTexture,
 	vulkan_deviceCmdBufferTransitionBarrier,
 	vulkan_deviceCmdBufferQueueGrabBarrier,
 	vulkan_deviceCmdBufferQueueReleaseBarrier,
