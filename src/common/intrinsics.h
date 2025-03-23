@@ -104,6 +104,10 @@ static OPAL_INLINE uint64_t alignUpul(uint64_t value, uint64_t alignment)
 	return (value + mask) & ~mask;
 }
 
+// NOTE: hello, microsoft ucrt
+#undef min
+#undef max
+
 static OPAL_INLINE uint32_t min(uint32_t a, uint32_t b)
 {
 	return (a < b) ? a : b;

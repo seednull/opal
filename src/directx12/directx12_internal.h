@@ -120,6 +120,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
+	Opal_Pool acceleration_structures;
 	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -182,6 +183,13 @@ typedef struct DirectX12_Sampler_t
 {
 	D3D12_SAMPLER_DESC desc;
 } DirectX12_Sampler;
+
+typedef struct DirectX12_AccelerationStructure_t
+{
+	Opal_BufferView buffer_view;
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE type;
+	uint32_t allow_compaction;
+} DirectX12_AccelerationStructure;
 
 typedef struct DirectX12_CommandAllocator_t
 {
@@ -257,6 +265,10 @@ typedef struct DirectX12_Pipeline_t
 	ID3D12StateObject *state_object;
 	ID3D12RootSignature *root_signature;
 	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
+	uint32_t num_raygen_shaders;
+	uint32_t num_hitgroups;
+	uint32_t num_miss_shaders;
+	uint8_t *shader_handles;
 } DirectX12_Pipeline;
 
 typedef struct DirectX12_Surface_t
@@ -305,6 +317,13 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE directx12_helperToPrimitiveTopologyType(Opal_Primi
 D3D12_PRIMITIVE_TOPOLOGY directx12_helperToPrimitiveTopology(Opal_PrimitiveType type);
 D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE directx12_helperToBeginningAccessType(Opal_LoadOp op);
 D3D12_RENDER_PASS_ENDING_ACCESS_TYPE directx12_helperToEndingAccessType(Opal_StoreOp op);
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE directx12_helperToAccelerationStructureType(Opal_AccelerationStructureType type);
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS directx12_helperToAccelerationStructureBuildFlags(Opal_AccelerationStructureBuildFlags flags);
+D3D12_RAYTRACING_GEOMETRY_TYPE directx12_helperToAccelerationStructureGeometryType(Opal_AccelerationStructureGeometryType type);
+D3D12_RAYTRACING_GEOMETRY_FLAGS directx12_helperToAccelerationStructureGeometryFlags(Opal_AccelerationStructureGeometryFlags flags);
+D3D12_RAYTRACING_INSTANCE_FLAGS directx12_helperToAccelerationStructureInstanceFlags(Opal_AccelerationStructureInstanceFlags flags);
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE directx12_helperToAccelerationStructureCopyMode(Opal_AccelerationStructureCopyMode mode);
 
 DXGI_FORMAT directx12_helperToDXGIVertexFormat(Opal_VertexFormat format);
 DXGI_FORMAT directx12_helperToDXGITextureFormat(Opal_TextureFormat format);

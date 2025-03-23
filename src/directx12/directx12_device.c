@@ -1,10 +1,14 @@
 #include "directx12_internal.h"
+#include "common/intrinsics.h"
+
 #include <strsafe.h>
 #include <assert.h>
 
 /*
  */
 static Opal_Result directx12_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view);
+static Opal_Result directx12_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr);
+static Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
 static Opal_Result directx12_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
 static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 
@@ -108,6 +112,14 @@ static void directx12_destroySampler(DirectX12_Device *device_ptr, DirectX12_Sam
 	// do nothing
 }
 
+static void directx12_destroyAccelerationStructure(DirectX12_Device *device_ptr, DirectX12_AccelerationStructure *acceleration_structure_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	OPAL_UNUSED(acceleration_structure_ptr);
+
+	// do nothing
+}
+
 static void directx12_destroyCommandAllocator(DirectX12_Device *device_ptr, DirectX12_CommandAllocator *command_allocator_ptr)
 {
 	OPAL_UNUSED(device_ptr);
@@ -185,6 +197,9 @@ static void directx12_destroyPipeline(DirectX12_Device *device_ptr, DirectX12_Pi
 
 	if (pipeline_ptr->state_object)
 		ID3D12StateObject_Release(pipeline_ptr->state_object);
+
+	if (pipeline_ptr->shader_handles)
+		free(pipeline_ptr->shader_handles);
 }
 
 static void directx12_destroySwapchain(DirectX12_Device *device_ptr, DirectX12_Swapchain *swapchain_ptr)
@@ -229,20 +244,113 @@ static Opal_Result directx12_deviceGetQueue(Opal_Device this, Opal_DeviceEngineT
 
 static Opal_Result directx12_deviceGetAccelerationStructurePrebuildInfo(Opal_Device this, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(info);
+	assert(this);
+	assert(desc);
+	assert(info);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	ID3D12Device5 *d3d12_device5 = NULL;
+	HRESULT hr = ID3D12Device_QueryInterface(d3d12_device, &IID_ID3D12Device5, &d3d12_device5);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {0};
+	inputs.Type = directx12_helperToAccelerationStructureType(desc->type);
+	inputs.Flags = directx12_helperToAccelerationStructureBuildFlags(desc->build_flags);
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+	{
+		uint32_t num_geometries = desc->input.bottom_level.num_geometries;
+
+		opal_bumpReset(&device_ptr->bump);
+		uint32_t geometries_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * num_geometries);
+
+		D3D12_RAYTRACING_GEOMETRY_DESC *geometries = (D3D12_RAYTRACING_GEOMETRY_DESC *)(device_ptr->bump.data + geometries_offset);
+		memset(geometries, 0, sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * num_geometries);
+
+		inputs.NumDescs = desc->input.bottom_level.num_geometries;
+		inputs.pGeometryDescs = geometries;
+
+		for (uint32_t i = 0; i < num_geometries; ++i)
+		{
+			const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[i];
+			D3D12_RAYTRACING_GEOMETRY_DESC *geometry = &geometries[i];
+
+			geometry->Type = directx12_helperToAccelerationStructureGeometryType(opal_geometry->type);
+			geometry->Flags = directx12_helperToAccelerationStructureGeometryFlags(opal_geometry->flags);
+
+			if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
+			{
+				const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
+				D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC *triangles = &geometry->Triangles;
+
+				triangles->IndexFormat = directx12_helperToDXGIIndexFormat(opal_triangles->index_format);
+				triangles->VertexFormat = directx12_helperToDXGIVertexFormat(opal_triangles->vertex_format);
+				triangles->IndexCount = opal_triangles->num_indices;
+				triangles->VertexCount = opal_triangles->num_vertices;
+				triangles->VertexBuffer.StrideInBytes = opal_triangles->vertex_stride;
+			}
+			else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
+			{
+				const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
+				D3D12_RAYTRACING_GEOMETRY_AABBS_DESC *aabbs = &geometry->AABBs;
+
+				aabbs->AABBCount = opal_aabbs->num_entries;
+				aabbs->AABBs.StrideInBytes = opal_aabbs->stride;
+			}
+			else
+				assert(0);
+		}
+	}
+	else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+	{
+		inputs.NumDescs = desc->input.top_level.num_instances;
+	}
+	else
+		assert(0);
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO build_info = {0};
+	ID3D12Device5_GetRaytracingAccelerationStructurePrebuildInfo(d3d12_device5, &inputs, &build_info);
+	ID3D12Device5_Release(d3d12_device5);
+
+	info->acceleration_structure_size = build_info.ResultDataMaxSizeInBytes;
+	info->build_scratch_size = build_info.ScratchDataSizeInBytes;
+	info->update_scratch_size = build_info.UpdateScratchDataSizeInBytes;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(info);
+	assert(this);
+	assert(desc);
+	assert(info);
 
-	return OPAL_NOT_SUPPORTED;
+	OPAL_UNUSED(this);
+
+	uint32_t handle_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	uint32_t handle_alignment = D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;
+	uint32_t base_alignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+
+	uint32_t aligned_handle_size = alignUp(handle_size, handle_alignment);
+
+	uint32_t raygen_size = alignUp(desc->num_raygen_indices * aligned_handle_size, base_alignment);
+	uint32_t hitgroup_size = alignUp(desc->num_hitgroup_indices * aligned_handle_size, base_alignment);
+
+	// Note: we don't need to align miss part since the buffer offset could be either 0 or already aligned to base_alignment
+	uint32_t miss_size = desc->num_miss_indices * aligned_handle_size;
+
+	info->buffer_size = raygen_size + hitgroup_size + miss_size;
+
+	info->base_raygen_offset = 0;
+	info->base_hitgroup_offset = raygen_size;
+	info->base_miss_offset = raygen_size + hitgroup_size;
+	info->aligned_handle_size = aligned_handle_size;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceGetSupportedSurfaceFormats(Opal_Device this, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
@@ -414,7 +522,7 @@ static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_Buf
 	buffer_info.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 	if (desc->usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE)
-		buffer_info.Flags |= D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE;
+		buffer_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	if (desc->usage & OPAL_BUFFER_USAGE_STORAGE)
 		buffer_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -723,11 +831,18 @@ static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_Sa
 
 static Opal_Result directx12_deviceCreateAccelerationStructure(Opal_Device this, const Opal_AccelerationStructureDesc *desc, Opal_AccelerationStructure *acceleration_structure)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(acceleration_structure);
+	assert(this);
+	assert(desc);
+	assert(acceleration_structure);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_AccelerationStructure result = {0};
+	result.buffer_view = desc->buffer;
+	result.type = directx12_helperToAccelerationStructureType(desc->type);
+
+	*acceleration_structure = (Opal_AccelerationStructure)opal_poolAddElement(&device_ptr->acceleration_structures, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateCommandAllocator(Opal_Device this, Opal_Queue queue, Opal_CommandAllocator *command_allocator)
@@ -1575,6 +1690,26 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
 	}
 
+	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
+	{
+		DirectX12_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->miss_shaders[i]);
+		assert(shader_ptr);
+
+		ShaderStage *shader = &shaders[num_shaders++];
+
+		StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rmiss%d", num_shaders - 1);
+
+		shader->export.Name = shader->id;
+		shader->export.ExportToRename = L"main";
+
+		shader->desc.DXILLibrary.pShaderBytecode = shader_ptr->data;
+		shader->desc.DXILLibrary.BytecodeLength = shader_ptr->size;
+		shader->desc.NumExports = 1;
+		shader->desc.pExports = &shader->export;
+
+		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
+	}
+
 	for (uint32_t i = 0; i < desc->num_hitgroup_shaders; ++i)
 	{
 		DirectX12_Shader *anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].anyhit_shader);
@@ -1651,26 +1786,6 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		}
 	}
 
-	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
-	{
-		DirectX12_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->miss_shaders[i]);
-		assert(shader_ptr);
-
-		ShaderStage *shader = &shaders[num_shaders++];
-
-		StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rmiss%d", num_shaders - 1);
-
-		shader->export.Name = shader->id;
-		shader->export.ExportToRename = L"main";
-
-		shader->desc.DXILLibrary.pShaderBytecode = shader_ptr->data;
-		shader->desc.DXILLibrary.BytecodeLength = shader_ptr->size;
-		shader->desc.NumExports = 1;
-		shader->desc.pExports = &shader->export;
-
-		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
-	}
-
 	D3D12_STATE_OBJECT_DESC pso_desc = {0};
 	pso_desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
 	pso_desc.NumSubobjects = num_subobjects;
@@ -1688,12 +1803,62 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECTX12_ERROR;
 
+	ID3D12StateObjectProperties *d3d12_state_properties = NULL;
+	hr = ID3D12StateObject_QueryInterface(d3d12_state_object, &IID_ID3D12StateObjectProperties, &d3d12_state_properties);
+	if (!SUCCEEDED(hr))
+	{
+		ID3D12StateObject_Release(d3d12_state_object);
+		return OPAL_DIRECTX12_ERROR;
+	}
+
+	uint8_t *handles = (uint8_t *)malloc((desc->num_raygen_shaders + desc->num_miss_shaders + desc->num_hitgroup_shaders) * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+	uint8_t *current_handle = handles;
+
+	for (uint32_t i = 0; i < desc->num_raygen_shaders; ++i)
+	{
+		ShaderStage *shader = &shaders[i];
+
+		void *ptr = ID3D12StateObjectProperties_GetShaderIdentifier(d3d12_state_properties, shader->id);
+		assert(ptr);
+
+		memcpy(current_handle, ptr, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		current_handle += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	}
+
+	uint32_t offset = desc->num_raygen_shaders;
+	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
+	{
+		ShaderStage *shader = &shaders[offset + i];
+
+		void *ptr = ID3D12StateObjectProperties_GetShaderIdentifier(d3d12_state_properties, shader->id);
+		assert(ptr);
+
+		memcpy(current_handle, ptr, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		current_handle += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	}
+
+	for (uint32_t i = 0; i < desc->num_hitgroup_shaders; ++i)
+	{
+		HitgroupStage *hitgroup = &hitgroups[i];
+
+		void *ptr = ID3D12StateObjectProperties_GetShaderIdentifier(d3d12_state_properties, hitgroup->id);
+		assert(ptr);
+
+		memcpy(current_handle, ptr, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		current_handle += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	}
+
+	ID3D12StateObjectProperties_Release(d3d12_state_properties);
 	ID3D12RootSignature_AddRef(pipeline_layout_ptr->root_signature);
 
 	DirectX12_Pipeline result = {0};
 	result.state_object = d3d12_state_object;
 	result.root_signature = pipeline_layout_ptr->root_signature;
 	result.primitive_topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+	result.num_raygen_shaders = desc->num_raygen_shaders;
+	result.num_hitgroups = desc->num_hitgroup_shaders;
+	result.num_miss_shaders = desc->num_miss_shaders;
+	result.shader_handles = handles;
 
 	*pipeline = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipelines, &result);
 	return OPAL_SUCCESS;
@@ -1931,10 +2096,20 @@ static Opal_Result directx12_deviceDestroySampler(Opal_Device this, Opal_Sampler
 
 static Opal_Result directx12_deviceDestroyAccelerationStructure(Opal_Device this, Opal_AccelerationStructure acceleration_structure)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(acceleration_structure);
+	assert(this);
+	assert(acceleration_structure);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)acceleration_structure;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_AccelerationStructure *acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, handle);
+	assert(acceleration_structure_ptr);
+
+	opal_poolRemoveElement(&device_ptr->acceleration_structures, handle);
+
+	directx12_destroyAccelerationStructure(device_ptr, acceleration_structure_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
@@ -2198,6 +2373,19 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 	}
 
 	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->acceleration_structures);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_AccelerationStructure *acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElementByIndex(&ptr->acceleration_structures, head);
+			directx12_destroyAccelerationStructure(ptr, acceleration_structure_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->acceleration_structures, head);
+		}
+
+		opal_poolShutdown(&ptr->acceleration_structures);
+	}
+
+	{
 		uint32_t head = opal_poolGetHeadIndex(&ptr->samplers);
 		while (head != OPAL_POOL_HANDLE_NULL)
 		{
@@ -2298,18 +2486,109 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 
 static Opal_Result directx12_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
+	assert(this);
+	assert(desc);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)desc->pipeline);
+	assert(pipeline_ptr);
+
+	uint32_t handle_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	uint32_t handle_alignment = D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;
+	uint32_t base_alignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+
+	uint32_t aligned_handle_size = alignUp(handle_size, handle_alignment);
+
+	uint32_t raygen_size = alignUp(desc->num_raygen_indices * aligned_handle_size, base_alignment);
+	uint32_t hitgroup_size = alignUp(desc->num_hitgroup_indices * aligned_handle_size, base_alignment);
+
+	assert(isAlignedul(desc->sbt.offset, base_alignment));
+
+	DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->sbt.buffer);
+	assert(buffer_ptr);
+
+	void *ptr = NULL;
+	Opal_Result result = directx12_deviceMapBuffer(this, desc->sbt.buffer, &ptr);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	uint8_t *src_raygen_handles = pipeline_ptr->shader_handles;
+	uint8_t *src_miss_handles = src_raygen_handles + pipeline_ptr->num_raygen_shaders * handle_size;
+	uint8_t *src_hitgroup_handles = src_miss_handles + pipeline_ptr->num_miss_shaders * handle_size;
+
+	uint8_t *dst_raygen_handles = (uint8_t *)ptr + desc->sbt.offset;
+	uint8_t *dst_hitgroup_handles = dst_raygen_handles + raygen_size;
+	uint8_t *dst_miss_handles = dst_hitgroup_handles + hitgroup_size;
+
+	uint8_t *dst = dst_raygen_handles;
+	for (uint32_t i = 0; i < desc->num_raygen_indices; ++i)
+	{
+		uint32_t index = desc->raygen_indices[i];
+		uint8_t *src = src_raygen_handles + index * handle_size;
+
+		memcpy(dst, src, handle_size);
+		dst += aligned_handle_size;
+	}
+
+	dst = dst_hitgroup_handles;
+	for (uint32_t i = 0; i < desc->num_hitgroup_indices; ++i)
+	{
+		uint32_t index = desc->hitgroup_indices[i];
+		uint8_t *src = src_hitgroup_handles + index * handle_size;
+
+		memcpy(dst, src, handle_size);
+		dst += aligned_handle_size;
+	}
+
+	dst = dst_miss_handles;
+	for (uint32_t i = 0; i < desc->num_miss_indices; ++i)
+	{
+		uint32_t index = desc->miss_indices[i];
+		uint8_t *src = src_miss_handles + index * handle_size;
+
+		memcpy(dst, src, handle_size);
+		dst += aligned_handle_size;
+	}
+
+	return directx12_deviceUnmapBuffer(this, desc->sbt.buffer);
 }
 
 static Opal_Result directx12_deviceBuildAccelerationStructureInstanceBuffer(Opal_Device this, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
+	assert(this);
+	assert(desc);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	void *ptr = NULL;
+	Opal_Result result = directx12_deviceMapBuffer(this, desc->buffer.buffer, &ptr);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	uint8_t *dst_data = (uint8_t *)ptr + desc->buffer.offset;
+
+	for (uint32_t i = 0; i < desc->num_instances; ++i)
+	{
+		const Opal_AccelerationStructureInstance *opal_instance = &desc->instances[i];
+		D3D12_RAYTRACING_INSTANCE_DESC *d3d12_instance = (D3D12_RAYTRACING_INSTANCE_DESC *)dst_data;
+
+		DirectX12_AccelerationStructure *blas_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)opal_instance->blas);
+		assert(blas_ptr);
+
+		DirectX12_Buffer *blas_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)blas_ptr->buffer_view.buffer);
+		assert(blas_buffer_ptr);
+
+		memcpy(&d3d12_instance->Transform, opal_instance->transform, sizeof(FLOAT) * 12);
+		d3d12_instance->InstanceID = opal_instance->custom_index;
+		d3d12_instance->InstanceMask = opal_instance->mask;
+		d3d12_instance->InstanceContributionToHitGroupIndex = opal_instance->sbt_hitgroup_index_offset;
+		d3d12_instance->Flags = directx12_helperToAccelerationStructureInstanceFlags(opal_instance->flags);
+		d3d12_instance->AccelerationStructure = blas_buffer_ptr->address + blas_ptr->buffer_view.offset;
+
+		dst_data += sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+	}
+
+	return directx12_deviceUnmapBuffer(this, desc->buffer.buffer);
 }
 
 static Opal_Result directx12_deviceResetCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
@@ -2664,7 +2943,19 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 				case OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
 				{
-					// TODO:
+					DirectX12_AccelerationStructure *acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)entry->data.acceleration_structure);
+					assert(acceleration_structure_ptr);
+
+					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)acceleration_structure_ptr->buffer_view.buffer);
+					assert(buffer_ptr);
+
+					D3D12_SHADER_RESOURCE_VIEW_DESC desc = {0};
+					desc.Format = DXGI_FORMAT_UNKNOWN;
+					desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+					desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+					desc.RaytracingAccelerationStructure.Location = buffer_ptr->address + acceleration_structure_ptr->buffer_view.offset;
+
+					ID3D12Device_CreateShaderResourceView(device_ptr->device, NULL, &desc, src_handles[i]);
 				}
 				break;
 
@@ -3534,48 +3825,271 @@ static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_Com
 
 static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(raygen_entry);
-	OPAL_UNUSED(hitgroup_entry);
-	OPAL_UNUSED(miss_entry);
-	OPAL_UNUSED(width);
-	OPAL_UNUSED(height);
-	OPAL_UNUSED(depth);
+	assert(this);
+	assert(command_buffer);
+ 
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	uint32_t handle_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	uint32_t handle_alignment = D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;
+
+	uint32_t aligned_handle_size = alignUp(handle_size, handle_alignment);
+
+	D3D12_DISPATCH_RAYS_DESC desc = {0};
+	desc.Width = width;
+	desc.Height = height;
+	desc.Depth = depth;
+
+	DirectX12_Buffer *raygen_sbt_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)raygen_entry.buffer);
+	if (raygen_sbt_buffer_ptr)
+	{
+		assert(isAlignedul(raygen_entry.offset, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+
+		desc.RayGenerationShaderRecord.StartAddress = raygen_sbt_buffer_ptr->address + raygen_entry.offset;
+		desc.RayGenerationShaderRecord.SizeInBytes = aligned_handle_size;
+	}
+
+	DirectX12_Buffer *miss_sbt_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)miss_entry.buffer);
+	if (miss_sbt_buffer_ptr)
+	{
+		assert(isAlignedul(miss_entry.offset, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+
+		desc.MissShaderTable.StartAddress = miss_sbt_buffer_ptr->address + miss_entry.offset;
+		desc.MissShaderTable.SizeInBytes = aligned_handle_size;
+		desc.MissShaderTable.StrideInBytes = aligned_handle_size;
+	}
+
+	DirectX12_Buffer *hitgroup_sbt_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)hitgroup_entry.buffer);
+	if (hitgroup_sbt_buffer_ptr)
+	{
+		assert(isAlignedul(hitgroup_entry.offset, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+
+		desc.HitGroupTable.StartAddress = hitgroup_sbt_buffer_ptr->address + hitgroup_entry.offset;
+		desc.HitGroupTable.SizeInBytes = aligned_handle_size;
+		desc.HitGroupTable.StrideInBytes = aligned_handle_size;
+	}
+
+	ID3D12GraphicsCommandList4_DispatchRays(command_buffer_ptr->list, &desc);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_build_descs);
-	OPAL_UNUSED(descs);
+	assert(this);
+	assert(command_buffer);
+	assert(num_build_descs > 0);
+	assert(descs);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	for (uint32_t i = 0; i < num_build_descs; ++i)
+	{
+		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
+
+		DirectX12_AccelerationStructure *dst_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
+		assert(dst_acceleration_structure_ptr);
+
+		dst_acceleration_structure_ptr->allow_compaction = (desc->build_flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_ALLOW_COMPACTION) != 0;
+
+		const DirectX12_Buffer *dst_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_acceleration_structure_ptr->buffer_view.buffer);
+		assert(dst_buffer_ptr);
+
+		const DirectX12_AccelerationStructure *src_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
+
+		const DirectX12_Buffer *scratch_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
+		assert(scratch_buffer_ptr);
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC build_desc = {0};
+
+		build_desc.Inputs.Type = directx12_helperToAccelerationStructureType(desc->type);
+		build_desc.Inputs.Flags = directx12_helperToAccelerationStructureBuildFlags(desc->build_flags);
+		build_desc.Inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+		build_desc.DestAccelerationStructureData = dst_buffer_ptr->address + dst_acceleration_structure_ptr->buffer_view.offset;
+		build_desc.ScratchAccelerationStructureData = scratch_buffer_ptr->address + desc->scratch_buffer.offset;
+
+		if (src_acceleration_structure_ptr)
+		{
+			const DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_acceleration_structure_ptr->buffer_view.buffer);
+			assert(src_buffer_ptr);
+
+			build_desc.SourceAccelerationStructureData = src_buffer_ptr->address + src_acceleration_structure_ptr->buffer_view.offset;
+		}
+
+		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+		{
+			uint32_t num_geometries = desc->input.bottom_level.num_geometries;
+
+			opal_bumpReset(&device_ptr->bump);
+			uint32_t geometries_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * num_geometries);
+
+			D3D12_RAYTRACING_GEOMETRY_DESC *geometries = (D3D12_RAYTRACING_GEOMETRY_DESC *)(device_ptr->bump.data + geometries_offset);
+			memset(geometries, 0, sizeof(D3D12_RAYTRACING_GEOMETRY_DESC) * num_geometries);
+
+			build_desc.Inputs.NumDescs = desc->input.bottom_level.num_geometries;
+			build_desc.Inputs.pGeometryDescs = geometries;
+
+			for (uint32_t j = 0; j < num_geometries; ++j)
+			{
+				const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[j];
+				D3D12_RAYTRACING_GEOMETRY_DESC *geometry = &geometries[j];
+
+				geometry->Type = directx12_helperToAccelerationStructureGeometryType(opal_geometry->type);
+				geometry->Flags = directx12_helperToAccelerationStructureGeometryFlags(opal_geometry->flags);
+
+				if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
+				{
+					const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
+					D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC *triangles = &geometry->Triangles;
+
+					const DirectX12_Buffer *vertex_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
+					assert(vertex_buffer_ptr);
+
+					const DirectX12_Buffer *index_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->index_buffer.buffer);
+					const DirectX12_Buffer *transform_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->transform_buffer.buffer);
+
+					triangles->IndexFormat = directx12_helperToDXGIIndexFormat(opal_triangles->index_format);
+					triangles->VertexFormat = directx12_helperToDXGIVertexFormat(opal_triangles->vertex_format);
+					triangles->IndexCount = opal_triangles->num_indices;
+					triangles->VertexCount = opal_triangles->num_vertices;
+					triangles->VertexBuffer.StartAddress = vertex_buffer_ptr->address + opal_triangles->vertex_buffer.offset;
+					triangles->VertexBuffer.StrideInBytes = opal_triangles->vertex_stride;
+
+					if (index_buffer_ptr)
+						triangles->IndexBuffer = index_buffer_ptr->address + opal_triangles->index_buffer.offset;
+
+					if (transform_buffer_ptr)
+						triangles->Transform3x4 = transform_buffer_ptr->address + opal_triangles->transform_buffer.offset;
+				}
+				else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
+				{
+					const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
+					D3D12_RAYTRACING_GEOMETRY_AABBS_DESC *aabbs = &geometry->AABBs;
+
+					const DirectX12_Buffer *entries_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
+					assert(entries_buffer_ptr);
+
+					aabbs->AABBCount = opal_aabbs->num_entries;
+					aabbs->AABBs.StartAddress = entries_buffer_ptr->address + opal_aabbs->entries_buffer.offset;
+					aabbs->AABBs.StrideInBytes = opal_aabbs->stride;
+				}
+				else
+					assert(0);
+			}
+		}
+		else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+		{
+			const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
+			const DirectX12_Buffer *instances_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)input->instance_buffer.buffer);
+			assert(instances_buffer_ptr);
+
+			build_desc.Inputs.NumDescs = desc->input.top_level.num_instances;
+			build_desc.Inputs.InstanceDescs = instances_buffer_ptr->address + input->instance_buffer.offset;
+		}
+		else
+			assert(0);
+
+		ID3D12GraphicsCommandList4_BuildRaytracingAccelerationStructure(command_buffer_ptr->list, &build_desc, 0, NULL);
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(mode);
+	assert(this);
+	assert(command_buffer);
+	assert(src);
+	assert(dst);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	const DirectX12_AccelerationStructure *src_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src);
+	assert(src_acceleration_structure_ptr);
+
+	const DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_acceleration_structure_ptr->buffer_view.buffer);
+	assert(src_buffer_ptr);
+
+	const DirectX12_AccelerationStructure *dst_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)dst);
+	assert(dst_acceleration_structure_ptr);
+
+	const DirectX12_Buffer *dst_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_acceleration_structure_ptr->buffer_view.buffer);
+	assert(dst_buffer_ptr);
+
+	D3D12_GPU_VIRTUAL_ADDRESS src_address = src_buffer_ptr->address + src_acceleration_structure_ptr->buffer_view.offset;
+	D3D12_GPU_VIRTUAL_ADDRESS dst_address = dst_buffer_ptr->address + dst_acceleration_structure_ptr->buffer_view.offset;
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE copy_mode = directx12_helperToAccelerationStructureCopyMode(mode);
+
+	ID3D12GraphicsCommandList4_CopyRaytracingAccelerationStructure(command_buffer_ptr->list, dst_address, src_address, copy_mode);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_src_acceleration_structures);
-	OPAL_UNUSED(src_acceleration_structures);
-	OPAL_UNUSED(dst_buffer);
+	assert(this);
+	assert(command_buffer);
+	assert(num_src_acceleration_structures > 0);
+	assert(src_acceleration_structures);
+	assert(dst_buffer.buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	const DirectX12_Buffer *dst_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_buffer.buffer);
+	assert(dst_buffer_ptr);
+
+	size_t stride = sizeof(Opal_AccelerationStructurePostbuildInfo);
+
+	size_t size_offset = offsetof(Opal_AccelerationStructurePostbuildInfo, acceleration_structure_size);
+	size_t compacted_size_offset = offsetof(Opal_AccelerationStructurePostbuildInfo, compacted_buffer_size);
+	size_t serialization_size_offset = offsetof(Opal_AccelerationStructurePostbuildInfo, serialization_buffer_size);
+
+	D3D12_GPU_VIRTUAL_ADDRESS base_address = dst_buffer_ptr->address + dst_buffer.offset;
+	D3D12_GPU_VIRTUAL_ADDRESS current_address = base_address;
+
+	for (uint32_t i = 0; i < num_src_acceleration_structures; ++i)
+	{
+		const DirectX12_AccelerationStructure *src_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src_acceleration_structures[i]);
+		assert(src_acceleration_structure_ptr);
+	
+		const DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_acceleration_structure_ptr->buffer_view.buffer);
+		assert(src_buffer_ptr);
+
+		D3D12_GPU_VIRTUAL_ADDRESS src_address = src_buffer_ptr->address + src_acceleration_structure_ptr->buffer_view.offset;
+
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC desc = {0};
+		desc.DestBuffer = current_address + size_offset;
+		desc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE;
+	
+		ID3D12GraphicsCommandList4_EmitRaytracingAccelerationStructurePostbuildInfo(command_buffer_ptr->list, &desc, 1, &src_address);
+	
+		desc.DestBuffer = current_address + serialization_size_offset;
+		desc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_SERIALIZATION;
+	
+		ID3D12GraphicsCommandList4_EmitRaytracingAccelerationStructurePostbuildInfo(command_buffer_ptr->list, &desc, 1, &src_address);
+
+		if (src_acceleration_structure_ptr->allow_compaction)
+		{
+			desc.DestBuffer = current_address + compacted_size_offset;
+			desc.InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE;
+
+			ID3D12GraphicsCommandList4_EmitRaytracingAccelerationStructurePostbuildInfo(command_buffer_ptr->list, &desc, 1, &src_address);
+		}
+
+		current_address += stride;
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
@@ -3972,6 +4486,7 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	opal_poolInitialize(&device_ptr->textures, sizeof(DirectX12_Texture), 32);
 	opal_poolInitialize(&device_ptr->texture_views, sizeof(DirectX12_TextureView), 32);
 	opal_poolInitialize(&device_ptr->samplers, sizeof(DirectX12_Sampler), 32);
+	opal_poolInitialize(&device_ptr->acceleration_structures, sizeof(DirectX12_AccelerationStructure), 32);
 	opal_poolInitialize(&device_ptr->command_allocators, sizeof(DirectX12_CommandAllocator), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(DirectX12_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(DirectX12_Shader), 32);
