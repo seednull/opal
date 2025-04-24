@@ -3308,6 +3308,8 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 
 	D3D12_RENDER_PASS_RENDER_TARGET_DESC color_render_targets[8] = {0};
 	D3D12_RENDER_PASS_RENDER_TARGET_DESC *color_ptrs = NULL;
+	UINT num_resolve_parameters = 0;
+	memset(command_buffer_ptr->resolve_parameters, 0, sizeof(D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS) * 9);
 
 	if (num_color_attachments > 0)
 	{
@@ -3341,11 +3343,14 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 
 			if (resolve_texture_view_ptr)
 			{
+				assert(num_resolve_parameters < 8);
+				D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS *resolve_parameters = &command_buffer_ptr->resolve_parameters[num_resolve_parameters++];
+
 				attachment->EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
 				attachment->EndingAccess.Resolve.pSrcResource = texture_view_ptr->texture;
 				attachment->EndingAccess.Resolve.pDstResource = resolve_texture_view_ptr->texture;
-				attachment->EndingAccess.Resolve.SubresourceCount = 0;
-				attachment->EndingAccess.Resolve.pSubresourceParameters = NULL;
+				attachment->EndingAccess.Resolve.SubresourceCount = 1;
+				attachment->EndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
 				attachment->EndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
 				attachment->EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
 				attachment->EndingAccess.Resolve.PreserveResolveSource = (opal_attachment->store_op == OPAL_STORE_OP_STORE);
@@ -3384,11 +3389,14 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 
 		if (resolve_texture_view_ptr)
 		{
+			assert(num_resolve_parameters < 9);
+			D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS *resolve_parameters = &command_buffer_ptr->resolve_parameters[num_resolve_parameters++];
+
 			depth_stencil_target.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
 			depth_stencil_target.DepthEndingAccess.Resolve.pSrcResource = texture_view_ptr->texture;
 			depth_stencil_target.DepthEndingAccess.Resolve.pDstResource = resolve_texture_view_ptr->texture;
-			depth_stencil_target.DepthEndingAccess.Resolve.SubresourceCount = 0;
-			depth_stencil_target.DepthEndingAccess.Resolve.pSubresourceParameters = NULL;
+			depth_stencil_target.DepthEndingAccess.Resolve.SubresourceCount = 1;
+			depth_stencil_target.DepthEndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
 			depth_stencil_target.DepthEndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
 			depth_stencil_target.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
 			depth_stencil_target.DepthEndingAccess.Resolve.PreserveResolveSource = (depth_stencil_attachment->store_op == OPAL_STORE_OP_STORE);
@@ -3396,8 +3404,8 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 			depth_stencil_target.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
 			depth_stencil_target.StencilEndingAccess.Resolve.pSrcResource = texture_view_ptr->texture;
 			depth_stencil_target.StencilEndingAccess.Resolve.pDstResource = resolve_texture_view_ptr->texture;
-			depth_stencil_target.StencilEndingAccess.Resolve.SubresourceCount = 0;
-			depth_stencil_target.StencilEndingAccess.Resolve.pSubresourceParameters = NULL;
+			depth_stencil_target.StencilEndingAccess.Resolve.SubresourceCount = 1;
+			depth_stencil_target.StencilEndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
 			depth_stencil_target.StencilEndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
 			depth_stencil_target.StencilEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
 			depth_stencil_target.StencilEndingAccess.Resolve.PreserveResolveSource = (depth_stencil_attachment->store_op == OPAL_STORE_OP_STORE);

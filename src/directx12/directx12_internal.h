@@ -201,6 +201,7 @@ typedef struct DirectX12_CommandAllocator_t
 typedef struct DirectX12_CommandBuffer_t
 {
 	ID3D12GraphicsCommandList4 *list;
+	D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_parameters[9];
 	Opal_CommandAllocator allocator;
 	uint32_t recording;
 	DirectX12_PassType pass;
