@@ -650,18 +650,22 @@ static Opal_Result webgpu_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 static Opal_Result webgpu_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_entries > 0);
-	assert(entries);
+	assert(num_entries == 0 || entries);
 	assert(descriptor_set_layout);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
 
-	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(WGPUBindGroupLayoutEntry) * num_entries);
+	WGPUBindGroupLayoutEntry *webgpu_bindings = NULL;
 
-	WGPUBindGroupLayoutEntry *webgpu_bindings = (WGPUBindGroupLayoutEntry *)device_ptr->bump.data;
-	memset(webgpu_bindings, 0, sizeof(WGPUBindGroupLayoutEntry) * num_entries);
+	if (num_entries > 0)
+	{
+		opal_bumpReset(&device_ptr->bump);
+		opal_bumpAlloc(&device_ptr->bump, sizeof(WGPUBindGroupLayoutEntry) * num_entries);
+
+		webgpu_bindings = (WGPUBindGroupLayoutEntry *)device_ptr->bump.data;
+		memset(webgpu_bindings, 0, sizeof(WGPUBindGroupLayoutEntry) * num_entries);
+	}
 
 	uint32_t num_resource_descriptors = 0;
 	uint32_t num_sampler_descriptors = 0;
@@ -756,7 +760,10 @@ static Opal_Result webgpu_deviceCreateDescriptorSetLayout(Opal_Device this, uint
 	if (webgpu_layout == NULL)
 		return OPAL_WEBGPU_ERROR;
 
-	WebGPU_DescriptorSetLayoutBinding *layout_bindings = (WebGPU_DescriptorSetLayoutBinding *)malloc(sizeof(WebGPU_DescriptorSetLayoutBinding) * num_entries);
+	WebGPU_DescriptorSetLayoutBinding *layout_bindings = NULL;
+
+	if (num_entries > 0)
+		layout_bindings = (WebGPU_DescriptorSetLayoutBinding *)malloc(sizeof(WebGPU_DescriptorSetLayoutBinding) * num_entries);
 
 	WebGPU_DescriptorSetLayout result = {0};
 	result.layout = webgpu_layout;

@@ -982,8 +982,7 @@ static Opal_Result directx12_deviceCreateDescriptorHeap(Opal_Device this, const 
 static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_entries > 0);
-	assert(entries);
+	assert(num_entries == 0 || entries);
 	assert(descriptor_set_layout);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
@@ -1049,9 +1048,14 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 
 	uint32_t inline_descriptor_offset = table_sampler_descriptor_offset + result.num_table_sampler_descriptors;
 
-	result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_entries * sizeof(DirectX12_DescriptorInfo));
+	result.descriptors = NULL;
+	DirectX12_DescriptorInfo *inline_descriptors = NULL;
 
-	DirectX12_DescriptorInfo *inline_descriptors = result.descriptors + inline_descriptor_offset;
+	if (num_entries > 0)
+	{
+		result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_entries * sizeof(DirectX12_DescriptorInfo));
+		inline_descriptors = result.descriptors + inline_descriptor_offset;
+	}
 
 	for (uint32_t i = 0; i < num_entries; ++i)
 	{
@@ -1171,7 +1175,6 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 		{
 			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
 			assert(descriptor_set_layout_ptr);
-			assert(descriptor_set_layout_ptr->descriptors);
 
 			uint32_t num_set_resource_descriptors = 0;
 			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
@@ -1218,7 +1221,6 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 		{
 			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
 			assert(descriptor_set_layout_ptr);
-			assert(descriptor_set_layout_ptr->descriptors);
 
 			uint32_t num_set_resource_descriptors = 0;
 			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
@@ -1228,6 +1230,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 			if (num_set_resource_descriptors == 0)
 				continue;
 
+			assert(descriptor_set_layout_ptr->descriptors);
 			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors;
 
 			uint32_t num_ranges = 0;
@@ -1290,7 +1293,6 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 		{
 			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
 			assert(descriptor_set_layout_ptr);
-			assert(descriptor_set_layout_ptr->descriptors);
 
 			uint32_t num_set_sampler_descriptors = 0;
 			num_set_sampler_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
@@ -1303,6 +1305,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 			offset += descriptor_set_layout_ptr->num_table_srv_descriptors;
 			offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
 
+			assert(descriptor_set_layout_ptr->descriptors);
 			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors + offset;
 
 			uint32_t num_ranges = 0;
@@ -1335,7 +1338,6 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 		{
 			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
 			assert(descriptor_set_layout_ptr);
-			assert(descriptor_set_layout_ptr->descriptors);
 
 			uint32_t num_set_inline_descriptors = descriptor_set_layout_ptr->num_inline_descriptors;
 
@@ -1348,6 +1350,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 			offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
 			offset += descriptor_set_layout_ptr->num_table_sampler_descriptors;
 
+			assert(descriptor_set_layout_ptr->descriptors);
 			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors + offset;
 
 			for (uint32_t j = 0; j < num_set_inline_descriptors; ++j)

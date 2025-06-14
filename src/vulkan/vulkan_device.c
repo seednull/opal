@@ -1227,9 +1227,8 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_entries > 0);
+	assert(num_entries == 0 || descriptor_set_layout);
 	assert(entries);
-	assert(descriptor_set_layout);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
@@ -1273,8 +1272,12 @@ static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, uint
 	uint32_t static_entry_index = 0;
 	uint32_t dynamic_entry_index = 0;
 
-	VkDescriptorSetLayoutBinding *vulkan_entries = (VkDescriptorSetLayoutBinding *)malloc(sizeof(VkDescriptorSetLayoutBinding) * num_entries);
-	memset(vulkan_entries, 0, sizeof(VkDescriptorSetLayoutBinding) * num_entries);
+	VkDescriptorSetLayoutBinding *vulkan_entries = NULL;
+	if (num_entries > 0)
+	{
+		vulkan_entries = (VkDescriptorSetLayoutBinding *)malloc(sizeof(VkDescriptorSetLayoutBinding) * num_entries);
+		memset(vulkan_entries, 0, sizeof(VkDescriptorSetLayoutBinding) * num_entries);
+	}
 
 	for (uint32_t i = 0; i < num_entries; ++i)
 	{
@@ -1319,17 +1322,30 @@ static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, uint
 		return OPAL_VULKAN_ERROR;
 	}
 
-	VkDeviceSize *vulkan_offsets = (VkDeviceSize *)malloc(sizeof(VkDeviceSize) * num_entries);
+	VkDeviceSize *vulkan_offsets = NULL;
+	if (num_entries > 0)
+	{
+		assert(vulkan_entries);
+		vulkan_offsets = (VkDeviceSize *)malloc(sizeof(VkDeviceSize) * num_entries);
+	}
+
 	for (uint32_t i = 0; i < num_entries; ++i)
 		device_ptr->vk.vkGetDescriptorSetLayoutBindingOffsetEXT(vulkan_device, vulkan_set_layout, vulkan_entries[i].binding, &vulkan_offsets[i]);
 
-	VkDeviceSize alignment = device_ptr->descriptor_buffer_properties.descriptorBufferOffsetAlignment;
 	VkDeviceSize size = 0;
-	device_ptr->vk.vkGetDescriptorSetLayoutSizeEXT(vulkan_device, vulkan_set_layout, &size);
+	uint32_t num_blocks = 0;
+
+	if (num_entries > 0)
+	{
+		device_ptr->vk.vkGetDescriptorSetLayoutSizeEXT(vulkan_device, vulkan_set_layout, &size);
+
+		VkDeviceSize alignment = device_ptr->descriptor_buffer_properties.descriptorBufferOffsetAlignment;
+		num_blocks = (uint32_t)(alignUpul(size, alignment) / alignment);
+	}
 
 	Vulkan_DescriptorSetLayout result = {0};
 	result.layout = vulkan_set_layout;
-	result.num_blocks = (uint32_t)(alignUpul(size, alignment) / alignment);
+	result.num_blocks = num_blocks;
 	result.num_entries = num_entries;
 	result.entries = vulkan_entries;
 	result.offsets = vulkan_offsets;
@@ -1363,8 +1379,6 @@ static Opal_Result vulkan_deviceCreatePipelineLayout(Opal_Device this, uint32_t 
 		{
 			Vulkan_DescriptorSetLayout *descriptor_set_layout_ptr = (Vulkan_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
 			assert(descriptor_set_layout_ptr);
-			assert(descriptor_set_layout_ptr->entries);
-			assert(descriptor_set_layout_ptr->offsets);
 
 			set_layouts[i] = descriptor_set_layout_ptr->layout;
 			num_dynamic_descriptors += descriptor_set_layout_ptr->num_dynamic_descriptors;
