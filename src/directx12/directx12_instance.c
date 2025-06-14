@@ -278,7 +278,7 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 
 	// debug interface
 	ID3D12Debug1 *d3d12_debug1 = NULL;
-	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_DIRECTX12_DEBUG_LAYER)
+	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_DEBUG_LAYERS)
 	{
 		ID3D12Debug *d3d12_debug = NULL;
 		hr = opal_d3d12GetDebugInterface(&IID_ID3D12Debug, &d3d12_debug);

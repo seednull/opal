@@ -323,7 +323,7 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 	info.enabledExtensionCount = num_extensions;
 	info.ppEnabledExtensionNames = extensions;
 
-	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_VULKAN_VALIDATION_LAYERS)
+	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_DEBUG_LAYERS)
 	{
 		info.enabledLayerCount = 1;
 		info.ppEnabledLayerNames = &validation_layer_name;
