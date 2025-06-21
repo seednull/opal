@@ -114,6 +114,7 @@ endif()
 if (OPAL_HAS_METAL)
 	file(GLOB METAL_SOURCES
 		${CMAKE_CURRENT_SOURCE_DIR}/metal/*.m
+		${CMAKE_CURRENT_SOURCE_DIR}/metal/*.c
 	)
 
 	file (GLOB METAL_HEADERS

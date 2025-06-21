@@ -2,6 +2,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define TARGET_API OPAL_API_DIRECTX12
 #include <windows.h>
+#elif OPAL_PLATFORM_MACOS
+#define TARGET_API OPAL_API_METAL
 #elif OPAL_PLATFORM_WEB
 #define TARGET_API OPAL_API_WEBGPU
 #include <emscripten.h>
