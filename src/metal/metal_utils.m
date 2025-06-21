@@ -80,8 +80,10 @@ uint32_t metal_getAppleDeviceID(MTLGPUFamily family)
 	return (os_major << 24) + (os_minor << 16) + (uint16_t)family;
 }
 
-MTLGPUFamily metal_getAppleDeviceFamily(id<MTLDevice> device)
+MTLGPUFamily metal_getAppleDeviceFamily(id<MTLDevice> metal_device)
 {
+	assert(metal_device);
+
 	static MTLGPUFamily supported_families[] =
 	{
 		MTLGPUFamilyMac2,
@@ -101,7 +103,7 @@ MTLGPUFamily metal_getAppleDeviceFamily(id<MTLDevice> device)
 	MTLGPUFamily family = 0;
 
 	for (uint32_t i = 0; i < num_families; ++i)
-		if ([device supportsFamily: supported_families[i]])
+		if ([metal_device supportsFamily: supported_families[i]])
 			family = supported_families[i];
 
 	return family;
@@ -109,17 +111,17 @@ MTLGPUFamily metal_getAppleDeviceFamily(id<MTLDevice> device)
 
 /*
  */
-Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
+Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info)
 {
-	assert(device);
+	assert(metal_device);
 	assert(info);
 
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
-	bool is_common2_or_greater = [device supportsFamily: MTLGPUFamilyCommon2];
-	bool is_metal3 = [device supportsFamily: MTLGPUFamilyMetal3];
+	bool is_common2_or_greater = [metal_device supportsFamily: MTLGPUFamilyCommon2];
+	bool is_metal3 = [metal_device supportsFamily: MTLGPUFamilyMetal3];
 
-	MTLGPUFamily family = metal_getAppleDeviceFamily(device);
+	MTLGPUFamily family = metal_getAppleDeviceFamily(metal_device);
 
 	bool is_apple1_or_greater = family >= MTLGPUFamilyApple1;
 	bool is_apple2_or_greater = family >= MTLGPUFamilyApple2;
@@ -127,7 +129,7 @@ Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
 	bool is_apple7_or_greater = family >= MTLGPUFamilyApple7;
 	bool is_mac2 = family == MTLGPUFamilyMac2;
 
-	strncpy(info->name, device.name.UTF8String, 256);
+	strncpy(info->name, metal_device.name.UTF8String, 256);
 
 	info->api = OPAL_API_METAL;
 	info->driver_version = 0; // FIXME: fill with hardcoded Opal version
@@ -139,26 +141,52 @@ Opal_Result metal_fillDeviceInfo(id<MTLDevice> device, Opal_DeviceInfo *info)
 	}
 	else
 	{
-		if (!metal_tryFillByRegistryID(device.registryID, info))
+		if (!metal_tryFillByRegistryID(metal_device.registryID, info))
 			metal_tryFillBySearchingAll(info);
 	}
 
 	info->device_type = OPAL_DEVICE_TYPE_DISCRETE;
 
-	if (device.isLowPower)
+	if (metal_device.isLowPower)
 		info->device_type = OPAL_DEVICE_TYPE_INTEGRATED;
 
-	info->tessellation_shader = is_apple3_or_greater || is_mac2 || is_common2_or_greater;
-	info->compute_pipeline = 1;
-	info->meshlet_pipeline = is_apple7_or_greater || is_mac2 || is_metal3;
-	info->texture_compression_etc2 = is_apple2_or_greater && !is_mac2;
-	info->texture_compression_astc = is_apple2_or_greater && !is_mac2;
-	info->texture_compression_bc = device.supportsBCTextureCompression;
-	info->raytrace_pipeline = device.supportsRaytracing;
-	info->max_buffer_alignment = 16;
-	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
-	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
-	info->queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->features.tessellation_shader = is_apple3_or_greater || is_mac2 || is_common2_or_greater;
+	info->features.compute_pipeline = 1;
+	info->features.meshlet_pipeline = is_apple7_or_greater || is_mac2 || is_metal3;
+	info->features.raytrace_pipeline = metal_device.supportsRaytracing;
+	info->features.texture_compression_etc2 = is_apple2_or_greater && !is_mac2;
+	info->features.texture_compression_astc = is_apple2_or_greater && !is_mac2;
+	info->features.texture_compression_bc = metal_device.supportsBCTextureCompression;
+
+	// TODO: fill limits properly
+	info->limits.max_texture_dimension_1d = 0;
+	info->limits.max_texture_dimension_1d = 0;
+	info->limits.max_texture_dimension_2d = 0;
+	info->limits.max_texture_dimension_3d = 0;
+	info->limits.max_texture_array_layers = 0;
+	info->limits.max_buffer_size = 0;
+	info->limits.min_uniform_buffer_offset_alignment = 0;
+	info->limits.min_storage_buffer_offset_alignment = 0;
+	info->limits.max_descriptor_sets = 0;
+	info->limits.max_uniform_buffer_binding_size = 0;
+	info->limits.max_storage_buffer_binding_size = 0;
+	info->limits.max_vertex_buffers = 0;
+	info->limits.max_vertex_attributes = 0;
+	info->limits.max_vertex_buffer_stride = 0;
+	info->limits.max_color_attachments = 0;
+	info->limits.max_compute_shared_memory_size = 0;
+	info->limits.max_compute_workgroup_count_x = 0;
+	info->limits.max_compute_workgroup_count_y = 0;
+	info->limits.max_compute_workgroup_count_z = 0;
+	info->limits.max_compute_workgroup_invocations = 0;
+	info->limits.max_compute_workgroup_local_size_x = 0;
+	info->limits.max_compute_workgroup_local_size_y = 0;
+	info->limits.max_compute_workgroup_local_size_z = 0;
+	info->limits.max_raytrace_recursion_depth = 0;
+	info->limits.max_raytrace_hit_attribute_size = 0;
 
 	return OPAL_SUCCESS;
 }
