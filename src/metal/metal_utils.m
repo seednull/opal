@@ -5,6 +5,234 @@ static const uint32_t display_vga_class = 0x30000;
 
 /*
  */
+MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples samples)
+{
+	if (type == OPAL_TEXTURE_TYPE_2D && samples != OPAL_SAMPLES_1)
+		return MTLTextureType2DMultisampleArray;
+
+	static MTLTextureType metal_types[] =
+	{
+		MTLTextureType1D,
+		MTLTextureType2DArray, // for texture view compatibility
+		MTLTextureType3D,
+	};
+
+	return metal_types[type];
+}
+
+MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type)
+{
+	static MTLTextureType metal_types[] =
+	{
+		MTLTextureType1D,
+		MTLTextureType2D,
+		MTLTextureType2DArray,
+		MTLTextureTypeCube,
+		MTLTextureTypeCubeArray,
+		MTLTextureType3D,
+	};
+
+	return metal_types[type];
+}
+
+MTLPixelFormat metal_helperToPixelFormat(Opal_TextureFormat format)
+{
+	static MTLPixelFormat metal_formats[] =
+	{
+		MTLPixelFormatInvalid,
+
+		MTLPixelFormatR8Unorm,
+		MTLPixelFormatR8Snorm,
+		MTLPixelFormatR8Uint,
+		MTLPixelFormatR8Sint,
+
+		MTLPixelFormatRG8Unorm,
+		MTLPixelFormatRG8Snorm,
+		MTLPixelFormatRG8Uint,
+		MTLPixelFormatRG8Sint,
+
+		MTLPixelFormatRGBA8Unorm,
+		MTLPixelFormatRGBA8Snorm,
+		MTLPixelFormatRGBA8Uint,
+		MTLPixelFormatRGBA8Sint,
+
+		MTLPixelFormatR16Uint,
+		MTLPixelFormatR16Sint,
+		MTLPixelFormatR16Float,
+
+		MTLPixelFormatRG16Uint,
+		MTLPixelFormatRG16Sint,
+		MTLPixelFormatRG16Float,
+
+		MTLPixelFormatRGBA16Uint,
+		MTLPixelFormatRGBA16Sint,
+		MTLPixelFormatRGBA16Float,
+
+		MTLPixelFormatR32Uint,
+		MTLPixelFormatR32Sint,
+		MTLPixelFormatR32Float,
+
+		MTLPixelFormatRG32Uint,
+		MTLPixelFormatRG32Sint,
+		MTLPixelFormatRG32Float,
+
+		MTLPixelFormatRGBA32Uint,
+		MTLPixelFormatRGBA32Sint,
+		MTLPixelFormatRGBA32Float,
+
+		MTLPixelFormatBGRA8Unorm,
+		MTLPixelFormatBGRA8Unorm_sRGB,
+		MTLPixelFormatRGBA8Unorm_sRGB,
+
+		MTLPixelFormatRG11B10Float,
+		MTLPixelFormatRGB9E5Float,
+
+		MTLPixelFormatBC1_RGBA,
+		MTLPixelFormatBC1_RGBA_sRGB,
+		MTLPixelFormatBC1_RGBA,
+		MTLPixelFormatBC1_RGBA_sRGB,
+		MTLPixelFormatBC2_RGBA,
+		MTLPixelFormatBC2_RGBA_sRGB,
+		MTLPixelFormatBC3_RGBA,
+		MTLPixelFormatBC3_RGBA_sRGB,
+		MTLPixelFormatBC4_RUnorm,
+		MTLPixelFormatBC4_RSnorm,
+		MTLPixelFormatBC5_RGUnorm,
+		MTLPixelFormatBC5_RGSnorm,
+		MTLPixelFormatBC6H_RGBUfloat,
+		MTLPixelFormatBC6H_RGBFloat,
+		MTLPixelFormatBC7_RGBAUnorm,
+		MTLPixelFormatBC7_RGBAUnorm_sRGB,
+
+		MTLPixelFormatETC2_RGB8,
+		MTLPixelFormatETC2_RGB8_sRGB,
+		MTLPixelFormatETC2_RGB8A1,
+		MTLPixelFormatETC2_RGB8A1_sRGB,
+		MTLPixelFormatEAC_RGBA8,
+		MTLPixelFormatEAC_RGBA8_sRGB,
+		MTLPixelFormatEAC_R11Unorm,
+		MTLPixelFormatEAC_R11Snorm,
+		MTLPixelFormatEAC_RG11Unorm,
+		MTLPixelFormatEAC_RG11Snorm,
+
+		MTLPixelFormatASTC_4x4_LDR,
+		MTLPixelFormatASTC_4x4_sRGB,
+		MTLPixelFormatASTC_5x4_LDR,
+		MTLPixelFormatASTC_5x4_sRGB,
+		MTLPixelFormatASTC_5x5_LDR,
+		MTLPixelFormatASTC_5x5_sRGB,
+		MTLPixelFormatASTC_6x5_LDR,
+		MTLPixelFormatASTC_6x5_sRGB,
+		MTLPixelFormatASTC_6x6_LDR,
+		MTLPixelFormatASTC_6x6_sRGB,
+		MTLPixelFormatASTC_8x5_LDR,
+		MTLPixelFormatASTC_8x5_sRGB,
+		MTLPixelFormatASTC_8x6_LDR,
+		MTLPixelFormatASTC_8x6_sRGB,
+		MTLPixelFormatASTC_8x8_LDR,
+		MTLPixelFormatASTC_8x8_sRGB,
+		MTLPixelFormatASTC_10x5_LDR,
+		MTLPixelFormatASTC_10x5_sRGB,
+		MTLPixelFormatASTC_10x6_LDR,
+		MTLPixelFormatASTC_10x6_sRGB,
+		MTLPixelFormatASTC_10x8_LDR,
+		MTLPixelFormatASTC_10x8_sRGB,
+		MTLPixelFormatASTC_10x10_LDR,
+		MTLPixelFormatASTC_10x10_sRGB,
+		MTLPixelFormatASTC_12x10_LDR,
+		MTLPixelFormatASTC_12x10_sRGB,
+		MTLPixelFormatASTC_12x12_LDR,
+		MTLPixelFormatASTC_12x12_sRGB,
+
+		MTLPixelFormatDepth16Unorm,
+		MTLPixelFormatDepth32Float,
+		MTLPixelFormatInvalid,
+		MTLPixelFormatDepth24Unorm_Stencil8,
+		MTLPixelFormatDepth32Float_Stencil8,
+	};
+
+	return metal_formats[format];
+}
+
+NSUInteger metal_helperToSampleCount(Opal_Samples samples)
+{
+	static NSUInteger metal_types[] =
+	{
+		1, 2, 4, 8, 16, 32, 64,
+	};
+
+	return metal_types[samples];
+}
+
+MTLTextureUsage metal_helperToTextureUsage(Opal_TextureUsageFlags flags)
+{
+	MTLTextureUsage result = 0;
+	
+	if (flags & OPAL_TEXTURE_USAGE_SHADER_SAMPLED)
+		result |= MTLTextureUsageShaderRead;
+
+	if (flags & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
+		result |= MTLTextureUsageShaderWrite;
+
+	if (flags & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT)
+		result |= MTLTextureUsageRenderTarget;
+
+	return result;
+}
+
+MTLSamplerAddressMode metal_helperToSamplerAddressMode(Opal_SamplerAddressMode mode)
+{
+	static MTLSamplerAddressMode metal_modes[] =
+	{
+		MTLSamplerAddressModeRepeat,
+		MTLSamplerAddressModeMirrorRepeat,
+		MTLSamplerAddressModeClampToEdge,
+	};
+
+	return metal_modes[mode];
+}
+
+MTLSamplerMinMagFilter metal_helperToSamplerMinMagFilter(Opal_SamplerFilterMode mode)
+{
+	static MTLSamplerMinMagFilter metal_filters[] =
+	{
+		MTLSamplerMinMagFilterNearest,
+		MTLSamplerMinMagFilterLinear,
+	};
+
+	return metal_filters[mode];
+}
+
+MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode)
+{
+	static MTLSamplerMipFilter metal_filters[] =
+	{
+		MTLSamplerMipFilterNearest,
+		MTLSamplerMipFilterLinear,
+	};
+
+	return metal_filters[mode];
+}
+
+MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op)
+{
+	static MTLCompareFunction metal_functions[] =
+	{
+		MTLCompareFunctionNever,
+		MTLCompareFunctionLess,
+		MTLCompareFunctionEqual,
+		MTLCompareFunctionLessEqual,
+		MTLCompareFunctionGreater,
+		MTLCompareFunctionNotEqual,
+		MTLCompareFunctionGreaterEqual,
+		MTLCompareFunctionAlways,
+	};
+
+	return metal_functions[op];
+}
+
+/*
+ */
 static uint32_t metal_getEntryProperty(io_registry_entry_t entry, CFStringRef name)
 {
 	CFTypeRef property = IORegistryEntrySearchCFProperty(entry, kIOServicePlane, name, kCFAllocatorDefault, kIORegistryIterateRecursively | kIORegistryIterateParents);

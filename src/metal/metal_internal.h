@@ -70,6 +70,9 @@ typedef struct Metal_Device_t
 
 	Opal_Bump bump;
 	Opal_Pool buffers;
+	Opal_Pool textures;
+	Opal_Pool texture_views;
+	Opal_Pool samplers;
 
 	Metal_Allocator allocator;
 } Metal_Device;
@@ -80,7 +83,37 @@ typedef struct Metal_Buffer_t
 	Metal_Allocation allocation;
 } Metal_Buffer;
 
+typedef struct Metal_Texture_t
+{
+	id<MTLTexture> texture;
+	MTLPixelFormat format;
+	Metal_Allocation allocation;
+} Metal_Texture;
+
+typedef struct Metal_TextureView_t
+{
+	id<MTLTexture> texture_view;
+	Opal_Texture texture;
+} Metal_TextureView;
+
+typedef struct Metal_Sampler_t
+{
+	id<MTLSamplerState> sampler;
+} Metal_Sampler;
+
 Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info);
+
+MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples samples);
+MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type);
+MTLPixelFormat metal_helperToPixelFormat(Opal_TextureFormat format);
+NSUInteger metal_helperToSampleCount(Opal_Samples samples);
+MTLTextureUsage metal_helperToTextureUsage(Opal_TextureUsageFlags flags);
+
+MTLSamplerAddressMode metal_helperToSamplerAddressMode(Opal_SamplerAddressMode mode);
+MTLSamplerMinMagFilter metal_helperToSamplerMinMagFilter(Opal_SamplerFilterMode mode);
+MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode);
+
+MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op);
 
 Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *instance_ptr, id<MTLDevice> metal_device);
 Opal_Result metal_deviceAllocateMemory(Metal_Device *device_ptr, const Metal_AllocationDesc *desc, Metal_Allocation *allocation);
