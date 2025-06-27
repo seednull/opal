@@ -125,10 +125,10 @@ static Opal_Result metal_allocatorBlockAlloc(Metal_Device *device, Opal_Allocati
 
 	MTLHeapDescriptor *info = [[MTLHeapDescriptor alloc] init];
 
-	[info setType: MTLHeapTypePlacement];
-	[info setStorageMode: metal_storage_modes[memory_type]];
-	[info setCpuCacheMode: metal_cpu_cache_modes[memory_type]];
-	[info setSize: block.size];
+	info.type = MTLHeapTypePlacement;
+	info.storageMode = metal_storage_modes[memory_type];
+	info.cpuCacheMode = metal_cpu_cache_modes[memory_type];
+	info.size = block.size;
 
 	block.memory = [device->device newHeapWithDescriptor: info];
 	[info release];
