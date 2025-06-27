@@ -1,13 +1,14 @@
 #ifdef OPAL_PLATFORM_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#define TARGET_API OPAL_API_DIRECTX12
-#include <windows.h>
+#	define WIN32_LEAN_AND_MEAN
+#	define TARGET_API OPAL_API_DIRECTX12
+#	include <windows.h>
 #elif OPAL_PLATFORM_MACOS
-#define TARGET_API OPAL_API_METAL
+#	define TARGET_API OPAL_API_METAL
+#	include <Cocoa/Cocoa.h>
 #elif OPAL_PLATFORM_WEB
-#define TARGET_API OPAL_API_WEBGPU
-#include <emscripten.h>
-#include <emscripten/html5.h>
+#	define TARGET_API OPAL_API_WEBGPU
+#	include <emscripten.h>
+#	include <emscripten/html5.h>
 #endif
 
 #include <opal.h>
@@ -709,8 +710,22 @@ int main()
 
 #else
 
-int main()
+int main(int argc, const char *argv[])
 {
+	[NSApplication sharedApplication];
+
+	NSWindow *window = [
+		[NSWindow alloc]
+		initWithContentRect: NSMakeRect(0, 0, 480, 320)
+		styleMask: (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable)
+		backing: NSBackingStoreBuffered
+		defer: NO
+	];
+
+	[window setTitle:@"YourAppName"];
+	[window makeKeyAndOrderFront:nil];
+
+	[NSApp run];
 	return 0;
 }
 
