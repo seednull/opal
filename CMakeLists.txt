@@ -38,6 +38,7 @@ if (APPLE)
 	set(OPAL_PLATFORM macos)
 	set(OPAL_ABI x64) # FIXME: Is it always x64?
 	enable_language(OBJC)
+	enable_language(OBJCXX)
 endif()
 
 if (EMSCRIPTEN)

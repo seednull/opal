@@ -38,6 +38,35 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
             }
+        },
+        {
+            "name": "osx-clang-common",
+            "hidden": true,
+            "generator": "Unix Makefiles",
+            "binaryDir": "${workspaceFolder}/build",
+            "installDir": "${workspaceFolder}/build",
+            "cacheVariables": {
+                "C": "/usr/bin/clang",
+                "CXX": "/usr/bin/clang++"
+            }
+        },
+        {
+            "name": "osx-clang-x64-debug",
+            "inherits": "osx-clang-common",
+            "hidden": false,
+            "displayName": "OSX Debug | x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "osx-clang-x64-release",
+            "inherits": "osx-clang-common",
+            "hidden": false,
+            "displayName": "OSX Release | x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
@@ -65,6 +94,18 @@
             "name": "build-emscripten-release",
             "hidden": false,
             "configurePreset": "emscripten-ninja",
+            "targets": ["all", "install"]
+        },
+        {
+            "name": "build-osx-debug",
+            "hidden": false,
+            "configurePreset": "osx-clang-x64-debug",
+            "targets": ["all", "install"]
+        },
+        {
+            "name": "build-osx-release",
+            "hidden": false,
+            "configurePreset": "osx-clang-x64-release",
             "targets": ["all", "install"]
         }
     ]

@@ -27,6 +27,10 @@ file(GLOB HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
+if (APPLE)
+	set_source_files_properties(${SOURCES} PROPERTIES LANGUAGE OBJCXX)
+endif()
+
 # ==================================================================================================
 # Target
 # ==================================================================================================
@@ -55,10 +59,19 @@ if (EMSCRIPTEN)
 	")
 endif()
 
+if (APPLE)
+	# TODO: for some reason CMake is unable to properly set rpath, so we set it manually
+	set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "-Wl,-rpath,@executable_path,-rpath,@loader_path,-rpath,@executable_path/../lib")
+endif()
+
 # ==================================================================================================
 # Libraries
 # ==================================================================================================
 target_link_libraries(${TARGET} PUBLIC opal)
+
+if (APPLE)
+	target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
+endif()
 
 # ==================================================================================================
 # Custom commands
