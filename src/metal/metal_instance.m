@@ -26,9 +26,9 @@ static Opal_Result metal_instanceEnumerateDevices(Opal_Instance this, uint32_t *
 		}
 	}
 
-	[metal_devices release];
-
 	*device_count = metal_devices.count;
+
+	[metal_devices release];
 	return OPAL_SUCCESS;
 }
 
@@ -73,6 +73,7 @@ static Opal_Result metal_instanceCreateDefaultDevice(Opal_Instance this, Opal_De
 		}
 	}
 
+	best_metal_device = [best_metal_device retain];
 	[metal_devices release];
 
 	Metal_Instance *instance_ptr = (Metal_Instance *)this;
@@ -105,7 +106,7 @@ static Opal_Result metal_instanceCreateDevice(Opal_Instance this, uint32_t index
 		return OPAL_INVALID_DEVICE_INDEX;
 	}
 
-	id<MTLDevice> metal_device = metal_devices[index];
+	id<MTLDevice> metal_device = [metal_devices[index] retain];
 	[metal_devices release];
 
 	Metal_Instance *instance_ptr = (Metal_Instance *)this;
