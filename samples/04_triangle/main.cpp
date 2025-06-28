@@ -5,6 +5,7 @@
 #elif OPAL_PLATFORM_MACOS
 #	define TARGET_API OPAL_API_METAL
 #	include <Cocoa/Cocoa.h>
+#	include <QuartzCore/CAMetalLayer.h>
 #elif OPAL_PLATFORM_WEB
 #	define TARGET_API OPAL_API_WEBGPU
 #	include <emscripten.h>
@@ -716,22 +717,104 @@ int main()
 
 #else
 
+@interface AppDelegate : NSObject <NSApplicationDelegate>
+@end
+
+@implementation AppDelegate
+- (BOOL) applicationShouldTerminateAfterLastWindowClosed:(NSApplication *) sender
+{
+	return YES;
+}
+@end
+
+@interface WindowDelegate : NSObject <NSWindowDelegate>
+@property Application *app;
+@end
+
+@implementation WindowDelegate
+- (NSSize) windowWillResize:(NSWindow *) sender toSize:(NSSize) size
+{
+	assert(self.app);
+
+	return size;
+}
+
+- (void) windowDidResize:(NSNotification *) notification
+{
+	assert(self.app);
+	// app->resize(...);
+}
+
+- (void) windowWillClose:(NSWindow *) sender
+{
+	assert(self.app);
+	self.app->shutdown();
+}
+@end
+
+@interface WindowView : NSView
+@property Application *app;
+@end
+
+@implementation WindowView
+- (instancetype)initWithFrame:(NSRect) rect
+{
+	self = [super initWithFrame: rect];
+
+	self.wantsLayer = YES;
+	self.layer = [CAMetalLayer layer];
+
+	return self;
+}
+
+- (void) drawRect:(NSRect) rect
+{
+}
+@end
+
 int main(int argc, const char *argv[])
 {
+	NSRect screen = [[NSScreen mainScreen] frame];
+
+	int w = 800;
+	int h = 600;
+	int x = screen.size.width / 2 - w / 2;
+	int y = screen.size.height / 2 - h / 2;
+
+	NSRect view = NSMakeRect(x, y, w, h);
+
+	Application app;
+
 	[NSApplication sharedApplication];
+	NSApp.delegate = [[AppDelegate alloc] init];
+	NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
+
+	[NSApp finishLaunching];
 
 	NSWindow *window = [
 		[NSWindow alloc]
-		initWithContentRect: NSMakeRect(0, 0, 480, 320)
+		initWithContentRect: view
 		styleMask: (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable)
 		backing: NSBackingStoreBuffered
 		defer: NO
 	];
 
-	[window setTitle:@"YourAppName"];
+	WindowDelegate *window_delegate = [[WindowDelegate alloc] init];
+	window_delegate.app = &app;
+
+	WindowView *window_view = [[WindowView alloc] initWithFrame: view];
+	window_view.app = &app;
+
+	window.delegate = window_delegate;
+	window.contentView = window_view;
+	window.acceptsMouseMovedEvents = YES;
+	window.title = @"Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
+
 	[window makeKeyAndOrderFront:nil];
 
+	app.init(window_view.layer, w, h);
 	[NSApp run];
+
 	return 0;
 }
 

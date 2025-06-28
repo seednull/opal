@@ -70,7 +70,7 @@ endif()
 target_link_libraries(${TARGET} PUBLIC opal)
 
 if (APPLE)
-	target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
+	target_link_libraries(${TARGET} PRIVATE "-framework Cocoa -framework QuartzCore")
 endif()
 
 # ==================================================================================================
