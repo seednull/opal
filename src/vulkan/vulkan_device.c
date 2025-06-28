@@ -3578,6 +3578,36 @@ static Opal_Result vulkan_deviceCmdEndRaytracePass(Opal_Device this, Opal_Comman
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result vulkan_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
 	assert(this);
@@ -4531,6 +4561,8 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdEndComputePass,
 	vulkan_deviceCmdBeginRaytracePass,
 	vulkan_deviceCmdEndRaytracePass,
+	vulkan_deviceCmdBeginCopyPass,
+	vulkan_deviceCmdEndCopyPass,
 	vulkan_deviceCmdSetPipeline,
 	vulkan_deviceCmdSetDescriptorHeap,
 	vulkan_deviceCmdSetDescriptorSet,

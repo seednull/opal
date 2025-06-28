@@ -3488,6 +3488,32 @@ static Opal_Result directx12_deviceCmdEndRaytracePass(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result directx12_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
 	assert(this);
@@ -4431,6 +4457,8 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdEndComputePass,
 	directx12_deviceCmdBeginRaytracePass,
 	directx12_deviceCmdEndRaytracePass,
+	directx12_deviceCmdBeginCopyPass,
+	directx12_deviceCmdEndCopyPass,
 	directx12_deviceCmdSetPipeline,
 	directx12_deviceCmdSetDescriptorHeap,
 	directx12_deviceCmdSetDescriptorSet,

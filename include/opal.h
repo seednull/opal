@@ -1378,6 +1378,8 @@ typedef Opal_Result (*PFN_opalCmdBeginComputePass)(Opal_Device device, Opal_Comm
 typedef Opal_Result (*PFN_opalCmdEndComputePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdBeginRaytracePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdEndRaytracePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalCmdBeginCopyPass)(Opal_Device device, Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalCmdEndCopyPass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdSetPipeline)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
 typedef Opal_Result (*PFN_opalCmdSetDescriptorHeap)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap);
 typedef Opal_Result (*PFN_opalCmdSetDescriptorSet)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
@@ -1488,6 +1490,8 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCmdEndComputePass cmdEndComputePass;
 	PFN_opalCmdBeginRaytracePass cmdBeginRaytracePass;
 	PFN_opalCmdEndRaytracePass cmdEndRaytracePass;
+	PFN_opalCmdBeginCopyPass cmdBeginCopyPass;
+	PFN_opalCmdEndCopyPass cmdEndCopyPass;
 	PFN_opalCmdSetPipeline cmdSetPipeline;
 	PFN_opalCmdSetDescriptorHeap cmdSetDescriptorHeap;
 	PFN_opalCmdSetDescriptorSet cmdSetDescriptorSet;
@@ -1601,6 +1605,8 @@ OPAL_APIENTRY Opal_Result opalCmdBeginComputePass(Opal_Device device, Opal_Comma
 OPAL_APIENTRY Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
 OPAL_APIENTRY Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap);
 OPAL_APIENTRY Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);

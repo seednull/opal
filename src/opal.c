@@ -958,6 +958,30 @@ Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->cmdEndRaytracePass(device, command_buffer);
 }
 
+Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdBeginCopyPass);
+
+	return ptr->vtbl->cmdBeginCopyPass(device, command_buffer);
+}
+
+Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdEndCopyPass);
+
+	return ptr->vtbl->cmdEndCopyPass(device, command_buffer);
+}
+
 Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
 	if (device == OPAL_NULL_HANDLE)

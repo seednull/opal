@@ -582,6 +582,22 @@ static Opal_Result null_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
 	OPAL_UNUSED(this);
@@ -928,6 +944,8 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdEndComputePass,
 	null_deviceCmdBeginRaytracePass,
 	null_deviceCmdEndRaytracePass,
+	null_deviceCmdBeginCopyPass,
+	null_deviceCmdEndCopyPass,
 	null_deviceCmdSetPipeline,
 	null_deviceCmdSetDescriptorHeap,
 	null_deviceCmdSetDescriptorSet,
