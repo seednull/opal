@@ -5,6 +5,7 @@ set(TARGET 01_enumerate_devices)
 # Variables
 # ==================================================================================================
 
+
 # ==================================================================================================
 # Sources
 # ==================================================================================================
@@ -47,9 +48,9 @@ target_link_libraries(${TARGET} PUBLIC opal)
 if (EMSCRIPTEN)
 	install(
 		FILES
-		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.js"
-		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.wasm"
-		"$<TARGET_FILE_DIR:${TARGET}>/${TARGET}.html"
+		"$<TARGET_FILE_DIR:${TARGET}>/$<TARGET_FILE_BASE_NAME:${TARGET}>.js"
+		"$<TARGET_FILE_DIR:${TARGET}>/$<TARGET_FILE_BASE_NAME:${TARGET}>.wasm"
+		"$<TARGET_FILE_DIR:${TARGET}>/$<TARGET_FILE_BASE_NAME:${TARGET}>.html"
 		DESTINATION bin
 	)
 else()
