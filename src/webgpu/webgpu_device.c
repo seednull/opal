@@ -2172,7 +2172,7 @@ static Opal_Result webgpu_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandB
 
 	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
-	assert(command_buffer_ptr->graphics_pass_encoder == NULL);
+	assert(command_buffer_ptr->render_pass_encoder == NULL);
 	assert(command_buffer_ptr->compute_pass_encoder == NULL);
 
 	OPAL_UNUSED(command_buffer_ptr);
@@ -2188,7 +2188,7 @@ static Opal_Result webgpu_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuf
 
 	WebGPU_CommandBuffer *command_buffer_ptr = (WebGPU_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
-	assert(command_buffer_ptr->graphics_pass_encoder == NULL);
+	assert(command_buffer_ptr->render_pass_encoder == NULL);
 	assert(command_buffer_ptr->compute_pass_encoder == NULL);
 
 	OPAL_UNUSED(command_buffer_ptr);
