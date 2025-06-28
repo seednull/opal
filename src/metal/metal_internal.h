@@ -1,6 +1,7 @@
 #pragma once
 
 #include "opal_internal.h"
+#include <QuartzCore/CAMetalLayer.h>
 #include <Metal/Metal.h>
 
 #include "common/bump.h"
@@ -55,27 +56,46 @@ typedef struct Metal_Allocation_t
 	Opal_NodeIndex heap_metadata;
 } Metal_Allocation;
 
+typedef struct Metal_DeviceEnginesInfo_t
+{
+	uint32_t queue_counts[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
+} Metal_DeviceEnginesInfo;
+
 typedef struct Metal_Instance_t
 {
 	Opal_InstanceTable *vtbl;
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
+
+	Opal_Pool surfaces;
 } Metal_Instance;
 
 typedef struct Metal_Device_t
 {
 	Opal_DeviceTable *vtbl;
+	Metal_Instance *instance;
 	id<MTLDevice> device;
 
+	Metal_DeviceEnginesInfo device_engines_info;
+	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
+	Opal_Pool queues;
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
+	Opal_Pool command_allocators;
+	Opal_Pool command_buffers;
+	Opal_Pool swapchains;
 
 	Metal_Allocator allocator;
 } Metal_Device;
+
+typedef struct Metal_Queue_t
+{
+	id<MTLCommandQueue> queue;
+} Metal_Queue;
 
 typedef struct Metal_Buffer_t
 {
@@ -101,6 +121,34 @@ typedef struct Metal_Sampler_t
 	id<MTLSamplerState> sampler;
 } Metal_Sampler;
 
+typedef struct Metal_CommandAllocator_t
+{
+	Opal_Queue queue;
+	uint32_t command_buffer_usage;
+} Metal_CommandAllocator;
+
+typedef struct Metal_CommandBuffer_t
+{
+	id<MTLCommandBuffer> command_buffer;
+	id<MTLRenderCommandEncoder> graphics_pass_encoder;
+	id<MTLComputeCommandEncoder> compute_pass_encoder;
+	id<MTLBlitCommandEncoder> copy_pass_encoder;
+	Opal_Queue queue;
+} Metal_CommandBuffer;
+
+typedef struct Metal_Swapchain_t
+{
+	Opal_Surface surface;
+	id<MTLCommandQueue> queue;
+	CGColorSpaceRef colorspace;
+} Metal_Swapchain;
+
+typedef struct Metal_Surface_t
+{
+	CAMetalLayer *layer;
+} Metal_Surface;
+
+Opal_Result metal_helperFillDeviceEnginesInfo(Metal_DeviceEnginesInfo *info);
 Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info);
 
 MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples samples);
@@ -114,6 +162,8 @@ MTLSamplerMinMagFilter metal_helperToSamplerMinMagFilter(Opal_SamplerFilterMode 
 MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode);
 
 MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op);
+
+CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space);
 
 Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *instance_ptr, id<MTLDevice> metal_device);
 Opal_Result metal_deviceAllocateMemory(Metal_Device *device_ptr, const Metal_AllocationDesc *desc, Metal_Allocation *allocation);

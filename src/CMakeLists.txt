@@ -170,7 +170,7 @@ endif()
 # Libraries
 # ==================================================================================================
 if (OPAL_HAS_METAL)
-	target_link_libraries(${TARGET} PRIVATE "-framework Metal -framework Foundation -framework IOKit")
+	target_link_libraries(${TARGET} PRIVATE "-framework Metal -framework Foundation -framework IOKit -framework QuartzCore -framework CoreGraphics")
 endif()
 
 # ==================================================================================================

@@ -34,11 +34,17 @@ static Opal_Result metal_instanceEnumerateDevices(Opal_Instance this, uint32_t *
 
 static Opal_Result metal_instanceCreateSurface(Opal_Instance this, void *handle, Opal_Surface *surface)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(handle);
-	OPAL_UNUSED(surface);
+	assert(this);
+	assert(handle);
+	assert(surface);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Instance *instance_ptr = (Metal_Instance *)this;
+
+	Metal_Surface result = {0};
+	result.layer = (CAMetalLayer *)handle;
+
+	*surface = (Opal_Surface)opal_poolAddElement(&instance_ptr->surfaces, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_instanceCreateDefaultDevice(Opal_Instance this, Opal_DeviceHint hint, Opal_Device *device)
@@ -126,16 +132,24 @@ static Opal_Result metal_instanceCreateDevice(Opal_Instance this, uint32_t index
 
 static Opal_Result metal_instanceDestroySurface(Opal_Instance this, Opal_Surface surface)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(surface);
+	assert(this);
+	assert(surface);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)surface;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_Instance *instance_ptr = (Metal_Instance *)this;
+
+	opal_poolRemoveElement(&instance_ptr->surfaces, handle);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_instanceDestroy(Opal_Instance this)
 {
 	assert(this);
 	Metal_Instance *ptr = (Metal_Instance *)this;
+
+	opal_poolShutdown(&ptr->surfaces);
 
 	free(ptr);
 	return OPAL_SUCCESS;
@@ -172,6 +186,9 @@ Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *i
 	ptr->heap_size = desc->heap_size;
 	ptr->max_heap_allocations = desc->max_heap_allocations;
 	ptr->max_heaps = desc->max_heaps;
+
+	// pools
+	opal_poolInitialize(&ptr->surfaces, sizeof(Metal_Surface), 32);
 
 	*instance = (Opal_Instance)ptr;
 	return OPAL_SUCCESS;

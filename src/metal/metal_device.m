@@ -7,6 +7,15 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 
 /*
  */
+static void metal_destroyQueue(Metal_Device *device_ptr, Metal_Queue *queue_ptr)
+{
+	assert(device_ptr);
+	assert(queue_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	[queue_ptr->queue release];
+}
+
 static void metal_destroyBuffer(Metal_Device *device_ptr, Metal_Buffer *buffer_ptr)
 {
 	assert(device_ptr);
@@ -31,8 +40,6 @@ static void metal_destroyTextureView(Metal_Device *device_ptr, Metal_TextureView
 	assert(texture_view_ptr);
 
 	OPAL_UNUSED(device_ptr);
-	OPAL_UNUSED(texture_view_ptr);
-
 	[texture_view_ptr->texture_view release];
 }
 
@@ -41,7 +48,36 @@ static void metal_destroySampler(Metal_Device *device_ptr, Metal_Sampler *sample
 	assert(device_ptr);
 	assert(sampler_ptr);
 
+	OPAL_UNUSED(device_ptr);
 	[sampler_ptr->sampler release];
+}
+
+static void metal_destroyCommandAllocator(Metal_Device *device_ptr, Metal_CommandAllocator *command_allocator_ptr)
+{
+	assert(device_ptr);
+	assert(command_allocator_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	OPAL_UNUSED(command_allocator_ptr);
+}
+
+static void metal_destroyCommandBuffer(Metal_Device *device_ptr, Metal_CommandBuffer *command_buffer_ptr)
+{
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	[command_buffer_ptr->command_buffer release];
+}
+
+static void metal_destroySwapchain(Metal_Device *device_ptr, Metal_Swapchain *swapchain_ptr)
+{
+	assert(device_ptr);
+	assert(swapchain_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	CGColorSpaceRelease(swapchain_ptr->colorspace);
+	[swapchain_ptr->queue release];
 }
 
 /*
@@ -61,7 +97,17 @@ static Opal_Result metal_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType 
 	assert(queue);
 	assert(engine_type < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *ptr = (Metal_Device *)this;
+	uint32_t queue_count = ptr->device_engines_info.queue_counts[engine_type];
+
+	if (index >= queue_count)
+		return OPAL_INVALID_QUEUE_INDEX;
+
+	Opal_Queue *queue_handles = ptr->queue_handles[engine_type];
+	assert(queue_handles);
+
+	*queue = queue_handles[index];
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceGetAccelerationStructurePrebuildInfo(Opal_Device this, const Opal_AccelerationStructureBuildDesc *desc, Opal_AccelerationStructurePrebuildInfo *info)
@@ -84,40 +130,117 @@ static Opal_Result metal_deviceGetShaderBindingTablePrebuildInfo(Opal_Device thi
 
 static Opal_Result metal_deviceGetSupportedSurfaceFormats(Opal_Device this, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(surface);
-	OPAL_UNUSED(num_formats);
-	OPAL_UNUSED(formats);
+	assert(this);
+	assert(surface);
+	assert(num_formats);
 
-	return OPAL_NOT_SUPPORTED;
+	static Opal_SurfaceFormat allowed_formats[] =
+	{
+		OPAL_TEXTURE_FORMAT_BGRA8_UNORM, OPAL_COLOR_SPACE_SRGB,
+		OPAL_TEXTURE_FORMAT_BGRA8_UNORM_SRGB, OPAL_COLOR_SPACE_SRGB,
+		// TODO: add rgb10a2 + hdr10 support
+	};
+	static uint32_t num_allowed_formats = sizeof(allowed_formats) / sizeof(Opal_SurfaceFormat);
+
+	*num_formats = num_allowed_formats;
+
+	if (formats)
+		memcpy(formats, &allowed_formats, sizeof(Opal_SurfaceFormat) * num_allowed_formats);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceGetSupportedPresentModes(Opal_Device this, Opal_Surface surface, uint32_t *num_present_modes, Opal_PresentMode *present_modes)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(surface);
-	OPAL_UNUSED(num_present_modes);
-	OPAL_UNUSED(present_modes);
+	assert(this);
+	assert(surface);
+	assert(num_present_modes);
 
-	return OPAL_NOT_SUPPORTED;
+	static Opal_PresentMode allowed_present_modes[] =
+	{
+		OPAL_PRESENT_MODE_FIFO,
+		OPAL_PRESENT_MODE_IMMEDIATE,
+	};
+	static uint32_t num_allowed_present_modes = sizeof(allowed_present_modes) / sizeof(Opal_PresentMode);
+
+	*num_present_modes = num_allowed_present_modes;
+
+	if (present_modes)
+		memcpy(present_modes, &allowed_present_modes, sizeof(Opal_PresentMode) * num_allowed_present_modes);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceGetPreferredSurfaceFormat(Opal_Device this, Opal_Surface surface, Opal_SurfaceFormat *format)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(surface);
-	OPAL_UNUSED(format);
+	assert(this);
+	assert(surface);
+	assert(format);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	uint32_t num_formats = 0;
+	metal_deviceGetSupportedSurfaceFormats(this, surface, &num_formats, NULL);
+
+	if (num_formats == 0)
+		return OPAL_SURFACE_NOT_DRAWABLE;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(Opal_SurfaceFormat) * num_formats);
+	Opal_SurfaceFormat *formats = (Opal_SurfaceFormat *)(device_ptr->bump.data);
+
+	metal_deviceGetSupportedSurfaceFormats(this, surface, &num_formats, formats);
+
+	Opal_TextureFormat optimal_format = OPAL_TEXTURE_FORMAT_BGRA8_UNORM;
+	Opal_ColorSpace optimal_color_space = OPAL_COLOR_SPACE_SRGB;
+
+	*format = formats[0];
+	for (uint32_t i = 0; i < num_formats; ++i)
+	{
+		if (formats[i].texture_format == optimal_format && formats[i].color_space == optimal_color_space)
+		{
+			format->texture_format = optimal_format;
+			format->color_space = optimal_color_space;
+			break;
+		}
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceGetPreferredSurfacePresentMode(Opal_Device this, Opal_Surface surface, Opal_PresentMode *present_mode)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(surface);
-	OPAL_UNUSED(present_mode);
+	assert(this);
+	assert(surface);
+	assert(present_mode);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	uint32_t num_present_modes = 0;
+	metal_deviceGetSupportedPresentModes(this, surface, &num_present_modes, NULL);
+
+	if (num_present_modes == 0)
+		return OPAL_SURFACE_NOT_PRESENTABLE;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(Opal_PresentMode) * num_present_modes);
+	Opal_PresentMode *present_modes = (Opal_PresentMode *)(device_ptr->bump.data);
+
+	metal_deviceGetSupportedPresentModes(this, surface, &num_present_modes, present_modes);
+
+	Opal_PresentMode optimal_present_mode = OPAL_PRESENT_MODE_FIFO;
+
+	*present_mode = present_modes[0];
+	for (uint32_t i = 0; i < num_present_modes; ++i)
+	{
+		if (present_modes[i] == optimal_present_mode)
+		{
+			*present_mode = optimal_present_mode;
+			break;
+		}
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCreateSemaphore(Opal_Device this, const Opal_SemaphoreDesc *desc, Opal_Semaphore *semaphore)
@@ -333,17 +456,46 @@ static Opal_Result metal_deviceCreateCommandAllocator(Opal_Device this, Opal_Que
 	OPAL_UNUSED(queue);
 	OPAL_UNUSED(command_allocator);
 
-	return OPAL_NOT_SUPPORTED;
-}
+	Metal_Device *device_ptr = (Metal_Device *)this;
 
+	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	OPAL_UNUSED(queue_ptr);
+
+	Metal_CommandAllocator result = {0};
+	result.queue = queue;
+	
+	*command_allocator = (Opal_CommandAllocator)opal_poolAddElement(&device_ptr->command_allocators, &result);
+	return OPAL_SUCCESS;
+}
 
 static Opal_Result metal_deviceCreateCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer *command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_allocator);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_allocator);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
+	assert(command_allocator_ptr);
+
+	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)command_allocator_ptr->queue);
+	assert(queue_ptr);
+
+	id<MTLCommandBuffer> metal_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
+	if (!metal_command_buffer)
+		return OPAL_METAL_ERROR;
+
+	command_allocator_ptr->command_buffer_usage++;
+
+	Metal_CommandBuffer result = {0};
+	result.command_buffer = metal_command_buffer;
+	result.queue = command_allocator_ptr->queue;
+
+	*command_buffer = (Opal_CommandBuffer)opal_poolAddElement(&device_ptr->command_buffers, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCreateShader(Opal_Device this, const Opal_ShaderDesc *desc, Opal_Shader *shader)
@@ -422,11 +574,60 @@ static Opal_Result metal_deviceCreateRaytracePipeline(Opal_Device this, const Op
 
 static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_SwapchainDesc *desc, Opal_Swapchain *swapchain)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(swapchain);
+	assert(this);
+	assert(desc);
+	assert(desc->surface);
+	assert(swapchain);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+	Metal_Instance *instance_ptr = device_ptr->instance;
+
+	// surface
+	Metal_Surface *surface_ptr = (Metal_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)desc->surface);
+	assert(surface_ptr);
+
+	CAMetalLayer *layer_ptr = surface_ptr->layer;
+	assert(layer_ptr);
+
+	// surface capabilities
+	if (desc->mode == OPAL_PRESENT_MODE_MAILBOX)
+		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
+
+	uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE) ? 1 : 2;
+
+	// device
+	layer_ptr.device = device_ptr->device;
+
+	// surface format
+	MTLPixelFormat format = metal_helperToPixelFormat(desc->format.texture_format);
+	if (format == MTLPixelFormatInvalid)
+		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
+
+	CFStringRef colorspace_name = metal_helperToColorspaceName(desc->format.color_space);
+	if (!colorspace_name)
+		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
+
+	CGColorSpaceRef colorspace = CGColorSpaceCreateWithName(colorspace_name);
+
+	// present queue
+	id<MTLCommandQueue> queue = [device_ptr->device newCommandQueue];
+	assert(queue);
+
+	// config
+	layer_ptr.pixelFormat = format;
+	layer_ptr.colorspace = colorspace;
+	layer_ptr.framebufferOnly = (desc->usage == OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
+	layer_ptr.displaySyncEnabled = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE);
+	layer_ptr.maximumDrawableCount = num_textures;
+
+	// create opal struct
+	Metal_Swapchain result = {0};
+	result.surface = desc->surface;
+	result.queue = queue;
+	result.colorspace = colorspace;
+
+	*swapchain = (Opal_Swapchain)opal_poolAddElement(&device_ptr->swapchains, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroySemaphore(Opal_Device this, Opal_Semaphore semaphore)
@@ -519,19 +720,44 @@ static Opal_Result metal_deviceDestroyAccelerationStructure(Opal_Device this, Op
 
 static Opal_Result metal_deviceDestroyCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_allocator);
+	assert(this);
+	assert(command_allocator);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Opal_PoolHandle handle = (Opal_PoolHandle)command_allocator;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
+	assert(command_allocator_ptr);
+
+	metal_destroyCommandAllocator(device_ptr, command_allocator_ptr);
+	opal_poolRemoveElement(&device_ptr->command_allocators, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_allocator);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_allocator);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
+	assert(command_allocator_ptr);
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	assert(command_allocator_ptr->command_buffer_usage > 0);
+	command_allocator_ptr->command_buffer_usage--;
+
+	metal_destroyCommandBuffer(device_ptr, command_buffer_ptr);
+	opal_poolRemoveElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroyShader(Opal_Device this, Opal_Shader shader)
@@ -576,10 +802,20 @@ static Opal_Result metal_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline p
 
 static Opal_Result metal_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(swapchain);
+	assert(this);
+	assert(swapchain);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)swapchain;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_Device *device_ptr = (Metal_Device *)this;
+	Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, handle);
+	assert(swapchain_ptr);
+
+	opal_poolRemoveElement(&device_ptr->swapchains, handle);
+
+	metal_destroySwapchain(device_ptr, swapchain_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroy(Opal_Device this)
@@ -587,6 +823,45 @@ static Opal_Result metal_deviceDestroy(Opal_Device this)
 	assert(this);
 
 	Metal_Device *ptr = (Metal_Device *)this;
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->swapchains);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElementByIndex(&ptr->swapchains, head);
+			metal_destroySwapchain(ptr, swapchain_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->swapchains, head);
+		}
+
+		opal_poolShutdown(&ptr->swapchains);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->command_buffers);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElementByIndex(&ptr->command_buffers, head);
+			metal_destroyCommandBuffer(ptr, command_buffer_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->command_buffers, head);
+		}
+
+		opal_poolShutdown(&ptr->command_buffers);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->command_allocators);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElementByIndex(&ptr->command_allocators, head);
+			metal_destroyCommandAllocator(ptr, command_allocator_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->command_allocators, head);
+		}
+
+		opal_poolShutdown(&ptr->command_allocators);
+	}
 
 	{
 		uint32_t head = opal_poolGetHeadIndex(&ptr->samplers);
@@ -639,6 +914,22 @@ static Opal_Result metal_deviceDestroy(Opal_Device this)
 
 		opal_poolShutdown(&ptr->buffers);
 	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->queues);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElementByIndex(&ptr->queues, head);
+			metal_destroyQueue(ptr, queue_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->queues, head);
+		}
+
+		opal_poolShutdown(&ptr->queues);
+	}
+
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+		free(ptr->queue_handles[i]);
 
 	opal_bumpShutdown(&ptr->bump);
 
@@ -748,18 +1039,38 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 
 static Opal_Result metal_deviceBeginCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	OPAL_UNUSED(command_buffer_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	OPAL_UNUSED(command_buffer_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceQuerySemaphore(Opal_Device this, Opal_Semaphore semaphore, uint64_t *value)
@@ -792,26 +1103,115 @@ static Opal_Result metal_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore se
 
 static Opal_Result metal_deviceWaitQueue(Opal_Device this, Opal_Queue queue)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(queue);
+	assert(this);
+	assert(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	id<MTLCommandBuffer> wait_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
+
+	[wait_command_buffer commit];
+	[wait_command_buffer waitUntilCompleted];
+	[wait_command_buffer release];
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceWaitIdle(Opal_Device this)
 {
-	OPAL_UNUSED(this);
+	assert(this);
+	Metal_Device *device_ptr = (Metal_Device *)this;
 
-	return OPAL_NOT_SUPPORTED;
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+	{
+		uint32_t queue_count = device_ptr->device_engines_info.queue_counts[i];
+		const Opal_Queue *queues = device_ptr->queue_handles[i];
+
+		for (uint32_t j = 0; j < queue_count; ++j)
+			metal_deviceWaitQueue(this, queues[j]);
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceSubmit(Opal_Device this, Opal_Queue queue, const Opal_SubmitDesc *desc)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(queue);
-	OPAL_UNUSED(desc);
+	assert(this);
+	assert(queue);
+	assert(desc);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
+	assert(queue_ptr);
+
+	if (desc->num_wait_semaphores > 0 || desc->num_wait_swapchains > 0)
+	{
+		id<MTLCommandBuffer> wait_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
+
+		for (uint32_t i = 0; i < desc->num_wait_semaphores; ++i)
+		{
+			// Metal_Semaphore *semaphore_ptr = (Metal_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->wait_semaphores[i]);
+			// assert(semaphore_ptr);
+
+			uint64_t value = desc->wait_values[i];
+
+			// TODO: encode wait command
+		}
+
+		for (uint32_t i = 0; i < desc->num_wait_swapchains; ++i)
+		{
+			Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->wait_swapchains[i]);
+			assert(swapchain_ptr);
+
+			// TODO: encode wait command
+		}
+
+		[wait_command_buffer commit];
+		[wait_command_buffer release];
+	}
+
+	for (uint32_t i = 0; i < desc->num_command_buffers; ++i)
+	{
+		Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)desc->command_buffers[i]);
+		assert(command_buffer_ptr);
+		assert(command_buffer_ptr->command_buffer);
+		assert(command_buffer_ptr->queue == queue);
+
+		// TODO: set on completion handler for queue sync
+		[command_buffer_ptr->command_buffer commit];
+	}
+
+	if (desc->num_signal_semaphores > 0 || desc->num_signal_swapchains > 0)
+	{
+		id<MTLCommandBuffer> signal_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
+
+		for (uint32_t i = 0; i < desc->num_signal_semaphores; ++i)
+		{
+			// Metal_Semaphore *semaphore_ptr = (Metal_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->signal_semaphores[i]);
+			// assert(semaphore_ptr);
+
+			uint64_t value = desc->signal_values[i];
+
+			// TODO: encode signal command
+		}
+
+		for (uint32_t i = 0; i < desc->num_signal_swapchains; ++i)
+		{
+			Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->signal_swapchains[i]);
+			assert(swapchain_ptr);
+
+			// TODO: encode signal command
+		}
+
+		[signal_command_buffer commit];
+		[signal_command_buffer release];
+	}
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceAcquire(Opal_Device this, Opal_Swapchain swapchain, Opal_TextureView *texture_view)
@@ -880,6 +1280,48 @@ static Opal_Result metal_deviceCmdEndRaytracePass(Opal_Device this, Opal_Command
 	OPAL_UNUSED(command_buffer);
 
 	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result metal_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	command_buffer_ptr->copy_pass_encoder = [command_buffer_ptr->command_buffer blitCommandEncoder];
+	if (command_buffer_ptr->copy_pass_encoder == nil)
+		return OPAL_METAL_ERROR;
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result metal_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	assert(this);
+	assert(command_buffer);
+
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder != nil);
+
+	[command_buffer_ptr->copy_pass_encoder endEncoding];
+	[command_buffer_ptr->copy_pass_encoder release];
+	command_buffer_ptr->copy_pass_encoder = nil;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
@@ -1048,15 +1490,34 @@ static Opal_Result metal_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_D
 
 static Opal_Result metal_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src_buffer);
-	OPAL_UNUSED(src_offset);
-	OPAL_UNUSED(dst_buffer);
-	OPAL_UNUSED(dst_offset);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder != nil);
+
+	Metal_Buffer *src_buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_buffer);
+	assert(src_buffer_ptr);
+	assert(src_buffer_ptr->buffer);
+
+	Metal_Buffer *dst_buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_buffer);
+	assert(dst_buffer_ptr);
+	assert(dst_buffer_ptr->buffer);
+
+	[command_buffer_ptr->copy_pass_encoder
+		copyFromBuffer: src_buffer_ptr->buffer
+		sourceOffset: (NSUInteger)src_offset
+		toBuffer: dst_buffer_ptr->buffer
+		destinationOffset: (NSUInteger)dst_offset
+		size: (NSUInteger)size];
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
@@ -1100,7 +1561,7 @@ static Opal_Result metal_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal
 	OPAL_UNUSED(state_before);
 	OPAL_UNUSED(state_after);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
@@ -1110,7 +1571,7 @@ static Opal_Result metal_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_
 	OPAL_UNUSED(buffer);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
@@ -1120,7 +1581,7 @@ static Opal_Result metal_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Op
 	OPAL_UNUSED(buffer);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
@@ -1131,7 +1592,7 @@ static Opal_Result metal_deviceCmdTextureTransitionBarrier(Opal_Device this, Opa
 	OPAL_UNUSED(state_before);
 	OPAL_UNUSED(state_after);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
@@ -1141,7 +1602,7 @@ static Opal_Result metal_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal
 	OPAL_UNUSED(texture_view);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
@@ -1151,7 +1612,7 @@ static Opal_Result metal_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, O
 	OPAL_UNUSED(texture_view);
 	OPAL_UNUSED(queue);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 /*
@@ -1228,6 +1689,8 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCmdEndComputePass,
 	metal_deviceCmdBeginRaytracePass,
 	metal_deviceCmdEndRaytracePass,
+	metal_deviceCmdBeginCopyPass,
+	metal_deviceCmdEndCopyPass,
 	metal_deviceCmdSetPipeline,
 	metal_deviceCmdSetDescriptorHeap,
 	metal_deviceCmdSetDescriptorSet,
@@ -1262,26 +1725,55 @@ Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *ins
 	assert(instance_ptr);
 	assert(device_ptr);
 
-	OPAL_UNUSED(instance_ptr);
-
 	// vtable
 	device_ptr->vtbl = &device_vtbl;
 
 	// data
+	device_ptr->instance = instance_ptr;
 	device_ptr->device = metal_device;
 
 	// allocator
 	Opal_Result result = metal_allocatorInitialize(device_ptr, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);
 	assert(result == OPAL_SUCCESS);
 
+	// device engine info
+	result = metal_helperFillDeviceEnginesInfo(&device_ptr->device_engines_info);
+	assert(result == OPAL_SUCCESS);
+
 	// bump
 	opal_bumpInitialize(&device_ptr->bump, 256);
 
 	// pools
+	opal_poolInitialize(&device_ptr->queues, sizeof(Metal_Queue), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(Metal_Buffer), 32);
 	opal_poolInitialize(&device_ptr->textures, sizeof(Metal_Texture), 32);
 	opal_poolInitialize(&device_ptr->texture_views, sizeof(Metal_TextureView), 32);
 	opal_poolInitialize(&device_ptr->samplers, sizeof(Metal_Sampler), 32);
+	opal_poolInitialize(&device_ptr->command_allocators, sizeof(Metal_CommandAllocator), 32);
+	opal_poolInitialize(&device_ptr->command_buffers, sizeof(Metal_CommandBuffer), 32);
+	opal_poolInitialize(&device_ptr->swapchains, sizeof(Metal_Swapchain), 32);
+
+	// queues
+	const Metal_DeviceEnginesInfo *engines_info = &device_ptr->device_engines_info;
+
+	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+	{
+		uint32_t queue_count = engines_info->queue_counts[i];
+
+		Metal_Queue queue = {0};
+
+		Opal_Queue *queue_handles = (Opal_Queue *)malloc(sizeof(Opal_Queue) * queue_count);
+
+		for (uint32_t j = 0; j < queue_count; j++)
+		{
+			queue.queue = [device_ptr->device newCommandQueue];
+			assert(queue.queue);
+
+			queue_handles[j] = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &queue);
+		}
+
+		device_ptr->queue_handles[i] = queue_handles;
+	}
 
 	return OPAL_SUCCESS;
 }

@@ -231,6 +231,15 @@ MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op)
 	return metal_functions[op];
 }
 
+CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space)
+{
+	switch (space)
+	{
+		case OPAL_COLOR_SPACE_SRGB: return kCGColorSpaceSRGB;
+		default: return nil;
+	}
+}
+
 /*
  */
 static uint32_t metal_getEntryProperty(io_registry_entry_t entry, CFStringRef name)
@@ -339,6 +348,17 @@ MTLGPUFamily metal_getAppleDeviceFamily(id<MTLDevice> metal_device)
 
 /*
  */
+Opal_Result metal_helperFillDeviceEnginesInfo(Metal_DeviceEnginesInfo *info)
+{
+	assert(info);
+
+	info->queue_counts[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_counts[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
+	info->queue_counts[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
+
+	return OPAL_SUCCESS;
+}
+
 Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info)
 {
 	assert(metal_device);
@@ -378,9 +398,11 @@ Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceIn
 	if (metal_device.isLowPower)
 		info->device_type = OPAL_DEVICE_TYPE_INTEGRATED;
 
-	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_MAIN] = 16; // NOTE: intentional artificial limit in order to keep the API consistent
-	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_COMPUTE] = 8; // NOTE: intentional artificial limit in order to keep the API consistent
-	info->features.queue_count[OPAL_DEVICE_ENGINE_TYPE_COPY] = 2; // NOTE: intentional artificial limit in order to keep the API consistent
+	Metal_DeviceEnginesInfo device_engines_info = {0};
+	metal_helperFillDeviceEnginesInfo(&device_engines_info);
+
+	memcpy(info->features.queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
+
 	info->features.tessellation_shader = is_apple3_or_greater || is_mac2 || is_common2_or_greater;
 	info->features.compute_pipeline = 1;
 	info->features.meshlet_pipeline = is_apple7_or_greater || is_mac2 || is_metal3;
