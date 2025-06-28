@@ -2005,7 +2005,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	if (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE)
 		result.present_flags = DXGI_PRESENT_ALLOW_TEARING;
 
-	*swapchain = (Opal_Buffer)opal_poolAddElement(&device_ptr->swapchains, &result);
+	*swapchain = (Opal_Swapchain)opal_poolAddElement(&device_ptr->swapchains, &result);
 	return OPAL_SUCCESS;
 }
 
