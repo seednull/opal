@@ -611,7 +611,7 @@ static Opal_Result webgpu_deviceCreateShader(Opal_Device this, const Opal_Shader
 		assert(desc->size % 4 == 0);
 		shader_info.nextInChain = &shader_spirv_info.chain;
 	}
-	else if (desc->type == OPAL_SHADER_SOURCE_TYPE_WGSL)
+	else if (desc->type == OPAL_SHADER_SOURCE_TYPE_WGSL_SOURCE)
 	{
 		assert(((const char *)desc->data)[desc->size - 1] == 0);
 		shader_info.nextInChain = &shader_wgsl_info.chain;

@@ -40,8 +40,8 @@ static Opal_ShaderSourceType shader_types[] =
 {
 	OPAL_SHADER_SOURCE_TYPE_SPIRV_BINARY,
 	OPAL_SHADER_SOURCE_TYPE_DXIL_BINARY,
-	OPAL_SHADER_SOURCE_TYPE_MSL,
-	OPAL_SHADER_SOURCE_TYPE_WGSL,
+	OPAL_SHADER_SOURCE_TYPE_METALLIB_BINARY,
+	OPAL_SHADER_SOURCE_TYPE_WGSL_SOURCE,
 	OPAL_SHADER_SOURCE_ENUM_FORCE32,
 };
 
@@ -60,7 +60,7 @@ bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device
 	fseek(f, 0, SEEK_SET);
 
 	size_t storage_size = size;
-	if (type == OPAL_SHADER_SOURCE_TYPE_WGSL || type == OPAL_SHADER_SOURCE_TYPE_MSL)
+	if (type == OPAL_SHADER_SOURCE_TYPE_WGSL_SOURCE)
 		storage_size += 1;
 
 	uint8_t *data = new uint8_t[storage_size];
