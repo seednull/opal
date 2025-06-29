@@ -70,6 +70,26 @@ static void metal_destroyCommandBuffer(Metal_Device *device_ptr, Metal_CommandBu
 	[command_buffer_ptr->command_buffer release];
 }
 
+static void metal_destroyShader(Metal_Device *device_ptr, Metal_Shader *shader_ptr)
+{
+	assert(device_ptr);
+	assert(shader_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	[shader_ptr->library release];
+}
+
+static void metal_destroyPipelineLayout(Metal_Device *device_ptr, Metal_PipelineLayout *pipeline_layout_ptr)
+{
+	assert(device_ptr);
+	assert(pipeline_layout_ptr);
+
+	OPAL_UNUSED(device_ptr);
+
+	free(pipeline_layout_ptr->layouts);
+	pipeline_layout_ptr->layouts = NULL;
+}
+
 static void metal_destroySwapchain(Metal_Device *device_ptr, Metal_Swapchain *swapchain_ptr)
 {
 	assert(device_ptr);
@@ -500,11 +520,26 @@ static Opal_Result metal_deviceCreateCommandBuffer(Opal_Device this, Opal_Comman
 
 static Opal_Result metal_deviceCreateShader(Opal_Device this, const Opal_ShaderDesc *desc, Opal_Shader *shader)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(shader);
+	assert(this);
+	assert(desc);
+	assert(shader);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	dispatch_data_t data = dispatch_data_create(desc->data, desc->size, nil, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+	assert(data);
+
+	id<MTLLibrary> metal_library = [device_ptr->device newLibraryWithData: data error: nil];
+	[data release];
+
+	if (!metal_library)
+		return OPAL_METAL_ERROR;
+
+	Metal_Shader result = {0};
+	result.library = metal_library;
+
+	*shader = (Opal_Shader)opal_poolAddElement(&device_ptr->shaders, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCreateDescriptorHeap(Opal_Device this, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_heap)
@@ -528,12 +563,23 @@ static Opal_Result metal_deviceCreateDescriptorSetLayout(Opal_Device this, uint3
 
 static Opal_Result metal_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_descriptor_set_layouts);
-	OPAL_UNUSED(descriptor_set_layouts);
-	OPAL_UNUSED(pipeline_layout);
+	assert(this);
+	assert(num_descriptor_set_layouts == 0 || descriptor_set_layouts);
+	assert(pipeline_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_PipelineLayout result = {0};
+	result.num_layouts = num_descriptor_set_layouts;
+
+	if (result.num_layouts > 0)
+	{
+		result.layouts = (Opal_DescriptorSetLayout *)malloc(sizeof(Opal_DescriptorSetLayout) * result.num_layouts);
+		memcpy(result.layouts, descriptor_set_layouts, sizeof(Opal_DescriptorSetLayout) * result.num_layouts);
+	}
+
+	*pipeline_layout = (Opal_PipelineLayout)opal_poolAddElement(&device_ptr->pipeline_layouts, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
@@ -728,7 +774,7 @@ static Opal_Result metal_deviceDestroyCommandAllocator(Opal_Device this, Opal_Co
 	Opal_PoolHandle handle = (Opal_PoolHandle)command_allocator;
 	assert(handle != OPAL_POOL_HANDLE_NULL);
 
-	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
+	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, handle);
 	assert(command_allocator_ptr);
 
 	metal_destroyCommandAllocator(device_ptr, command_allocator_ptr);
@@ -762,10 +808,21 @@ static Opal_Result metal_deviceDestroyCommandBuffer(Opal_Device this, Opal_Comma
 
 static Opal_Result metal_deviceDestroyShader(Opal_Device this, Opal_Shader shader)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(shader);
+	assert(this);
+	assert(shader);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Opal_PoolHandle handle = (Opal_PoolHandle)shader;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_Shader *shader_ptr = (Metal_Shader *)opal_poolGetElement(&device_ptr->shaders, handle);
+	assert(shader_ptr);
+
+	metal_destroyShader(device_ptr, shader_ptr);
+	opal_poolRemoveElement(&device_ptr->shaders, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroyDescriptorHeap(Opal_Device this, Opal_DescriptorHeap descriptor_heap)
@@ -786,10 +843,21 @@ static Opal_Result metal_deviceDestroyDescriptorSetLayout(Opal_Device this, Opal
 
 static Opal_Result metal_deviceDestroyPipelineLayout(Opal_Device this, Opal_PipelineLayout pipeline_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(pipeline_layout);
+	assert(this);
+	assert(pipeline_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Opal_PoolHandle handle = (Opal_PoolHandle)pipeline_layout;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, handle);
+	assert(pipeline_layout_ptr);
+
+	metal_destroyPipelineLayout(device_ptr, pipeline_layout_ptr);
+	opal_poolRemoveElement(&device_ptr->pipeline_layouts, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline pipeline)
@@ -835,6 +903,32 @@ static Opal_Result metal_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->swapchains);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->pipeline_layouts);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElementByIndex(&ptr->pipeline_layouts, head);
+			metal_destroyPipelineLayout(ptr, pipeline_layout_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->pipeline_layouts, head);
+		}
+
+		opal_poolShutdown(&ptr->pipeline_layouts);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->shaders);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_Shader *shader_ptr = (Metal_Shader *)opal_poolGetElementByIndex(&ptr->shaders, head);
+			metal_destroyShader(ptr, shader_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->shaders, head);
+		}
+
+		opal_poolShutdown(&ptr->shaders);
 	}
 
 	{
@@ -1751,6 +1845,8 @@ Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *ins
 	opal_poolInitialize(&device_ptr->samplers, sizeof(Metal_Sampler), 32);
 	opal_poolInitialize(&device_ptr->command_allocators, sizeof(Metal_CommandAllocator), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(Metal_CommandBuffer), 32);
+	opal_poolInitialize(&device_ptr->shaders, sizeof(Metal_Shader), 32);
+	opal_poolInitialize(&device_ptr->pipeline_layouts, sizeof(Metal_PipelineLayout), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(Metal_Swapchain), 32);
 
 	// queues

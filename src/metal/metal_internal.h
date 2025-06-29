@@ -87,6 +87,8 @@ typedef struct Metal_Device_t
 	Opal_Pool samplers;
 	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
+	Opal_Pool shaders;
+	Opal_Pool pipeline_layouts;
 	Opal_Pool swapchains;
 
 	Metal_Allocator allocator;
@@ -135,6 +137,17 @@ typedef struct Metal_CommandBuffer_t
 	id<MTLBlitCommandEncoder> copy_pass_encoder;
 	Opal_Queue queue;
 } Metal_CommandBuffer;
+
+typedef struct Metal_Shader_t
+{
+	id<MTLLibrary> library;
+} Metal_Shader;
+
+typedef struct Metal_PipelineLayout_t
+{
+	Opal_DescriptorSetLayout *layouts;
+	uint32_t num_layouts;
+} Metal_PipelineLayout;
 
 typedef struct Metal_Swapchain_t
 {
