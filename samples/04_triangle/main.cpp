@@ -22,7 +22,7 @@ static const char *vertex_paths[] =
 {
 	"samples/04_triangle/shaders/vulkan/main.vert.spv",
 	"samples/04_triangle/shaders/directx12/main.vert.cso",
-	NULL,
+	"samples/04_triangle/shaders/metal/main.vert.metallib",
 	"samples/04_triangle/shaders/webgpu/main.vert.wgsl",
 	NULL,
 };
@@ -31,7 +31,7 @@ static const char *fragment_paths[] =
 {
 	"samples/04_triangle/shaders/vulkan/main.frag.spv",
 	"samples/04_triangle/shaders/directx12/main.frag.cso",
-	NULL,
+	"samples/04_triangle/shaders/metal/main.frag.metallib",
 	"samples/04_triangle/shaders/webgpu/main.frag.wgsl",
 	NULL,
 };
@@ -77,8 +77,9 @@ bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device
 	};
 
 	Opal_Result result = opalCreateShader(device, &desc, shader);
-	free(data);
+	assert(result == OPAL_SUCCESS);
 
+	free(data);
 	return result == OPAL_SUCCESS;
 }
 
