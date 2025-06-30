@@ -913,6 +913,12 @@ typedef struct Opal_ShaderDesc_t
 	uint64_t size;
 } Opal_ShaderDesc;
 
+typedef struct Opal_ShaderFunction_t
+{
+	Opal_Shader shader;
+	const char *name;
+} Opal_ShaderFunction;
+
 typedef union Opal_ClearColor_t
 {
 	float f[4];
@@ -1170,11 +1176,11 @@ typedef struct Opal_GraphicsPipelineDesc_t
 {
 	Opal_PipelineLayout pipeline_layout;
 
-	Opal_Shader vertex_shader;
-	Opal_Shader tessellation_control_shader;
-	Opal_Shader tessellation_evaluation_shader;
-	Opal_Shader geometry_shader;
-	Opal_Shader fragment_shader;
+	Opal_ShaderFunction vertex_function;
+	Opal_ShaderFunction tessellation_control_function;
+	Opal_ShaderFunction tessellation_evaluation_function;
+	Opal_ShaderFunction geometry_function;
+	Opal_ShaderFunction fragment_function;
 
 	uint32_t num_vertex_streams;
 	const Opal_VertexStream *vertex_streams;
@@ -1207,9 +1213,9 @@ typedef struct Opal_MeshletPipelineDesc_t
 {
 	Opal_PipelineLayout pipeline_layout;
 
-	Opal_Shader task_shader;
-	Opal_Shader mesh_shader;
-	Opal_Shader fragment_shader;
+	Opal_ShaderFunction task_function;
+	Opal_ShaderFunction mesh_function;
+	Opal_ShaderFunction fragment_function;
 
 	Opal_CullMode cull_mode;
 	Opal_FrontFace front_face;
@@ -1236,28 +1242,28 @@ typedef struct Opal_MeshletPipelineDesc_t
 typedef struct Opal_ComputePipelineDesc_t
 {
 	Opal_PipelineLayout pipeline_layout;
-	Opal_Shader compute_shader;
+	Opal_ShaderFunction compute_function;
 } Opal_ComputePipelineDesc;
 
 typedef struct Opal_HitgroupShader_t
 {
-	Opal_Shader intersection_shader;
-	Opal_Shader anyhit_shader;
-	Opal_Shader closesthit_shader;
+	Opal_ShaderFunction intersection_function;
+	Opal_ShaderFunction anyhit_function;
+	Opal_ShaderFunction closesthit_function;
 } Opal_HitgroupShader;
 
 typedef struct Opal_RaytracePipelineDesc_t
 {
 	Opal_PipelineLayout pipeline_layout;
 
-	uint32_t num_raygen_shaders;
-	const Opal_Shader *raygen_shaders;
+	uint32_t num_raygen_functions;
+	const Opal_ShaderFunction *raygen_functions;
 
-	uint32_t num_hitgroup_shaders;
-	const Opal_HitgroupShader *hitgroup_shaders;
+	uint32_t num_hitgroup_functions;
+	const Opal_HitgroupShader *hitgroup_functions;
 
-	uint32_t num_miss_shaders;
-	const Opal_Shader *miss_shaders;
+	uint32_t num_miss_functions;
+	const Opal_ShaderFunction *miss_functions;
 
 	uint32_t max_recursion_depth;
 	uint32_t max_ray_payload_size;

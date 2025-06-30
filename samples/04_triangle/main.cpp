@@ -308,8 +308,8 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	Opal_GraphicsPipelineDesc pipeline_desc = {};
 	pipeline_desc.pipeline_layout = pipeline_layout;
 
-	pipeline_desc.vertex_shader = vertex_shader;
-	pipeline_desc.fragment_shader = fragment_shader;
+	pipeline_desc.vertex_function = { vertex_shader, "vertexMain" };
+	pipeline_desc.fragment_function = { fragment_shader, "fragmentMain" };
 
 	pipeline_desc.num_vertex_streams = 1;
 	pipeline_desc.vertex_streams = &vertex_stream;
