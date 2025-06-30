@@ -81,6 +81,7 @@ typedef struct Metal_Device_t
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
 	Opal_Pool queues;
+	Opal_Pool semaphores;
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
@@ -89,6 +90,7 @@ typedef struct Metal_Device_t
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
 	Opal_Pool pipeline_layouts;
+	Opal_Pool pipelines;
 	Opal_Pool swapchains;
 
 	Metal_Allocator allocator;
@@ -98,6 +100,12 @@ typedef struct Metal_Queue_t
 {
 	id<MTLCommandQueue> queue;
 } Metal_Queue;
+
+typedef struct Metal_Semaphore_t
+{
+	id<MTLEvent> event;
+	id<MTLSharedEvent> shared_event;
+} Metal_Semaphore;
 
 typedef struct Metal_Buffer_t
 {
@@ -149,6 +157,18 @@ typedef struct Metal_PipelineLayout_t
 	uint32_t num_layouts;
 } Metal_PipelineLayout;
 
+typedef struct Metal_Pipeline_t
+{
+	id<MTLComputePipelineState> compute_pipeline;
+
+	id<MTLRenderPipelineState> render_pipeline;
+	id<MTLDepthStencilState> depth_stencil_state;
+	MTLPrimitiveType primitive_type;
+	MTLCullMode cull_mode;
+	MTLWinding winding;
+	MTLIndexType index_format;
+} Metal_Pipeline;
+
 typedef struct Metal_Swapchain_t
 {
 	Opal_Surface surface;
@@ -175,6 +195,19 @@ MTLSamplerMinMagFilter metal_helperToSamplerMinMagFilter(Opal_SamplerFilterMode 
 MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode);
 
 MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op);
+
+MTLVertexFormat metal_helperToVertexFormat(Opal_VertexFormat format);
+MTLVertexStepFunction metal_helperToVertexStepFunction(Opal_VertexInputRate rate);
+
+MTLBlendFactor metal_helperToBlendFactor(Opal_BlendFactor factor);
+MTLBlendOperation metal_helperToBlendOperation(Opal_BlendOp op);
+
+MTLPrimitiveTopologyClass metal_helperToPrimitiveTopologyClass(Opal_PrimitiveType type);
+MTLPrimitiveType metal_helperToPrimitiveType(Opal_PrimitiveType type);
+
+MTLCullMode metal_helperToCullMode(Opal_CullMode mode);
+MTLWinding metal_helperToWinding(Opal_FrontFace face);
+MTLIndexType metal_helperToIndexType(Opal_IndexFormat format);
 
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space);
 

@@ -231,6 +231,175 @@ MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op)
 	return metal_functions[op];
 }
 
+MTLVertexFormat metal_helperToVertexFormat(Opal_VertexFormat format)
+{
+	static MTLVertexFormat metal_formats[] =
+	{
+		MTLVertexFormatInvalid,
+
+		MTLVertexFormatUChar2Normalized,
+		MTLVertexFormatChar2Normalized,
+		MTLVertexFormatUChar2,
+		MTLVertexFormatChar2,
+
+		MTLVertexFormatUChar4Normalized,
+		MTLVertexFormatChar4Normalized,
+		MTLVertexFormatUChar4,
+		MTLVertexFormatChar4,
+
+		MTLVertexFormatUShort2Normalized,
+		MTLVertexFormatShort2Normalized,
+		MTLVertexFormatUShort2,
+		MTLVertexFormatShort2,
+		MTLVertexFormatHalf2,
+
+		MTLVertexFormatUShort4Normalized,
+		MTLVertexFormatShort4Normalized,
+		MTLVertexFormatUShort4,
+		MTLVertexFormatShort4,
+		MTLVertexFormatHalf4,
+
+		MTLVertexFormatUInt,
+		MTLVertexFormatInt,
+		MTLVertexFormatFloat,
+
+		MTLVertexFormatUInt2,
+		MTLVertexFormatInt2,
+		MTLVertexFormatFloat2,
+
+		MTLVertexFormatUInt3,
+		MTLVertexFormatInt3,
+		MTLVertexFormatFloat3,
+
+		MTLVertexFormatUInt4,
+		MTLVertexFormatInt4,
+		MTLVertexFormatFloat4,
+
+		MTLVertexFormatUInt1010102Normalized,
+	};
+
+	return metal_formats[format];
+}
+
+MTLVertexStepFunction metal_helperToVertexStepFunction(Opal_VertexInputRate rate)
+{
+	static MTLVertexStepFunction metal_step_functions[] =
+	{
+		MTLVertexStepFunctionPerVertex,
+		MTLVertexStepFunctionPerInstance,
+	};
+
+	return metal_step_functions[rate];
+}
+
+MTLBlendFactor metal_helperToBlendFactor(Opal_BlendFactor factor)
+{
+	static MTLBlendFactor metal_blend_factors[] =
+	{
+		MTLBlendFactorZero,
+		MTLBlendFactorOne,
+		MTLBlendFactorSourceColor,
+		MTLBlendFactorOneMinusSourceColor,
+		MTLBlendFactorDestinationColor,
+		MTLBlendFactorOneMinusDestinationColor,
+		MTLBlendFactorSourceAlpha,
+		MTLBlendFactorOneMinusSourceAlpha,
+		MTLBlendFactorDestinationAlpha,
+		MTLBlendFactorOneMinusDestinationAlpha,
+	};
+
+	return metal_blend_factors[factor];
+}
+
+MTLBlendOperation metal_helperToBlendOperation(Opal_BlendOp op)
+{
+	static MTLBlendOperation metal_blend_operations[] =
+	{
+		MTLBlendOperationAdd,
+		MTLBlendOperationSubtract,
+		MTLBlendOperationReverseSubtract,
+		MTLBlendOperationMin,
+		MTLBlendOperationMax,
+	};
+
+	return metal_blend_operations[op];
+}
+
+MTLPrimitiveTopologyClass metal_helperToPrimitiveTopologyClass(Opal_PrimitiveType type)
+{
+	assert(type != OPAL_PRIMITIVE_TYPE_TRIANGLE_PATCH);
+	assert(type != OPAL_PRIMITIVE_TYPE_QUAD_PATCH);
+
+	static MTLPrimitiveTopologyClass metal_primitive_topology_classes[] =
+	{
+		MTLPrimitiveTopologyClassPoint,
+		MTLPrimitiveTopologyClassLine,
+		MTLPrimitiveTopologyClassLine,
+		MTLPrimitiveTopologyClassTriangle,
+		MTLPrimitiveTopologyClassTriangle,
+		MTLPrimitiveTopologyClassUnspecified,
+		MTLPrimitiveTopologyClassUnspecified,
+	};
+
+	return metal_primitive_topology_classes[type];
+}
+
+MTLPrimitiveType metal_helperToPrimitiveType(Opal_PrimitiveType type)
+{
+	assert(type != OPAL_PRIMITIVE_TYPE_TRIANGLE_PATCH);
+	assert(type != OPAL_PRIMITIVE_TYPE_QUAD_PATCH);
+
+	static MTLPrimitiveType metal_primitive_types[] =
+	{
+		MTLPrimitiveTypePoint,
+		MTLPrimitiveTypeLine,
+		MTLPrimitiveTypeLineStrip,
+		MTLPrimitiveTypeTriangle,
+		MTLPrimitiveTypeTriangleStrip,
+		NSUIntegerMax,
+		NSUIntegerMax,
+	};
+
+	return metal_primitive_types[type];
+}
+
+MTLCullMode metal_helperToCullMode(Opal_CullMode mode)
+{
+	static MTLCullMode metal_cull_modes[] =
+	{
+		MTLCullModeNone,
+		MTLCullModeFront,
+		MTLCullModeBack,
+	};
+
+	return metal_cull_modes[mode];
+}
+
+MTLWinding metal_helperToWinding(Opal_FrontFace face)
+{
+	static MTLWinding metal_windings[] =
+	{
+		MTLWindingCounterClockwise,
+		MTLWindingClockwise,
+	};
+
+	return metal_windings[face];
+}
+
+MTLIndexType metal_helperToIndexType(Opal_IndexFormat format)
+{
+	assert(format != OPAL_INDEX_FORMAT_UNDEFINED);
+
+	static MTLIndexType metal_index_types[] =
+	{
+		NSUIntegerMax,
+		MTLIndexTypeUInt16,
+		MTLIndexTypeUInt32,
+	};
+
+	return metal_index_types[format];
+}
+
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space)
 {
 	switch (space)
