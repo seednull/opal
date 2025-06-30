@@ -1409,8 +1409,10 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 {
 	assert(this);
 	assert(desc);
-	assert(desc->vertex_shader);
-	assert(desc->fragment_shader);
+	assert(desc->vertex_function.shader);
+	assert(desc->vertex_function.name);
+	assert(desc->fragment_function.shader);
+	assert(desc->fragment_function.name);
 	assert(desc->pipeline_layout);
 	assert(pipeline);
 
@@ -1428,11 +1430,20 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	// shaders
 	Opal_Shader shaders[5] =
 	{
-		desc->vertex_shader,
-		desc->tessellation_control_shader,
-		desc->tessellation_evaluation_shader,
-		desc->geometry_shader,
-		desc->fragment_shader
+		desc->vertex_function.shader,
+		desc->tessellation_control_function.shader,
+		desc->tessellation_evaluation_function.shader,
+		desc->geometry_function.shader,
+		desc->fragment_function.shader,
+	};
+
+	const char *names[5] =
+	{
+		desc->vertex_function.name,
+		desc->tessellation_control_function.name,
+		desc->tessellation_evaluation_function.name,
+		desc->geometry_function.name,
+		desc->fragment_function.name,
 	};
 
 	VkShaderStageFlagBits shader_stages[5] =
@@ -1458,7 +1469,7 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 		shader_infos[num_shaders].flags = 0;
 		shader_infos[num_shaders].stage = shader_stages[i];
 		shader_infos[num_shaders].module = shader_ptr->shader;
-		shader_infos[num_shaders].pName = "main";
+		shader_infos[num_shaders].pName = names[i];
 		shader_infos[num_shaders].pSpecializationInfo = NULL;
 		num_shaders++;
 	}
@@ -1658,7 +1669,8 @@ static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Op
 {
 	assert(this);
 	assert(desc);
-	assert(desc->compute_shader);
+	assert(desc->compute_function.shader);
+	assert(desc->compute_function.name);
 	assert(desc->pipeline_layout);
 	assert(pipeline);
 
@@ -1674,7 +1686,7 @@ static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Op
 	VkPipelineCache vulkan_pipeline_cache = VK_NULL_HANDLE;
 
 	// shader
-	Vulkan_Shader *shader_ptr = (Vulkan_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_shader);
+	Vulkan_Shader *shader_ptr = (Vulkan_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_function.shader);
 	assert(shader_ptr);
 
 	// pipeline
@@ -1686,7 +1698,7 @@ static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Op
 	pipeline_info.stage.flags = 0;
 	pipeline_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	pipeline_info.stage.module = shader_ptr->shader;
-	pipeline_info.stage.pName = "main";
+	pipeline_info.stage.pName = desc->compute_function.name;
 	pipeline_info.stage.pSpecializationInfo = NULL;
 	pipeline_info.layout = vulkan_pipeline_layout;
 
@@ -1723,8 +1735,8 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 	VkPipeline vulkan_pipeline = VK_NULL_HANDLE;
 	VkPipelineCache vulkan_pipeline_cache = VK_NULL_HANDLE;
 
-	uint32_t max_shader_modules = desc->num_raygen_shaders + desc->num_hitgroup_shaders * 3 + desc->num_miss_shaders; 
-	uint32_t max_shader_groups = desc->num_raygen_shaders + desc->num_hitgroup_shaders + desc->num_miss_shaders;
+	uint32_t max_shader_modules = desc->num_raygen_functions + desc->num_hitgroup_functions * 3 + desc->num_miss_functions; 
+	uint32_t max_shader_groups = desc->num_raygen_functions + desc->num_hitgroup_functions + desc->num_miss_functions;
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t shader_stages_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkPipelineShaderStageCreateInfo) * max_shader_modules);
@@ -1740,16 +1752,16 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 	uint32_t current_shader_offset = 0;
 	uint32_t current_group_offset = 0;
 
-	for (uint32_t i = 0; i < desc->num_raygen_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_raygen_functions; ++i)
 	{
-		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->raygen_shaders[i]);
+		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->raygen_functions[i].shader);
 		assert(shader_ptr);
 
 		VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
 		stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		stage->stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
 		stage->module = shader_ptr->shader;
-		stage->pName = "main";
+		stage->pName = desc->raygen_functions[i].name;
 
 		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
 		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -1763,15 +1775,15 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 		current_group_offset++;
 	}
 
-	for (uint32_t i = 0; i < desc->num_hitgroup_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
 	{
 		Vulkan_Shader *closesthit_shader_ptr = NULL;
 		Vulkan_Shader *anyhit_shader_ptr = NULL;
 		Vulkan_Shader *intersection_shader_ptr = NULL;
 		
-		closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].closesthit_shader);
-		anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].anyhit_shader);
-		intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].intersection_shader);
+		closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].closesthit_function.shader);
+		anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].anyhit_function.shader);
+		intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].intersection_function.shader);
 
 		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
 		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -1783,33 +1795,42 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 
 		if (closesthit_shader_ptr)
 		{
+			const char *name = desc->hitgroup_functions[i].closesthit_function.name;
+			assert(name);
+
 			VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
 			stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			stage->stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 			stage->module = closesthit_shader_ptr->shader;
-			stage->pName = "main";
+			stage->pName = name;
 
 			group->closestHitShader = current_shader_offset++;
 		}
 
 		if (anyhit_shader_ptr)
 		{
+			const char *name = desc->hitgroup_functions[i].anyhit_function.name;
+			assert(name);
+
 			VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
 			stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			stage->stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
 			stage->module = anyhit_shader_ptr->shader;
-			stage->pName = "main";
+			stage->pName = name;
 
 			group->anyHitShader = current_shader_offset++;
 		}
 
 		if (intersection_shader_ptr)
 		{
+			const char *name = desc->hitgroup_functions[i].intersection_function.name;
+			assert(name);
+
 			VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
 			stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			stage->stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
 			stage->module = intersection_shader_ptr->shader;
-			stage->pName = "main";
+			stage->pName = name;
 
 			group->intersectionShader = current_shader_offset++;
 			group->type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
@@ -1818,16 +1839,16 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 		current_group_offset++;
 	}
 
-	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_miss_functions; ++i)
 	{
-		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->miss_shaders[i]);
+		Vulkan_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->miss_functions[i].shader);
 		assert(shader_ptr);
 
 		VkPipelineShaderStageCreateInfo *stage = &shader_stages[current_shader_offset];
 		stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		stage->stage = VK_SHADER_STAGE_MISS_BIT_KHR;
 		stage->module = shader_ptr->shader;
-		stage->pName = "main";
+		stage->pName = desc->miss_functions[i].name;
 
 		VkRayTracingShaderGroupCreateInfoKHR *group = &shader_groups[current_group_offset];
 		group->sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -1863,9 +1884,9 @@ static Opal_Result vulkan_deviceCreateRaytracePipeline(Opal_Device this, const O
 	Vulkan_Pipeline result = {0};
 	result.pipeline = vulkan_pipeline;
 	result.bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
-	result.num_raygen_groups = desc->num_raygen_shaders;
-	result.num_hitgroup_groups = desc->num_hitgroup_shaders;
-	result.num_miss_groups = desc->num_miss_shaders;
+	result.num_raygen_groups = desc->num_raygen_functions;
+	result.num_hitgroup_groups = desc->num_hitgroup_functions;
+	result.num_miss_groups = desc->num_miss_functions;
 
 	*pipeline = (Opal_Pipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
 	return OPAL_SUCCESS;
