@@ -1426,11 +1426,11 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 	// shaders
 	Opal_Shader shaders[5] =
 	{
-		desc->vertex_shader,
-		desc->tessellation_control_shader,
-		desc->tessellation_evaluation_shader,
-		desc->geometry_shader,
-		desc->fragment_shader
+		desc->vertex_function.shader,
+		desc->tessellation_control_function.shader,
+		desc->tessellation_evaluation_function.shader,
+		desc->geometry_function.shader,
+		desc->fragment_function.shader,
 	};
 
 	D3D12_SHADER_BYTECODE *shader_bytecodes[5] =
@@ -1580,7 +1580,7 @@ static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const
 	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
 	assert(pipeline_layout_ptr);
 
-	DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_shader);
+	DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_function.shader);
 	assert(shader_ptr);
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC pipeline_info = {0};
@@ -1616,8 +1616,8 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
 	assert(pipeline_layout_ptr);
 
-	uint32_t max_shaders = desc->num_raygen_shaders + desc->num_hitgroup_shaders * 3 + desc->num_miss_shaders;
-	uint32_t max_hitgroups = desc->num_hitgroup_shaders;
+	uint32_t max_shaders = desc->num_raygen_functions + desc->num_hitgroup_functions * 3 + desc->num_miss_functions;
+	uint32_t max_hitgroups = desc->num_hitgroup_functions;
 	uint32_t max_subobjects = 3 + max_shaders + max_hitgroups;
 	uint32_t num_shaders = 0;
 	uint32_t num_hitgroups = 0;
@@ -1636,15 +1636,88 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		WCHAR id[16];
 	} HitgroupStage;
 
+	uint32_t name_buffer_size = 0;
+
 	opal_bumpReset(&device_ptr->bump);
+	uint32_t name_lenghts_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(int) * max_shaders);
+	int *name_lengths = (int *)(device_ptr->bump.data + name_lenghts_offset);
+
+	for (uint32_t i = 0; i < desc->num_raygen_functions; ++i)
+	{
+		assert(desc->raygen_functions[i].name);
+
+		int size = MultiByteToWideChar(CP_UTF8, 0, desc->raygen_functions[i].name, 0, NULL, 0);
+
+		*name_lengths++ = size;
+		name_buffer_size += size;
+		name_buffer_size++;
+	}
+
+	for (uint32_t i = 0; i < desc->num_miss_functions; ++i)
+	{
+		assert(desc->miss_functions[i].name);
+
+		int size = MultiByteToWideChar(CP_UTF8, 0, desc->miss_functions[i].name, 0, NULL, 0);
+
+		*name_lengths++ = size;
+		name_buffer_size += size;
+		name_buffer_size++;
+	}
+
+	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
+	{
+		Opal_PoolHandle anyhit_shader_handle = (Opal_PoolHandle)desc->hitgroup_functions[i].anyhit_function.shader;
+		Opal_PoolHandle closesthit_shader_handle = (Opal_PoolHandle)desc->hitgroup_functions[i].closesthit_function.shader;
+		Opal_PoolHandle intersection_shader_handle = (Opal_PoolHandle)desc->hitgroup_functions[i].intersection_function.shader;
+
+		assert(anyhit_shader_handle != OPAL_NULL_HANDLE || closesthit_shader_handle != OPAL_NULL_HANDLE || intersection_shader_handle != OPAL_NULL_HANDLE);
+
+		if (anyhit_shader_handle != OPAL_NULL_HANDLE)
+		{
+			assert(desc->hitgroup_functions[i].anyhit_function.name);
+
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, 0, NULL, 0);
+
+			*name_lengths++ = size;
+			name_buffer_size += size;
+			name_buffer_size++;
+		}
+
+		if (closesthit_shader_handle != OPAL_NULL_HANDLE)
+		{
+			assert(desc->hitgroup_functions[i].closesthit_function.name);
+
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, 0, NULL, 0);
+
+			*name_lengths++ = size;
+			name_buffer_size += size;
+			name_buffer_size++;
+		}
+
+		if (intersection_shader_handle != OPAL_NULL_HANDLE)
+		{
+			assert(desc->hitgroup_functions[i].intersection_function.name);
+
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, 0, NULL, 0);
+
+			*name_lengths++ = size;
+			name_buffer_size += size;
+			name_buffer_size++;
+		}
+	}
+
+	uint32_t names_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(WCHAR) * name_buffer_size);
 	uint32_t subobjects_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_STATE_SUBOBJECT) * max_subobjects);
 	uint32_t shaders_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(ShaderStage) * max_shaders);
 	uint32_t hitgroups_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(HitgroupStage) * max_hitgroups);
 
+	name_lengths = (int *)(device_ptr->bump.data + name_lenghts_offset);
+	WCHAR *names = (WCHAR *)(device_ptr->bump.data + names_offset);
 	D3D12_STATE_SUBOBJECT *subobjects = (D3D12_STATE_SUBOBJECT *)(device_ptr->bump.data + subobjects_offset);
 	ShaderStage *shaders = (ShaderStage *)(device_ptr->bump.data + shaders_offset);
 	HitgroupStage *hitgroups = (HitgroupStage *)(device_ptr->bump.data + hitgroups_offset);
 
+	memset(names, 0, sizeof(WCHAR) * name_buffer_size);
 	memset(subobjects, 0, sizeof(D3D12_STATE_SUBOBJECT) * max_subobjects);
 	memset(shaders, 0, sizeof(ShaderStage) * max_shaders);
 	memset(hitgroups, 0, sizeof(HitgroupStage) * max_hitgroups);
@@ -1674,17 +1747,20 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 	subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &pipeline_config };
 
-	for (uint32_t i = 0; i < desc->num_raygen_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_raygen_functions; ++i)
 	{
-		DirectX12_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->raygen_shaders[i]);
+		DirectX12_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->raygen_functions[i].shader);
 		assert(shader_ptr);
 
 		ShaderStage *shader = &shaders[num_shaders++];
 
 		StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rgen%d", num_shaders - 1);
 
+		int size = *name_lengths++;
+		MultiByteToWideChar(CP_UTF8, 0, desc->raygen_functions[i].name, 0, names, size);
+
 		shader->export.Name = shader->id;
-		shader->export.ExportToRename = L"main";
+		shader->export.ExportToRename = names;
 
 		shader->desc.DXILLibrary.pShaderBytecode = shader_ptr->data;
 		shader->desc.DXILLibrary.BytecodeLength = shader_ptr->size;
@@ -1692,19 +1768,24 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		shader->desc.pExports = &shader->export;
 
 		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
+		names += size;
+		names++;
 	}
 
-	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_miss_functions; ++i)
 	{
-		DirectX12_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->miss_shaders[i]);
+		DirectX12_Shader *shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->miss_functions[i].shader);
 		assert(shader_ptr);
 
 		ShaderStage *shader = &shaders[num_shaders++];
 
 		StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rmiss%d", num_shaders - 1);
 
+		int size = *name_lengths++;
+		MultiByteToWideChar(CP_UTF8, 0, desc->miss_functions[i].name, 0, names, size);
+
 		shader->export.Name = shader->id;
-		shader->export.ExportToRename = L"main";
+		shader->export.ExportToRename = names;
 
 		shader->desc.DXILLibrary.pShaderBytecode = shader_ptr->data;
 		shader->desc.DXILLibrary.BytecodeLength = shader_ptr->size;
@@ -1712,13 +1793,15 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		shader->desc.pExports = &shader->export;
 
 		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
+		names += size;
+		names++;
 	}
 
-	for (uint32_t i = 0; i < desc->num_hitgroup_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
 	{
-		DirectX12_Shader *anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].anyhit_shader);
-		DirectX12_Shader *closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].closesthit_shader);
-		DirectX12_Shader *intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_shaders[i].intersection_shader);
+		DirectX12_Shader *anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].anyhit_function.shader);
+		DirectX12_Shader *closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].closesthit_function.shader);
+		DirectX12_Shader *intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].intersection_function.shader);
 
 		assert(anyhit_shader_ptr || closesthit_shader_ptr || intersection_shader_ptr);
 
@@ -1737,8 +1820,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rahit%d", num_shaders - 1);
 	
+			int size = *name_lengths++;
+			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, 0, names, size);
+
 			shader->export.Name = shader->id;
-			shader->export.ExportToRename = L"main";
+			shader->export.ExportToRename = names;
 	
 			shader->desc.DXILLibrary.pShaderBytecode = anyhit_shader_ptr->data;
 			shader->desc.DXILLibrary.BytecodeLength = anyhit_shader_ptr->size;
@@ -1748,6 +1834,8 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
 
 			hitgroup->desc.AnyHitShaderImport = shader->id;
+			names += size;
+			names++;
 		}
 
 		if (closesthit_shader_ptr != NULL)
@@ -1756,8 +1844,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rchit%d", num_shaders - 1);
 	
+			int size = *name_lengths++;
+			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, 0, names, size);
+
 			shader->export.Name = shader->id;
-			shader->export.ExportToRename = L"main";
+			shader->export.ExportToRename = names;
 	
 			shader->desc.DXILLibrary.pShaderBytecode = closesthit_shader_ptr->data;
 			shader->desc.DXILLibrary.BytecodeLength = closesthit_shader_ptr->size;
@@ -1767,6 +1858,8 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
 
 			hitgroup->desc.ClosestHitShaderImport = shader->id;
+			names += size;
+			names++;
 		}
 
 		if (intersection_shader_ptr != NULL)
@@ -1775,8 +1868,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rint%d", num_shaders - 1);
 	
+			int size = *name_lengths++;
+			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, 0, names, size);
+
 			shader->export.Name = shader->id;
-			shader->export.ExportToRename = L"main";
+			shader->export.ExportToRename = names;
 	
 			shader->desc.DXILLibrary.pShaderBytecode = intersection_shader_ptr->data;
 			shader->desc.DXILLibrary.BytecodeLength = intersection_shader_ptr->size;
@@ -1787,6 +1883,8 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 			hitgroup->desc.IntersectionShaderImport = shader->id;
 			hitgroup->desc.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+			names += size;
+			names++;
 		}
 	}
 
@@ -1815,10 +1913,10 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		return OPAL_DIRECTX12_ERROR;
 	}
 
-	uint8_t *handles = (uint8_t *)malloc((desc->num_raygen_shaders + desc->num_miss_shaders + desc->num_hitgroup_shaders) * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+	uint8_t *handles = (uint8_t *)malloc((desc->num_raygen_functions + desc->num_miss_functions + desc->num_hitgroup_functions) * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	uint8_t *current_handle = handles;
 
-	for (uint32_t i = 0; i < desc->num_raygen_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_raygen_functions; ++i)
 	{
 		ShaderStage *shader = &shaders[i];
 
@@ -1829,8 +1927,8 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		current_handle += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 	}
 
-	uint32_t offset = desc->num_raygen_shaders;
-	for (uint32_t i = 0; i < desc->num_miss_shaders; ++i)
+	uint32_t offset = desc->num_raygen_functions;
+	for (uint32_t i = 0; i < desc->num_miss_functions; ++i)
 	{
 		ShaderStage *shader = &shaders[offset + i];
 
@@ -1841,7 +1939,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		current_handle += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 	}
 
-	for (uint32_t i = 0; i < desc->num_hitgroup_shaders; ++i)
+	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
 	{
 		HitgroupStage *hitgroup = &hitgroups[i];
 
@@ -1859,9 +1957,9 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	result.state_object = d3d12_state_object;
 	result.root_signature = pipeline_layout_ptr->root_signature;
 	result.primitive_topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-	result.num_raygen_shaders = desc->num_raygen_shaders;
-	result.num_hitgroups = desc->num_hitgroup_shaders;
-	result.num_miss_shaders = desc->num_miss_shaders;
+	result.num_raygen_shaders = desc->num_raygen_functions;
+	result.num_hitgroups = desc->num_hitgroup_functions;
+	result.num_miss_shaders = desc->num_miss_functions;
 	result.shader_handles = handles;
 
 	*pipeline = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipelines, &result);
