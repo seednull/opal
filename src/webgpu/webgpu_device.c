@@ -592,7 +592,7 @@ static Opal_Result webgpu_deviceCreateShader(Opal_Device this, const Opal_Shader
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
 
-	if (desc->type == OPAL_SHADER_SOURCE_TYPE_DXIL_BINARY || desc->type == OPAL_SHADER_SOURCE_TYPE_MSL)
+	if (desc->type == OPAL_SHADER_SOURCE_TYPE_DXIL_BINARY || desc->type == OPAL_SHADER_SOURCE_TYPE_METALLIB_BINARY)
 		return OPAL_SHADER_SOURCE_NOT_SUPPORTED;
 
 	WGPUShaderModuleSPIRVDescriptor shader_spirv_info = {0};
@@ -833,10 +833,10 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	WebGPU_PipelineLayout *layout_ptr = (WebGPU_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
 	assert(layout_ptr);
 
-	WebGPU_Shader *vertex_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->vertex_shader);
+	WebGPU_Shader *vertex_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->vertex_function.shader);
 	assert(vertex_shader_ptr);
 
-	WebGPU_Shader *fragment_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->fragment_shader);
+	WebGPU_Shader *fragment_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->fragment_function.shader);
 	assert(fragment_shader_ptr);
 
 	uint32_t num_vertex_streams = desc->num_vertex_streams;
@@ -924,14 +924,14 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	WGPUFragmentState fragment_state = {0};
 	fragment_state.module = fragment_shader_ptr->shader;
-	fragment_state.entryPoint = "main";
+	fragment_state.entryPoint = desc->fragment_function.name;
 	fragment_state.targetCount = desc->num_color_attachments;
 	fragment_state.targets = color_targets;
 
 	WGPURenderPipelineDescriptor pipeline_info = {0};
 	pipeline_info.layout = layout_ptr->layout;
 	pipeline_info.vertex.module = vertex_shader_ptr->shader;
-	pipeline_info.vertex.entryPoint = "main";
+	pipeline_info.vertex.entryPoint = desc->vertex_function.name;
 	pipeline_info.vertex.bufferCount = desc->num_vertex_streams;
 	pipeline_info.vertex.buffers = vertex_buffers;
 
@@ -982,13 +982,13 @@ static Opal_Result webgpu_deviceCreateComputePipeline(Opal_Device this, const Op
 	WebGPU_PipelineLayout *layout_ptr = (WebGPU_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
 	assert(layout_ptr);
 
-	WebGPU_Shader *shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_shader);
+	WebGPU_Shader *shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_function.shader);
 	assert(shader_ptr);
 
 	WGPUComputePipelineDescriptor pipeline_info = {0};
 	pipeline_info.layout = layout_ptr->layout;
 	pipeline_info.compute.module = shader_ptr->shader;
-	pipeline_info.compute.entryPoint = "main";
+	pipeline_info.compute.entryPoint = desc->compute_function.name;
 
 	WGPUComputePipeline webgpu_pipeline = wgpuDeviceCreateComputePipeline(webgpu_device, &pipeline_info);
 	if (webgpu_pipeline == NULL)
