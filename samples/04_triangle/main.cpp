@@ -6,6 +6,7 @@
 #	define TARGET_API OPAL_API_METAL
 #	include <Cocoa/Cocoa.h>
 #	include <QuartzCore/CAMetalLayer.h>
+#	include <QuartzCore/CADisplayLink.h>
 #elif OPAL_PLATFORM_WEB
 #	define TARGET_API OPAL_API_WEBGPU
 #	include <emscripten.h>
@@ -730,12 +731,17 @@ int main()
 
 @interface WindowDelegate : NSObject <NSWindowDelegate>
 @property Application *app;
+@property NSSize size;
 @end
 
 @implementation WindowDelegate
 - (NSSize) windowWillResize:(NSWindow *) sender toSize:(NSSize) size
 {
-	assert(self.app);
+	NSRect frame = sender.frame;
+	frame.size = size;
+
+	NSRect content = [sender contentRectForFrameRect: frame];
+	self.size = content.size;
 
 	return size;
 }
@@ -743,7 +749,7 @@ int main()
 - (void) windowDidResize:(NSNotification *) notification
 {
 	assert(self.app);
-	// app->resize(...);
+	self.app->resize(self.size.width, self.size.height);
 }
 
 - (void) windowWillClose:(NSWindow *) sender
@@ -765,11 +771,21 @@ int main()
 	self.wantsLayer = YES;
 	self.layer = [CAMetalLayer layer];
 
+	CADisplayLink *link = [self displayLinkWithTarget:self selector:@selector(update:)];
+	[link addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
+
 	return self;
 }
 
-- (void) drawRect:(NSRect) rect
+- (void) update:(CADisplayLink *) sender
 {
+	assert(self.app);
+
+	float dt = static_cast<float>(1.0 / (sender.targetTimestamp - sender.timestamp));
+
+	self.app->update(dt);
+	self.app->render();
+	self.app->present();
 }
 @end
 
