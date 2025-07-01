@@ -124,6 +124,8 @@ typedef struct Metal_TextureView_t
 {
 	id<MTLTexture> texture_view;
 	Opal_Texture texture;
+	NSUInteger base_mip;
+	NSUInteger base_layer;
 } Metal_TextureView;
 
 typedef struct Metal_Sampler_t
@@ -140,7 +142,11 @@ typedef struct Metal_CommandAllocator_t
 typedef struct Metal_CommandBuffer_t
 {
 	id<MTLCommandBuffer> command_buffer;
+
 	id<MTLRenderCommandEncoder> graphics_pass_encoder;
+	MTLPrimitiveType primitive_type;
+	Opal_IndexBufferView index_buffer_view;
+
 	id<MTLComputeCommandEncoder> compute_pass_encoder;
 	id<MTLBlitCommandEncoder> copy_pass_encoder;
 	Opal_Queue queue;
@@ -174,6 +180,9 @@ typedef struct Metal_Swapchain_t
 	Opal_Surface surface;
 	id<MTLCommandQueue> queue;
 	CGColorSpaceRef colorspace;
+
+	Opal_TextureView current_texture_view;
+	id<CAMetalDrawable> current_drawable;
 } Metal_Swapchain;
 
 typedef struct Metal_Surface_t
@@ -208,6 +217,9 @@ MTLPrimitiveType metal_helperToPrimitiveType(Opal_PrimitiveType type);
 MTLCullMode metal_helperToCullMode(Opal_CullMode mode);
 MTLWinding metal_helperToWinding(Opal_FrontFace face);
 MTLIndexType metal_helperToIndexType(Opal_IndexFormat format);
+
+MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op);
+MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op);
 
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space);
 

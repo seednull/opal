@@ -400,6 +400,30 @@ MTLIndexType metal_helperToIndexType(Opal_IndexFormat format)
 	return metal_index_types[format];
 }
 
+MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op)
+{
+	MTLLoadAction metal_ops[] =
+	{
+		MTLLoadActionDontCare,
+		MTLLoadActionClear,
+		MTLLoadActionLoad,
+	};
+
+	return metal_ops[op];
+}
+
+MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op)
+{
+	MTLStoreAction metal_ops[] =
+	{
+		MTLStoreActionDontCare,
+		MTLStoreActionStore,
+	};
+
+	return metal_ops[op];
+}
+
+
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space)
 {
 	switch (space)
