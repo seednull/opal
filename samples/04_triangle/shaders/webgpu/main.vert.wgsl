@@ -12,7 +12,7 @@ struct VertexOutput
 };
 
 @vertex
-fn main(input: VertexInput) -> VertexOutput
+fn vertexMain(input: VertexInput) -> VertexOutput
 {
 	var out: VertexOutput;
 
