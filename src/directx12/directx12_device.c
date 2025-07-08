@@ -4666,6 +4666,7 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 
 			queue.event = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
 			queue.wanted_value = 0;
+			queue.type = desc.Type;
 
 			OPAL_UNUSED(hr);
 			queue_handles[j] = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &queue);
