@@ -1,4 +1,5 @@
 #include "metal_internal.h"
+#include "common/intrinsics.h"
 
 /*
  */
@@ -111,6 +112,35 @@ static void metal_destroyPipeline(Metal_Device *device_ptr, Metal_Pipeline *pipe
 		[pipeline_ptr->compute_pipeline release];
 		pipeline_ptr->compute_pipeline = nil;
 	}
+}
+
+static void metal_destroyDescriptorHeap(Metal_Device *device_ptr, Metal_DescriptorHeap *descriptor_heap_ptr)
+{
+	assert(device_ptr);
+	assert(descriptor_heap_ptr);
+
+	opal_heapShutdown(&descriptor_heap_ptr->heap);
+
+	[descriptor_heap_ptr->buffer release];
+	metal_allocatorFreeMemory(device_ptr, descriptor_heap_ptr->allocation);
+}
+
+static void metal_destroyDescriptorSetLayout(Metal_Device *device_ptr, Metal_DescriptorSetLayout *descriptor_set_layout_ptr)
+{
+	assert(device_ptr);
+	assert(descriptor_set_layout_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	OPAL_UNUSED(descriptor_set_layout_ptr);
+}
+
+static void metal_destroyDescriptorSet(Metal_Device *device_ptr, Metal_DescriptorSet *descriptor_set_ptr)
+{
+	assert(device_ptr);
+	assert(descriptor_set_ptr);
+
+	OPAL_UNUSED(device_ptr);
+	OPAL_UNUSED(descriptor_set_ptr);
 }
 
 static void metal_destroyPipelineLayout(Metal_Device *device_ptr, Metal_PipelineLayout *pipeline_layout_ptr)
@@ -628,21 +658,164 @@ static Opal_Result metal_deviceCreateShader(Opal_Device this, const Opal_ShaderD
 
 static Opal_Result metal_deviceCreateDescriptorHeap(Opal_Device this, const Opal_DescriptorHeapDesc *desc, Opal_DescriptorHeap *descriptor_heap)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(descriptor_heap);
+	assert(this);
+	assert(desc);
+	assert(descriptor_heap);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+	id<MTLDevice> metal_device = device_ptr->device;
+
+	id<MTLBuffer> metal_buffer = nil;
+	Metal_Allocation allocation = {0};
+
+	// estimate argument buffer size
+	MTLDataType types[] =
+	{
+		MTLDataTypePointer,
+		MTLDataTypeSampler,
+	};
+
+	uint32_t counts[] =
+	{
+		desc->num_resource_descriptors,
+		desc->num_sampler_descriptors,
+	};
+
+	// TODO: check if there's a better estimation, i.e. maybe it's possible to calculate descriptor set overhead (MoltenVK does that)
+	MTLSizeAndAlign allocation_info = {0};
+	allocation_info.align = 256;
+
+	for (uint32_t i = 0; i < 2; ++i)
+	{
+		MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
+		arg.dataType = types[i];
+		arg.access = MTLBindingAccessReadWrite;
+		arg.index = 0;
+		arg.arrayLength = counts[i];
+		arg.textureType = MTLTextureTypeCubeArray;
+
+		NSArray *args = @[arg];
+
+		id<MTLArgumentEncoder> metal_encoder = [metal_device newArgumentEncoderWithArguments: args];
+		[args release];
+		[arg release];
+
+		if (metal_encoder == nil)
+			return OPAL_METAL_ERROR;
+
+		allocation_info.size += metal_encoder.encodedLength;
+		[metal_encoder release];
+	}
+
+	allocation_info.size = alignUpul(allocation_info.size, allocation_info.align);
+
+	// fill allocation info
+	Metal_AllocationDesc allocation_desc = {0};
+	allocation_desc.size = allocation_info.size;
+	allocation_desc.alignment = allocation_info.align;
+	allocation_desc.allocation_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
+	allocation_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
+
+	Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
+
+	assert(allocation.offset % allocation_info.align == 0);
+
+	MTLResourceOptions options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache;
+
+	metal_buffer = [allocation.memory newBufferWithLength: allocation_desc.size options: options offset: allocation.offset];
+	if (!metal_buffer)
+	{
+		metal_allocatorFreeMemory(device_ptr, allocation);
+		return OPAL_METAL_ERROR;
+	}
+
+	// create opal struct
+	Metal_DescriptorHeap result = {0};
+	result.buffer = metal_buffer;
+	result.allocation = allocation;
+
+	uint32_t num_blocks = (uint32_t)(allocation_info.size / allocation_info.align);
+	opal_result = opal_heapInitialize(&result.heap, num_blocks, num_blocks);
+	assert(opal_result == OPAL_SUCCESS);
+
+	*descriptor_heap = (Opal_Buffer)opal_poolAddElement(&device_ptr->descriptor_heaps, &result);
+	return opal_result;
 }
 
 static Opal_Result metal_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_entries);
-	OPAL_UNUSED(entries);
-	OPAL_UNUSED(descriptor_set_layout);
+	assert(this);
+	assert(num_entries == 0 || entries);
+	assert(descriptor_set_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+	id<MTLDevice> metal_device = device_ptr->device;
+
+	uint32_t num_static_entries = 0;
+	uint32_t num_dynamic_entries = 0;
+
+	NSMutableArray<MTLArgumentDescriptor*>* args = [NSMutableArray arrayWithCapacity: num_entries];
+
+	for (uint32_t i = 0; i < num_entries; ++i)
+	{
+		const Opal_DescriptorSetLayoutEntry *entry = &entries[i];
+
+		switch (entry->type)
+		{
+			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
+			{
+				num_dynamic_entries++;
+			}
+			break;
+
+			default:
+			{
+				MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
+				arg.dataType = metal_helperToArgumentDataType(entry->type);
+				arg.access = MTLBindingAccessReadWrite;
+				arg.index = entry->binding;
+				arg.arrayLength = 1;
+				arg.textureType = MTLTextureTypeCubeArray;
+
+				[args addObject: arg];
+
+				num_static_entries++;
+			}
+			break;
+		}
+	}
+
+	assert([args count] == num_static_entries);
+	assert(num_static_entries + num_dynamic_entries == num_entries);
+
+	NSSortDescriptor *argument_sort_desc = [[NSSortDescriptor alloc] initWithKey:@"index" ascending:YES];
+	NSArray *sorted_args = [args sortedArrayUsingDescriptors:@[argument_sort_desc]];
+
+	id<MTLArgumentEncoder> metal_encoder = [metal_device newArgumentEncoderWithArguments: sorted_args];
+	[sorted_args release];
+
+	for (uint32_t i = 0; i < num_entries; ++i)
+		[args[i] release];
+
+	[args release];
+
+	if (metal_encoder == nil)
+		return OPAL_METAL_ERROR;
+
+	uint32_t num_blocks = alignUpul(metal_encoder.encodedLength, 256) / 256;
+	[metal_encoder release];
+
+	Metal_DescriptorSetLayout result = {0};
+	result.num_blocks = num_blocks;
+	result.num_static_descriptors = num_static_entries;
+	result.num_dynamic_descriptors = num_dynamic_entries;
+
+	*descriptor_set_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->descriptor_set_layouts, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
@@ -1068,18 +1241,40 @@ static Opal_Result metal_deviceDestroyShader(Opal_Device this, Opal_Shader shade
 
 static Opal_Result metal_deviceDestroyDescriptorHeap(Opal_Device this, Opal_DescriptorHeap descriptor_heap)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(descriptor_heap);
+	assert(this);
+	assert(descriptor_heap);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Opal_PoolHandle handle = (Opal_PoolHandle)descriptor_heap;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, handle);
+	assert(descriptor_heap_ptr);
+
+	metal_destroyDescriptorHeap(device_ptr, descriptor_heap_ptr);
+	opal_poolRemoveElement(&device_ptr->descriptor_heaps, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroyDescriptorSetLayout(Opal_Device this, Opal_DescriptorSetLayout descriptor_set_layout)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(descriptor_set_layout);
+	assert(this);
+	assert(descriptor_set_layout);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Opal_PoolHandle handle = (Opal_PoolHandle)descriptor_set_layout;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, handle);
+	assert(descriptor_set_layout_ptr);
+
+	metal_destroyDescriptorSetLayout(device_ptr, descriptor_set_layout_ptr);
+	opal_poolRemoveElement(&device_ptr->descriptor_set_layouts, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceDestroyPipelineLayout(Opal_Device this, Opal_PipelineLayout pipeline_layout)
@@ -1181,6 +1376,45 @@ static Opal_Result metal_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->pipeline_layouts);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_sets);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_DescriptorSet *descriptor_set_ptr = (Metal_DescriptorSet *)opal_poolGetElementByIndex(&ptr->descriptor_sets, head);
+			metal_destroyDescriptorSet(ptr, descriptor_set_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->descriptor_sets, head);
+		}
+
+		opal_poolShutdown(&ptr->descriptor_sets);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_set_layouts);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElementByIndex(&ptr->descriptor_set_layouts, head);
+			metal_destroyDescriptorSetLayout(ptr, descriptor_set_layout_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->descriptor_set_layouts, head);
+		}
+
+		opal_poolShutdown(&ptr->descriptor_set_layouts);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_heaps);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElementByIndex(&ptr->descriptor_heaps, head);
+			metal_destroyDescriptorHeap(ptr, descriptor_heap_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->descriptor_heaps, head);
+		}
+
+		opal_poolShutdown(&ptr->descriptor_heaps);
 	}
 
 	{
@@ -2403,6 +2637,9 @@ Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *ins
 	opal_poolInitialize(&device_ptr->command_allocators, sizeof(Metal_CommandAllocator), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(Metal_CommandBuffer), 32);
 	opal_poolInitialize(&device_ptr->shaders, sizeof(Metal_Shader), 32);
+	opal_poolInitialize(&device_ptr->descriptor_heaps, sizeof(Metal_DescriptorHeap), 32);
+	opal_poolInitialize(&device_ptr->descriptor_set_layouts, sizeof(Metal_DescriptorSetLayout), 32);
+	opal_poolInitialize(&device_ptr->descriptor_sets, sizeof(Metal_DescriptorSet), 32);
 	opal_poolInitialize(&device_ptr->pipeline_layouts, sizeof(Metal_PipelineLayout), 32);
 	opal_poolInitialize(&device_ptr->pipelines, sizeof(Metal_Pipeline), 32);
 	opal_poolInitialize(&device_ptr->swapchains, sizeof(Metal_Swapchain), 32);

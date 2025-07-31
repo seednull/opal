@@ -5,6 +5,35 @@ static const uint32_t display_vga_class = 0x30000;
 
 /*
  */
+MTLDataType metal_helperToArgumentDataType(Opal_DescriptorType type)
+{
+	static MTLDataType metal_types[] =
+	{
+		MTLDataTypePointer,
+		MTLDataTypeNone,
+		MTLDataTypePointer,
+		MTLDataTypeNone,
+		MTLDataTypePointer,
+		MTLDataTypeNone,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeTexture,
+		MTLDataTypeSampler,
+		MTLDataTypeSampler,
+		MTLDataTypeInstanceAccelerationStructure, // TODO: check if there's need for BLAS descriptors
+	};
+
+	return metal_types[type];
+}
+
 MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples samples)
 {
 	if (type == OPAL_TEXTURE_TYPE_2D && samples != OPAL_SAMPLES_1)

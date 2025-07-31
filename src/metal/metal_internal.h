@@ -89,6 +89,9 @@ typedef struct Metal_Device_t
 	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
+	Opal_Pool descriptor_heaps;
+	Opal_Pool descriptor_set_layouts;
+	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
 	Opal_Pool pipelines;
 	Opal_Pool swapchains;
@@ -157,10 +160,55 @@ typedef struct Metal_Shader_t
 	id<MTLLibrary> library;
 } Metal_Shader;
 
+typedef struct Metal_DescriptorHeap_t
+{
+	id<MTLBuffer> buffer;
+	Metal_Allocation allocation;
+	Opal_Heap heap;
+} Metal_DescriptorHeap;
+
+typedef struct Metal_DescriptorSetLayout_t
+{
+	uint32_t num_blocks;
+	uint32_t num_static_descriptors;
+	uint32_t num_dynamic_descriptors;
+} Metal_DescriptorSetLayout;
+
+typedef struct Metal_DescriptorSet_t
+{
+	Opal_DescriptorSetLayout layout;
+	Opal_DescriptorHeap heap;
+	Opal_HeapAllocation allocation;
+	// TODO: think about using fixed array
+	// uint32_t num_static_descriptors;
+	// uint32_t num_dynamic_descriptors;
+	// Opal_DescriptorSetEntry *dynamic_descriptors;
+	// TODO: store all ro resource heaps
+	// TODO: store all rw buffers
+} Metal_DescriptorSet;
+
+// NOTE: overall layout is this:
+//       set 0 static descriptors -> argument buffer with [[buffer(0)]] and proper id[[binding]]
+//       ...
+//       set N static descriptors -> argument buffer with [[buffer(N)]] and proper id[[binding]]
+//
+//       set 0 dynamic buffer 0   -> buffer with [[buffer(set0_dynamic_binding + 0)]]
+//       ...
+//       set 0 dynamic buffer K   -> buffer with [[buffer(set0_dynamic_binding + K)]]
+//
+//       set N dynamic buffer 0   -> buffer with [[buffer(setN_dynamic_binding + 0)]]
+//       ...
+//       set N dynamic buffer M   -> buffer with [[buffer(setN_dynamic_binding + M)]]
+//
+//       vertex stream 0          -> implicit buffer binding with [[buffer(vertex_binding + 0)]]
+//       ...
+//       vertex stream L          -> implicit buffer binding with [[buffer(vertex_binding + L)]]
 typedef struct Metal_PipelineLayout_t
 {
 	Opal_DescriptorSetLayout *layouts;
+	uint32_t *layout_dynamic_bindings;
 	uint32_t num_layouts;
+	uint32_t vertex_binding;
 } Metal_PipelineLayout;
 
 typedef struct Metal_Pipeline_t
@@ -192,6 +240,8 @@ typedef struct Metal_Surface_t
 
 Opal_Result metal_helperFillDeviceEnginesInfo(Metal_DeviceEnginesInfo *info);
 Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info);
+
+MTLDataType metal_helperToArgumentDataType(Opal_DescriptorType type);
 
 MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples samples);
 MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type);
