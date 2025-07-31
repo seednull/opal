@@ -1227,8 +1227,8 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_entries == 0 || descriptor_set_layout);
-	assert(entries);
+	assert(num_entries == 0 || entries);
+	assert(descriptor_set_layout);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
