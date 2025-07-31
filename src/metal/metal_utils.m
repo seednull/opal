@@ -641,8 +641,8 @@ Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceIn
 	info->limits.max_texture_dimension_3d = 0;
 	info->limits.max_texture_array_layers = 0;
 	info->limits.max_buffer_size = 0;
-	info->limits.min_uniform_buffer_offset_alignment = 0;
-	info->limits.min_storage_buffer_offset_alignment = 0;
+	info->limits.min_uniform_buffer_offset_alignment = 256;
+	info->limits.min_storage_buffer_offset_alignment = 256;
 	info->limits.max_descriptor_sets = 0;
 	info->limits.max_uniform_buffer_binding_size = 0;
 	info->limits.max_storage_buffer_binding_size = 0;
