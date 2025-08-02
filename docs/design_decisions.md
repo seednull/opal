@@ -77,3 +77,15 @@ For example, buffer & texture could have the same binding index, because there'r
 Intentionally introduced semantic name "LOCATION[n]" for vertex shader input attributes to match other shading language designs. This semantic only required for vertex shader inputs. Other inter-stage semantics could be used as usual.
 
 ## Metal
+
+### Manual resource management, hazard tracking and barries
+
+Internally, Opal uses MTLResidencySet to avoid costly useResource / useHeap calls during command encoding. While this improves performance, it also sets higher minspec (iPhone Xr / iPad Air 2019 / macOS 15) and brings resource synchronization to the user.
+
+This is acceptable since Opal has public barrier API.
+
+### Automatic vertex buffer binding indices
+
+Metal threats vertex buffer as any buffer that it bound to vertex shader stage, including one's that are described in the pipeline as vertex input. As such, it expects specific indices for that.
+
+In order to match other APIs, these indices will be automatically calculated according to pipeline layout. It's possible to use [[stage_in]] semantic in the shaders to avoid setting these binding indices manually.
