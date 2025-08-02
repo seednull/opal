@@ -38,6 +38,8 @@ typedef struct Metal_Allocator_t
 	uint32_t heap_size;
 	uint32_t max_heaps;
 	uint32_t max_heap_allocations;
+
+	// TODO: residency set
 } Metal_Allocator;
 
 typedef struct Metal_AllocationDesc_t
@@ -167,9 +169,19 @@ typedef struct Metal_DescriptorHeap_t
 	Opal_Heap heap;
 } Metal_DescriptorHeap;
 
+typedef struct Metal_DescriptorInfo_t
+{
+	Opal_DescriptorType type;
+	MTLDataType api_type;
+	uint32_t binding;
+} Metal_DescriptorInfo;
+
 typedef struct Metal_DescriptorSetLayout_t
 {
 	uint32_t num_blocks;
+	uint32_t num_entries;
+	Metal_DescriptorInfo *entries;
+	id<MTLArgumentEncoder> encoder;
 	uint32_t num_static_descriptors;
 	uint32_t num_dynamic_descriptors;
 } Metal_DescriptorSetLayout;
@@ -180,11 +192,9 @@ typedef struct Metal_DescriptorSet_t
 	Opal_DescriptorHeap heap;
 	Opal_HeapAllocation allocation;
 	// TODO: think about using fixed array
-	// uint32_t num_static_descriptors;
-	// uint32_t num_dynamic_descriptors;
-	// Opal_DescriptorSetEntry *dynamic_descriptors;
-	// TODO: store all ro resource heaps
-	// TODO: store all rw buffers
+	uint32_t num_static_descriptors;
+	uint32_t num_dynamic_descriptors;
+	Opal_DescriptorSetEntry *dynamic_descriptors;
 } Metal_DescriptorSet;
 
 // NOTE: overall layout is this:
