@@ -3676,9 +3676,6 @@ static Opal_Result directx12_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_C
 
 static Opal_Result directx12_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
-	OPAL_UNUSED(num_dynamic_offsets);
-	OPAL_UNUSED(dynamic_offsets);
-
 	assert(this);
 	assert(command_buffer);
 	assert(pipeline_layout);
