@@ -162,6 +162,34 @@ static void directx12_destroyDescriptorHeap(DirectX12_Device *device_ptr, Direct
 	}
 }
 
+static void directx12_destroyDescriptorSet(DirectX12_Device *device_ptr, DirectX12_DescriptorSet *descriptor_set_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	assert(descriptor_set_ptr);
+
+	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(heap_ptr);
+	
+	if (descriptor_set_ptr->resource_handle.ptr > 0)
+	{
+		Opal_Result opal_result = opal_heapFree(&heap_ptr->resource_heap, descriptor_set_ptr->resource_allocation);
+		assert(opal_result == OPAL_SUCCESS);
+	}
+
+	if (descriptor_set_ptr->sampler_handle.ptr > 0)
+	{
+		Opal_Result opal_result = opal_heapFree(&heap_ptr->sampler_heap, descriptor_set_ptr->sampler_allocation);
+		assert(opal_result == OPAL_SUCCESS);
+	}
+
+	if (descriptor_set_ptr->num_inline_descriptors > 0)
+	{
+		free(descriptor_set_ptr->inline_descriptors);
+		descriptor_set_ptr->inline_descriptors = NULL;
+		descriptor_set_ptr->num_inline_descriptors = 0;
+	}
+}
+
 static void directx12_destroyDescriptorSetLayout(DirectX12_Device *device_ptr, DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr)
 {
 	OPAL_UNUSED(device_ptr);
@@ -2821,27 +2849,7 @@ static Opal_Result directx12_deviceFreeDescriptorSet(Opal_Device this, Opal_Desc
 	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
 
-	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-	assert(heap_ptr);
-	
-	if (descriptor_set_ptr->resource_handle.ptr > 0)
-	{
-		Opal_Result opal_result = opal_heapFree(&heap_ptr->resource_heap, descriptor_set_ptr->resource_allocation);
-		assert(opal_result == OPAL_SUCCESS);
-	}
-
-	if (descriptor_set_ptr->sampler_handle.ptr > 0)
-	{
-		Opal_Result opal_result = opal_heapFree(&heap_ptr->sampler_heap, descriptor_set_ptr->sampler_allocation);
-		assert(opal_result == OPAL_SUCCESS);
-	}
-
-	if (descriptor_set_ptr->num_inline_descriptors > 0)
-	{
-		free(descriptor_set_ptr->inline_descriptors);
-		descriptor_set_ptr->inline_descriptors = NULL;
-		descriptor_set_ptr->num_inline_descriptors = 0;
-	}
+	directx12_destroyDescriptorSet(device_ptr, descriptor_set_ptr);
 
 	opal_poolRemoveElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	return OPAL_SUCCESS;
