@@ -151,6 +151,8 @@ typedef struct Metal_CommandBuffer_t
 	id<MTLRenderCommandEncoder> graphics_pass_encoder;
 	MTLPrimitiveType primitive_type;
 	Opal_IndexBufferView index_buffer_view;
+	Opal_PipelineLayout pipeline_layout;
+	uint32_t vertex_binding_offset;
 
 	id<MTLComputeCommandEncoder> compute_pass_encoder;
 	id<MTLBlitCommandEncoder> copy_pass_encoder;
@@ -171,19 +173,19 @@ typedef struct Metal_DescriptorHeap_t
 
 typedef struct Metal_DescriptorInfo_t
 {
-	Opal_DescriptorType type;
+	Opal_DescriptorType opal_type;
 	MTLDataType api_type;
 	uint32_t binding;
 } Metal_DescriptorInfo;
 
 typedef struct Metal_DescriptorSetLayout_t
 {
-	uint32_t num_blocks;
-	uint32_t num_entries;
-	Metal_DescriptorInfo *entries;
 	id<MTLArgumentEncoder> encoder;
+	uint32_t num_blocks;
 	uint32_t num_static_descriptors;
 	uint32_t num_dynamic_descriptors;
+	uint32_t num_descriptors;
+	Metal_DescriptorInfo *descriptors;
 } Metal_DescriptorSetLayout;
 
 typedef struct Metal_DescriptorSet_t
@@ -191,34 +193,19 @@ typedef struct Metal_DescriptorSet_t
 	Opal_DescriptorSetLayout layout;
 	Opal_DescriptorHeap heap;
 	Opal_HeapAllocation allocation;
+	uint64_t buffer_offset;
 	// TODO: think about using fixed array
 	uint32_t num_static_descriptors;
 	uint32_t num_dynamic_descriptors;
 	Opal_DescriptorSetEntry *dynamic_descriptors;
 } Metal_DescriptorSet;
 
-// NOTE: overall layout is this:
-//       set 0 static descriptors -> argument buffer with [[buffer(0)]] and proper id[[binding]]
-//       ...
-//       set N static descriptors -> argument buffer with [[buffer(N)]] and proper id[[binding]]
-//
-//       set 0 dynamic buffer 0   -> buffer with [[buffer(set0_dynamic_binding + 0)]]
-//       ...
-//       set 0 dynamic buffer K   -> buffer with [[buffer(set0_dynamic_binding + K)]]
-//
-//       set N dynamic buffer 0   -> buffer with [[buffer(setN_dynamic_binding + 0)]]
-//       ...
-//       set N dynamic buffer M   -> buffer with [[buffer(setN_dynamic_binding + M)]]
-//
-//       vertex stream 0          -> implicit buffer binding with [[buffer(vertex_binding + 0)]]
-//       ...
-//       vertex stream L          -> implicit buffer binding with [[buffer(vertex_binding + L)]]
 typedef struct Metal_PipelineLayout_t
 {
 	Opal_DescriptorSetLayout *layouts;
-	uint32_t *layout_dynamic_bindings;
+	uint32_t *dynamic_binding_offsets;
 	uint32_t num_layouts;
-	uint32_t vertex_binding;
+	uint32_t vertex_binding_offset;
 } Metal_PipelineLayout;
 
 typedef struct Metal_Pipeline_t
