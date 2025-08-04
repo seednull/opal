@@ -2195,6 +2195,24 @@ static Opal_Result webgpu_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result webgpu_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(heap);
+
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result webgpu_deviceCmdSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(pipeline_layout);
+
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result webgpu_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
 {
 	assert(this);
@@ -2227,24 +2245,12 @@ static Opal_Result webgpu_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap heap)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(heap);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result webgpu_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result webgpu_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(pipeline_layout);
 	assert(descriptor_set);
 	assert(num_dynamic_offsets == 0 || dynamic_offsets);
-
-	OPAL_UNUSED(pipeline_layout);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
@@ -2767,8 +2773,9 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdEndRaytracePass,
 	webgpu_deviceCmdBeginCopyPass,
 	webgpu_deviceCmdEndCopyPass,
-	webgpu_deviceCmdSetPipeline,
 	webgpu_deviceCmdSetDescriptorHeap,
+	webgpu_deviceCmdSetPipelineLayout,
+	webgpu_deviceCmdSetPipeline,
 	webgpu_deviceCmdSetDescriptorSet,
 	webgpu_deviceCmdSetVertexBuffers,
 	webgpu_deviceCmdSetIndexBuffer,
