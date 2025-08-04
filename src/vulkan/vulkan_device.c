@@ -3629,24 +3629,6 @@ static Opal_Result vulkan_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
-{
-	assert(this);
-	assert(command_buffer);
- 
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-
-	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
-	assert(pipeline_ptr);
-	assert(command_buffer_ptr->pipeline_bind_point == pipeline_ptr->bind_point);
-
-	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, command_buffer_ptr->pipeline_bind_point, pipeline_ptr->pipeline);
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result vulkan_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
 {
 	assert(this);
@@ -3670,19 +3652,51 @@ static Opal_Result vulkan_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comm
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result vulkan_deviceCmdSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(pipeline_layout);
-	assert(descriptor_set);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)pipeline_layout);
+	command_buffer_ptr->pipeline_layout = pipeline_layout;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
+{
+	assert(this);
+	assert(command_buffer);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+
+	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
+	assert(pipeline_ptr);
+	assert(command_buffer_ptr->pipeline_bind_point == pipeline_ptr->bind_point);
+
+	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, command_buffer_ptr->pipeline_bind_point, pipeline_ptr->pipeline);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result vulkan_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
+	assert(descriptor_set);
+ 
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+
+	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout);
+
+	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
 	assert(pipeline_layout_ptr);
 
 	Vulkan_DescriptorSet *descriptor_set_ptr = (Vulkan_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
@@ -4584,8 +4598,9 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdEndRaytracePass,
 	vulkan_deviceCmdBeginCopyPass,
 	vulkan_deviceCmdEndCopyPass,
-	vulkan_deviceCmdSetPipeline,
 	vulkan_deviceCmdSetDescriptorHeap,
+	vulkan_deviceCmdSetPipelineLayout,
+	vulkan_deviceCmdSetPipeline,
 	vulkan_deviceCmdSetDescriptorSet,
 	vulkan_deviceCmdSetVertexBuffers,
 	vulkan_deviceCmdSetIndexBuffer,

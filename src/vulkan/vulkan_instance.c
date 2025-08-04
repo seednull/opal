@@ -163,11 +163,11 @@ static Opal_Result vulkan_instanceCreateDefaultDevice(Opal_Instance this, Opal_D
 
 	memcpy(&device_ptr->device_engines_info, &device_engine_infos, sizeof(Vulkan_DeviceEnginesInfo));
 
-	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
-	if (result != OPAL_SUCCESS)
+	opal_result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
+	if (opal_result != OPAL_SUCCESS)
 	{
 		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
-		return result;
+		return opal_result;
 	}
 
 	*device = (Opal_Device)device_ptr;
@@ -224,11 +224,11 @@ static Opal_Result vulkan_instanceCreateDevice(Opal_Instance this, uint32_t inde
 
 	memcpy(&device_ptr->device_engines_info, &device_engine_infos, sizeof(Vulkan_DeviceEnginesInfo));
 
-	result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
-	if (result != OPAL_SUCCESS)
+	opal_result = vulkan_deviceInitialize(device_ptr, instance_ptr, vulkan_physical_device, vulkan_device);
+	if (opal_result != OPAL_SUCCESS)
 	{
 		device_ptr->vtbl->destroyDevice((Opal_Device)device_ptr);
-		return result;
+		return opal_result;
 	}
 
 	*device = (Opal_Device)device_ptr;

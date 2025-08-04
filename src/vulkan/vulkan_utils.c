@@ -68,7 +68,7 @@ VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type)
 
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode)
 {
-	static VkImageViewType vk_present_modes[] =
+	static VkPresentModeKHR vk_present_modes[] =
 	{
 		VK_PRESENT_MODE_IMMEDIATE_KHR,
 		VK_PRESENT_MODE_FIFO_KHR,

@@ -207,6 +207,7 @@ typedef struct Vulkan_CommandAllocator_t
 typedef struct Vulkan_CommandBuffer_t
 {
 	VkCommandBuffer command_buffer;
+	Opal_PipelineLayout pipeline_layout;
 	VkPipelineBindPoint pipeline_bind_point;
 } Vulkan_CommandBuffer;
 
