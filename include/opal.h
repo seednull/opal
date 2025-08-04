@@ -1386,9 +1386,10 @@ typedef Opal_Result (*PFN_opalCmdBeginRaytracePass)(Opal_Device device, Opal_Com
 typedef Opal_Result (*PFN_opalCmdEndRaytracePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdBeginCopyPass)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalCmdEndCopyPass)(Opal_Device device, Opal_CommandBuffer command_buffer);
-typedef Opal_Result (*PFN_opalCmdSetPipeline)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
 typedef Opal_Result (*PFN_opalCmdSetDescriptorHeap)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap);
-typedef Opal_Result (*PFN_opalCmdSetDescriptorSet)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
+typedef Opal_Result (*PFN_opalCmdSetPipelineLayout)(Opal_Device device, Opal_CommandBuffer, Opal_PipelineLayout pipeline_layout);
+typedef Opal_Result (*PFN_opalCmdSetPipeline)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
+typedef Opal_Result (*PFN_opalCmdSetDescriptorSet)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
 typedef Opal_Result (*PFN_opalCmdSetVertexBuffers)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
 typedef Opal_Result (*PFN_opalCmdSetIndexBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer);
 typedef Opal_Result (*PFN_opalCmdSetViewport)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);
@@ -1498,8 +1499,9 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCmdEndRaytracePass cmdEndRaytracePass;
 	PFN_opalCmdBeginCopyPass cmdBeginCopyPass;
 	PFN_opalCmdEndCopyPass cmdEndCopyPass;
-	PFN_opalCmdSetPipeline cmdSetPipeline;
 	PFN_opalCmdSetDescriptorHeap cmdSetDescriptorHeap;
+	PFN_opalCmdSetPipelineLayout cmdSetPipelineLayout;
+	PFN_opalCmdSetPipeline cmdSetPipeline;
 	PFN_opalCmdSetDescriptorSet cmdSetDescriptorSet;
 	PFN_opalCmdSetVertexBuffers cmdSetVertexBuffers;
 	PFN_opalCmdSetIndexBuffer cmdSetIndexBuffer;
@@ -1613,9 +1615,10 @@ OPAL_APIENTRY Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_Comm
 OPAL_APIENTRY Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer);
-OPAL_APIENTRY Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
 OPAL_APIENTRY Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap);
-OPAL_APIENTRY Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
+OPAL_APIENTRY Opal_Result opalCmdSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout);
+OPAL_APIENTRY Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline);
+OPAL_APIENTRY Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
 OPAL_APIENTRY Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
 OPAL_APIENTRY Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer);
 OPAL_APIENTRY Opal_Result opalCmdSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);

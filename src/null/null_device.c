@@ -598,15 +598,6 @@ static Opal_Result null_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffe
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(pipeline);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
 {
 	OPAL_UNUSED(this);
@@ -616,11 +607,28 @@ static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result null_deviceCmdSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(pipeline_layout);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(pipeline);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(index);
 	OPAL_UNUSED(descriptor_set);
 	OPAL_UNUSED(num_dynamic_offsets);
@@ -946,8 +954,9 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdEndRaytracePass,
 	null_deviceCmdBeginCopyPass,
 	null_deviceCmdEndCopyPass,
-	null_deviceCmdSetPipeline,
 	null_deviceCmdSetDescriptorHeap,
+	null_deviceCmdSetPipelineLayout,
+	null_deviceCmdSetPipeline,
 	null_deviceCmdSetDescriptorSet,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,
