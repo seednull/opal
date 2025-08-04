@@ -3115,6 +3115,7 @@ static Opal_Result vulkan_deviceBeginCommandBuffer(Opal_Device this, Opal_Comman
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
+	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
 	return OPAL_SUCCESS;
 }
 
@@ -3132,6 +3133,7 @@ static Opal_Result vulkan_deviceEndCommandBuffer(Opal_Device this, Opal_CommandB
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
+	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
 	return OPAL_SUCCESS;
 }
 
@@ -3678,6 +3680,7 @@ static Opal_Result vulkan_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuf
 
 	Vulkan_Pipeline *pipeline_ptr = (Vulkan_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
 	assert(pipeline_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 	assert(command_buffer_ptr->pipeline_bind_point == pipeline_ptr->bind_point);
 
 	device_ptr->vk.vkCmdBindPipeline(command_buffer_ptr->command_buffer, command_buffer_ptr->pipeline_bind_point, pipeline_ptr->pipeline);
@@ -3694,7 +3697,7 @@ static Opal_Result vulkan_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Comma
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
-	assert(command_buffer_ptr->pipeline_layout);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
 	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
 	assert(pipeline_layout_ptr);
@@ -3786,6 +3789,7 @@ static Opal_Result vulkan_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Comma
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkBuffer) * num_vertex_buffers);
@@ -3816,6 +3820,7 @@ static Opal_Result vulkan_deviceCmdSetIndexBuffer(Opal_Device this, Opal_Command
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
 	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)index_buffer.buffer);
 	assert(buffer_ptr);
