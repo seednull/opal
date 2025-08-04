@@ -3703,7 +3703,7 @@ static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_Command
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
-	assert(command_buffer_ptr->pipeline_layout);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
 	DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
 	assert(pipeline_ptr);
@@ -3853,6 +3853,7 @@ static Opal_Result directx12_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Co
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t buffers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_VERTEX_BUFFER_VIEW) * num_vertex_buffers);
@@ -3883,6 +3884,7 @@ static Opal_Result directx12_deviceCmdSetIndexBuffer(Opal_Device this, Opal_Comm
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
 	DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)index_buffer.buffer);
 	assert(buffer_ptr);
