@@ -462,6 +462,9 @@ void Application::render()
 	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
 	assert(result == OPAL_SUCCESS);
 
+	result = opalCmdSetPipelineLayout(device, command_buffer, pipeline_layout);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalCmdSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
