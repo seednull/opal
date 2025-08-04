@@ -1061,6 +1061,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 	{
 		uint32_t index = 0;
 		D3D12_DESCRIPTOR_RANGE_TYPE type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		D3D12_ROOT_PARAMETER_TYPE root_type = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 
 		switch (entries[i].type)
 		{
@@ -1109,6 +1110,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			{
 				index = inline_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+				root_type = D3D12_ROOT_PARAMETER_TYPE_CBV;
 			}
 			break;
 
@@ -1116,6 +1118,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			{
 				index = inline_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+				root_type = D3D12_ROOT_PARAMETER_TYPE_SRV;
 			}
 			break;
 
@@ -1123,14 +1126,16 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			{
 				index = inline_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+				root_type = D3D12_ROOT_PARAMETER_TYPE_UAV;
 			}
 			break;
 
 			default: assert(0); break;
 		}
 
-		result.descriptors[index].type = entries[i].type;
+		result.descriptors[index].opal_type = entries[i].type;
 		result.descriptors[index].api_type = type;
+		result.descriptors[index].root_type = root_type;
 		result.descriptors[index].binding = entries[i].binding;
 	}
 
@@ -1237,6 +1242,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_cbv_descriptors; ++j)
 			{
+				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_CBV);
 
 				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
@@ -1252,6 +1258,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_srv_descriptors; ++j)
 			{
+				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_SRV);
 
 				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
@@ -1267,6 +1274,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_uav_descriptors; ++j)
 			{
+				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
 
 				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
@@ -1312,6 +1320,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_sampler_descriptors; ++j)
 			{
+				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
 
 				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
@@ -1355,7 +1364,10 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 			for (uint32_t j = 0; j < num_set_inline_descriptors; ++j)
 			{
-				current_parameter->ParameterType = current_descriptor->api_type;
+				assert(current_descriptor->root_type != D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+				assert(current_descriptor->root_type != D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
+
+				current_parameter->ParameterType = current_descriptor->root_type;
 				current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 				current_parameter->Descriptor.RegisterSpace = i;
 				current_parameter->Descriptor.ShaderRegister = current_descriptor->binding;
@@ -1598,7 +1610,7 @@ static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const
 	DirectX12_Pipeline result = {0};
 	result.pipeline_state = d3d12_pipeline_state;
 	result.root_signature = pipeline_layout_ptr->root_signature;
-	result.primitive_topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+	result.primitive_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 	*pipeline = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipelines, &result);
 	return OPAL_SUCCESS;
@@ -1956,7 +1968,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	DirectX12_Pipeline result = {0};
 	result.state_object = d3d12_state_object;
 	result.root_signature = pipeline_layout_ptr->root_signature;
-	result.primitive_topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+	result.primitive_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	result.num_raygen_shaders = desc->num_raygen_functions;
 	result.num_hitgroups = desc->num_hitgroup_functions;
 	result.num_miss_shaders = desc->num_miss_functions;
@@ -2411,6 +2423,19 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 	}
 
 	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_sets);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElementByIndex(&ptr->descriptor_sets, head);
+			directx12_destroyDescriptorSet(ptr, descriptor_set_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->descriptor_sets, head);
+		}
+
+		opal_poolShutdown(&ptr->descriptor_sets);
+	}
+
+	{
 		uint32_t head = opal_poolGetHeadIndex(&ptr->descriptor_set_layouts);
 		while (head != OPAL_POOL_HANDLE_NULL)
 		{
@@ -2565,8 +2590,6 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 
 		opal_poolShutdown(&ptr->queues);
 	}
-
-	opal_poolShutdown(&ptr->descriptor_sets);
 
 	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
 		free(ptr->queue_handles[i]);
@@ -2994,7 +3017,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
 			assert(info->binding == entry->binding);
 
-			switch (info->type)
+			switch (info->opal_type)
 			{
 				case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 				{
@@ -3070,7 +3093,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 					D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {0};
 					desc.Format = DXGI_FORMAT_UNKNOWN;
-					desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+					desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 					desc.Buffer.FirstElement = buffer_view.offset / buffer_view.element_size;
 					desc.Buffer.NumElements = buffer_view.num_elements;
 					desc.Buffer.StructureByteStride = buffer_view.element_size;
@@ -3144,7 +3167,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
 			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
 			assert(info->binding == entry->binding);
-			assert(info->type == OPAL_DESCRIPTOR_TYPE_SAMPLER);
+			assert(info->opal_type == OPAL_DESCRIPTOR_TYPE_SAMPLER);
 
 			Opal_Sampler sampler = entry->data.sampler;
 			DirectX12_Sampler *sampler_ptr = (DirectX12_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)sampler);
@@ -3195,7 +3218,7 @@ static Opal_Result directx12_deviceBeginCommandBuffer(Opal_Device this, Opal_Com
 		return OPAL_DIRECTX12_ERROR;
 
 	command_buffer_ptr->recording = 1;
-	command_buffer_ptr->root_signature = NULL;
+	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
 	return OPAL_SUCCESS;
 }
 
@@ -3217,7 +3240,7 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 		return OPAL_DIRECTX12_ERROR;
 
 	command_buffer_ptr->recording = 0;
-	command_buffer_ptr->root_signature = NULL;
+	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
 	return OPAL_SUCCESS;
 }
 
@@ -3612,43 +3635,6 @@ static Opal_Result directx12_deviceCmdEndCopyPass(Opal_Device this, Opal_Command
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(pipeline);
-
-	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
-	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
-	assert(pipeline_ptr);
-
-	ID3D12GraphicsCommandList4 *d3d12_list = command_buffer_ptr->list;
-	ID3D12RootSignature *d3d12_root_signature = pipeline_ptr->root_signature;
-
-	// FIXME: keep track of previously bound descriptor sets and rebind them in case root signature changes
-	if (command_buffer_ptr->root_signature != d3d12_root_signature)
-	{
-		command_buffer_ptr->root_signature = d3d12_root_signature;
-		switch (command_buffer_ptr->pass)
-		{
-			case DIRECTX12_PASS_TYPE_GRAPHICS: ID3D12GraphicsCommandList4_SetGraphicsRootSignature(d3d12_list, d3d12_root_signature); break;
-			case DIRECTX12_PASS_TYPE_COMPUTE: ID3D12GraphicsCommandList4_SetComputeRootSignature(d3d12_list, d3d12_root_signature); break;
-		}
-	}
-
-	if (pipeline_ptr->pipeline_state)
-		ID3D12GraphicsCommandList4_SetPipelineState(command_buffer_ptr->list, pipeline_ptr->pipeline_state);
-
-	if (pipeline_ptr->state_object)
-		ID3D12GraphicsCommandList4_SetPipelineState1(command_buffer_ptr->list, pipeline_ptr->state_object);
-
-	ID3D12GraphicsCommandList4_IASetPrimitiveTopology(command_buffer_ptr->list, pipeline_ptr->primitive_topology);
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result directx12_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
 {
 	assert(this);
@@ -3674,7 +3660,7 @@ static Opal_Result directx12_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_C
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result directx12_deviceCmdSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3687,6 +3673,58 @@ static Opal_Result directx12_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Co
 	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)pipeline_layout);
 	assert(pipeline_layout_ptr);
 
+	ID3D12GraphicsCommandList4 *d3d12_list = command_buffer_ptr->list;
+	ID3D12RootSignature *d3d12_root_signature = pipeline_layout_ptr->root_signature;
+
+	switch (command_buffer_ptr->pass)
+	{
+		case DIRECTX12_PASS_TYPE_GRAPHICS: ID3D12GraphicsCommandList4_SetGraphicsRootSignature(d3d12_list, d3d12_root_signature); break;
+		case DIRECTX12_PASS_TYPE_COMPUTE: ID3D12GraphicsCommandList4_SetComputeRootSignature(d3d12_list, d3d12_root_signature); break;
+	}
+
+	command_buffer_ptr->pipeline_layout = pipeline_layout;
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
+{
+	assert(this);
+	assert(command_buffer);
+	assert(pipeline);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout);
+
+	DirectX12_Pipeline *pipeline_ptr = (DirectX12_Pipeline *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)pipeline);
+	assert(pipeline_ptr);
+
+	ID3D12GraphicsCommandList4 *d3d12_list = command_buffer_ptr->list;
+
+	if (pipeline_ptr->pipeline_state)
+		ID3D12GraphicsCommandList4_SetPipelineState(d3d12_list, pipeline_ptr->pipeline_state);
+
+	if (pipeline_ptr->state_object)
+		ID3D12GraphicsCommandList4_SetPipelineState1(d3d12_list, pipeline_ptr->state_object);
+
+	ID3D12GraphicsCommandList4_IASetPrimitiveTopology(d3d12_list, pipeline_ptr->primitive_topology);
+	return OPAL_SUCCESS;
+}
+
+static Opal_Result directx12_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
+
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
 	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
 
@@ -3694,18 +3732,6 @@ static Opal_Result directx12_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Co
 	assert(descriptor_set_layout_ptr);
 
 	ID3D12GraphicsCommandList4 *d3d12_list = command_buffer_ptr->list;
-	ID3D12RootSignature *d3d12_root_signature = pipeline_layout_ptr->root_signature;
-
-	// FIXME: keep track of previously bound descriptor sets and rebind them in case root signature changes
-	if (command_buffer_ptr->root_signature != d3d12_root_signature)
-	{
-		command_buffer_ptr->root_signature = d3d12_root_signature;
-		switch (command_buffer_ptr->pass)
-		{
-			case DIRECTX12_PASS_TYPE_GRAPHICS: ID3D12GraphicsCommandList4_SetGraphicsRootSignature(d3d12_list, d3d12_root_signature); break;
-			case DIRECTX12_PASS_TYPE_COMPUTE: ID3D12GraphicsCommandList4_SetComputeRootSignature(d3d12_list, d3d12_root_signature); break;
-		}
-	}
 
 	// CBV SRV UAV descriptor table
 	if (descriptor_set_ptr->resource_handle.ptr > 0)
@@ -4554,8 +4580,9 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdEndRaytracePass,
 	directx12_deviceCmdBeginCopyPass,
 	directx12_deviceCmdEndCopyPass,
-	directx12_deviceCmdSetPipeline,
 	directx12_deviceCmdSetDescriptorHeap,
+	directx12_deviceCmdSetPipelineLayout,
+	directx12_deviceCmdSetPipeline,
 	directx12_deviceCmdSetDescriptorSet,
 	directx12_deviceCmdSetVertexBuffers,
 	directx12_deviceCmdSetIndexBuffer,

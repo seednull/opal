@@ -205,7 +205,7 @@ typedef struct DirectX12_CommandBuffer_t
 	Opal_CommandAllocator allocator;
 	uint32_t recording;
 	DirectX12_PassType pass;
-	ID3D12RootSignature *root_signature;
+	Opal_PipelineLayout pipeline_layout;
 } DirectX12_CommandBuffer;
 
 typedef struct DirectX12_Shader_t
@@ -224,8 +224,9 @@ typedef struct DirectX12_DescriptorHeap_t
 
 typedef struct DirectX12_DescriptorInfo_t
 {
-	Opal_DescriptorType type;
+	Opal_DescriptorType opal_type;
 	D3D12_DESCRIPTOR_RANGE_TYPE api_type;
+	D3D12_ROOT_PARAMETER_TYPE root_type;
 	UINT binding;
 } DirectX12_DescriptorInfo;
 
