@@ -1970,6 +1970,8 @@ static Opal_Result metal_deviceBeginCommandBuffer(Opal_Device this, Opal_Command
 		return OPAL_METAL_ERROR;
 
 	command_buffer_ptr->command_buffer = metal_command_buffer;
+	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
+
 	return OPAL_SUCCESS;
 }
 
@@ -1987,7 +1989,7 @@ static Opal_Result metal_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBu
 	assert(command_buffer_ptr->compute_pass_encoder == nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
 
-	OPAL_UNUSED(command_buffer_ptr);
+	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
 	return OPAL_SUCCESS;
 }
 
@@ -2446,6 +2448,7 @@ static Opal_Result metal_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuff
 
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 	assert(command_buffer_ptr->command_buffer);
 	assert(command_buffer_ptr->graphics_pass_encoder != nil || command_buffer_ptr->compute_pass_encoder != nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
@@ -2481,6 +2484,7 @@ static Opal_Result metal_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Comman
 
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 	assert(command_buffer_ptr->command_buffer);
 	assert(command_buffer_ptr->graphics_pass_encoder != nil || command_buffer_ptr->compute_pass_encoder != nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
@@ -2594,6 +2598,7 @@ static Opal_Result metal_deviceCmdSetVertexBuffers(Opal_Device this, Opal_Comman
 
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 	assert(command_buffer_ptr->command_buffer);
 	assert(command_buffer_ptr->graphics_pass_encoder != nil);
 	assert(command_buffer_ptr->compute_pass_encoder == nil);
@@ -2623,6 +2628,7 @@ static Opal_Result metal_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandB
 
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 	assert(command_buffer_ptr->command_buffer);
 	assert(command_buffer_ptr->graphics_pass_encoder != nil);
 	assert(command_buffer_ptr->compute_pass_encoder == nil);
