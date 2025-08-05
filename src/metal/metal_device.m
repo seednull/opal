@@ -13,7 +13,7 @@ static void metal_destroyQueue(Metal_Device *device_ptr, Metal_Queue *queue_ptr)
 	assert(device_ptr);
 	assert(queue_ptr);
 
-	OPAL_UNUSED(device_ptr);
+	[queue_ptr->queue removeResidencySet: device_ptr->allocator.residency_set];
 	[queue_ptr->queue release];
 }
 
@@ -3092,6 +3092,7 @@ Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *ins
 			queue.queue = [device_ptr->device newCommandQueue];
 			assert(queue.queue);
 
+			[queue.queue addResidencySet: device_ptr->allocator.residency_set];
 			queue_handles[j] = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &queue);
 		}
 

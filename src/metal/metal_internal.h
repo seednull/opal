@@ -39,7 +39,7 @@ typedef struct Metal_Allocator_t
 	uint32_t max_heaps;
 	uint32_t max_heap_allocations;
 
-	// TODO: residency set
+	id<MTLResidencySet> residency_set;
 } Metal_Allocator;
 
 typedef struct Metal_AllocationDesc_t

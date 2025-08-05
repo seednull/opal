@@ -133,6 +133,9 @@ static Opal_Result metal_allocatorBlockAlloc(Metal_Device *device, Opal_Allocati
 	block.memory = [device->device newHeapWithDescriptor: info];
 	[info release];
 
+	[allocator->residency_set addAllocation: block.memory];
+	[allocator->residency_set commit];
+
 	if (!block.memory)
 		return OPAL_NO_MEMORY;
 
@@ -161,6 +164,21 @@ Opal_Result metal_allocatorInitialize(Metal_Device *device, uint32_t heap_size, 
 
 	opal_poolInitialize(&allocator->blocks, sizeof(Metal_MemoryBlock), max_heaps);
 
+	MTLResidencySetDescriptor *residency_info = [[MTLResidencySetDescriptor alloc] init];
+	residency_info.initialCapacity = max_heaps;
+
+	NSError *error = nil;
+	allocator->residency_set = [device->device newResidencySetWithDescriptor: residency_info error: &error];
+	[residency_info release];
+
+	if (error)
+	{
+		[error release];
+		return OPAL_METAL_ERROR;
+	}
+
+	[allocator->residency_set requestResidency];
+
 	return OPAL_SUCCESS;
 }
 
@@ -183,11 +201,18 @@ Opal_Result metal_allocatorShutdown(Metal_Device *device)
 	{
 		Metal_MemoryBlock *block = (Metal_MemoryBlock *)opal_poolGetElementByIndex(&allocator->blocks, head);
 
+		[allocator->residency_set removeAllocation: block->memory];
+
+		[block->memory release];
 		block->memory = nil;
+
 		head = opal_poolGetNextIndex(&allocator->blocks, head);
 	}
-
 	opal_poolShutdown(&allocator->blocks);
+
+	[allocator->residency_set commit];
+	[allocator->residency_set endResidency];
+	[allocator->residency_set release];
 
 	return OPAL_SUCCESS;
 }
@@ -325,6 +350,9 @@ Opal_Result metal_allocatorFreeMemory(Metal_Device *device, Metal_Allocation all
 		allocator->last_used_heap[block->memory_type] = block->heap;
 		return metal_allocatorFreeHeapAlloc(allocator, block->heap, allocation.heap_metadata, allocation.offset);
 	}
+
+	[allocator->residency_set removeAllocation: block->memory];
+	[allocator->residency_set commit];
 
 	[block->memory release];
 	return opal_poolRemoveElement(&allocator->blocks, allocation.block);
