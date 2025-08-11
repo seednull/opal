@@ -48,32 +48,32 @@ static Opal_Result directx12_instanceEnumerateDevices(Opal_Instance this, uint32
 	IDXGIFactory2 *factory = ptr->factory;
 
 	UINT count = 0;
-	IDXGIAdapter1 *adapter = NULL;
+	IDXGIAdapter1 *d3d_adapter = NULL;
 
-	while (IDXGIFactory2_EnumAdapters1(factory, count, &adapter) != DXGI_ERROR_NOT_FOUND)
+	while (IDXGIFactory2_EnumAdapters1(factory, count, &d3d_adapter) != DXGI_ERROR_NOT_FOUND)
 	{
 		if (infos)
 		{
 			ID3D12Device *d3d_device = NULL;
-			HRESULT hr = opal_d3d12CreateDevice((IUnknown *)adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
+			HRESULT hr = opal_d3d12CreateDevice((IUnknown *)d3d_adapter, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device, &d3d_device);
 			if (!SUCCEEDED(hr))
 			{
 				IDXGIAdapter1_Release(d3d_device);
 				return OPAL_DIRECTX12_ERROR;
 			}
 
-			Opal_Result result = directx12_helperFillDeviceInfo(adapter, d3d_device, &infos[count]);
+			Opal_Result result = directx12_helperFillDeviceInfo(d3d_adapter, d3d_device, &infos[count]);
 
 			ID3D12Device_Release(d3d_device);
 
 			if (result != OPAL_SUCCESS)
 			{
-				IDXGIAdapter1_Release(d3d_device);
+				IDXGIAdapter1_Release(d3d_adapter);
 				return result;
 			}
 		}
 
-		IDXGIAdapter1_Release(adapter);
+		IDXGIAdapter1_Release(d3d_adapter);
 		count++;
 	}
 
