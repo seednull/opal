@@ -243,6 +243,23 @@ MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode)
 	return metal_filters[mode];
 }
 
+MTLStencilOperation metal_helperToStencilOperation(Opal_StencilOp op)
+{
+	static MTLStencilOperation metal_ops[] =
+	{
+		MTLStencilOperationKeep,
+		MTLStencilOperationZero,
+		MTLStencilOperationReplace,
+		MTLStencilOperationInvert,
+		MTLStencilOperationIncrementClamp,
+		MTLStencilOperationDecrementClamp,
+		MTLStencilOperationIncrementWrap,
+		MTLStencilOperationDecrementWrap,
+	};
+
+	return metal_ops[op];
+}
+
 MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op)
 {
 	static MTLCompareFunction metal_functions[] =
@@ -429,6 +446,20 @@ MTLIndexType metal_helperToIndexType(Opal_IndexFormat format)
 	return metal_index_types[format];
 }
 
+uint32_t metal_helperToIndexSize(Opal_IndexFormat format)
+{
+	assert(format != OPAL_INDEX_FORMAT_UNDEFINED);
+
+	static uint32_t metal_index_sizes[] =
+	{
+		0,
+		2,
+		4,
+	};
+
+	return metal_index_sizes[format];
+}
+
 MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op)
 {
 	MTLLoadAction metal_ops[] =
@@ -581,6 +612,7 @@ Opal_Result metal_helperFillDeviceEnginesInfo(Metal_DeviceEnginesInfo *info)
 	return OPAL_SUCCESS;
 }
 
+// TODO: autoreleasepool?
 Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info)
 {
 	assert(metal_device);
@@ -644,8 +676,8 @@ Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceIn
 	info->limits.min_uniform_buffer_offset_alignment = 256;
 	info->limits.min_storage_buffer_offset_alignment = 256;
 	info->limits.max_descriptor_sets = 0;
-	info->limits.max_uniform_buffer_binding_size = 0;
-	info->limits.max_storage_buffer_binding_size = 0;
+	info->limits.max_uniform_buffer_binding_size = 0xFFFFFFFF;
+	info->limits.max_storage_buffer_binding_size = 0xFFFFFFFF;
 	info->limits.max_vertex_buffers = 0;
 	info->limits.max_vertex_attributes = 0;
 	info->limits.max_vertex_buffer_stride = 0;

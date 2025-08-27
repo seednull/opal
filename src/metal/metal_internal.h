@@ -250,6 +250,7 @@ MTLSamplerAddressMode metal_helperToSamplerAddressMode(Opal_SamplerAddressMode m
 MTLSamplerMinMagFilter metal_helperToSamplerMinMagFilter(Opal_SamplerFilterMode mode);
 MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode);
 
+MTLStencilOperation metal_helperToStencilOperation(Opal_StencilOp op);
 MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op);
 
 MTLVertexFormat metal_helperToVertexFormat(Opal_VertexFormat format);
@@ -264,6 +265,7 @@ MTLPrimitiveType metal_helperToPrimitiveType(Opal_PrimitiveType type);
 MTLCullMode metal_helperToCullMode(Opal_CullMode mode);
 MTLWinding metal_helperToWinding(Opal_FrontFace face);
 MTLIndexType metal_helperToIndexType(Opal_IndexFormat format);
+uint32_t metal_helperToIndexSize(Opal_IndexFormat format);
 
 MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op);
 MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op);
