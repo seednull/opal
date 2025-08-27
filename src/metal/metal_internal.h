@@ -147,6 +147,7 @@ typedef struct Metal_CommandAllocator_t
 typedef struct Metal_CommandBuffer_t
 {
 	id<MTLCommandBuffer> command_buffer;
+	NSAutoreleasePool *pool;
 
 	id<MTLRenderCommandEncoder> graphics_pass_encoder;
 	MTLPrimitiveType primitive_type;

@@ -13,8 +13,11 @@ static void metal_destroyQueue(Metal_Device *device_ptr, Metal_Queue *queue_ptr)
 	assert(device_ptr);
 	assert(queue_ptr);
 
-	[queue_ptr->queue removeResidencySet: device_ptr->allocator.residency_set];
-	[queue_ptr->queue release];
+	@autoreleasepool
+	{
+		[queue_ptr->queue removeResidencySet: device_ptr->allocator.residency_set];
+		[queue_ptr->queue release];
+	}
 }
 
 static void metal_destroySemaphore(Metal_Device *device_ptr, Metal_Semaphore *semaphore_ptr)
@@ -23,7 +26,11 @@ static void metal_destroySemaphore(Metal_Device *device_ptr, Metal_Semaphore *se
 	assert(semaphore_ptr);
 
 	OPAL_UNUSED(device_ptr);
-	[semaphore_ptr->event release];
+
+	@autoreleasepool
+	{
+		[semaphore_ptr->event release];
+	}
 }
 
 static void metal_destroyBuffer(Metal_Device *device_ptr, Metal_Buffer *buffer_ptr)
@@ -31,8 +38,11 @@ static void metal_destroyBuffer(Metal_Device *device_ptr, Metal_Buffer *buffer_p
 	assert(device_ptr);
 	assert(buffer_ptr);
 
-	[buffer_ptr->buffer release];
-	metal_allocatorFreeMemory(device_ptr, buffer_ptr->allocation);
+	@autoreleasepool
+	{
+		[buffer_ptr->buffer release];
+		metal_allocatorFreeMemory(device_ptr, buffer_ptr->allocation);
+	}
 }
 
 static void metal_destroyTexture(Metal_Device *device_ptr, Metal_Texture *texture_ptr)
@@ -40,8 +50,11 @@ static void metal_destroyTexture(Metal_Device *device_ptr, Metal_Texture *textur
 	assert(device_ptr);
 	assert(texture_ptr);
 
-	[texture_ptr->texture release];
-	metal_allocatorFreeMemory(device_ptr, texture_ptr->allocation);
+	@autoreleasepool
+	{
+		[texture_ptr->texture release];
+		metal_allocatorFreeMemory(device_ptr, texture_ptr->allocation);
+	}
 }
 
 static void metal_destroyTextureView(Metal_Device *device_ptr, Metal_TextureView *texture_view_ptr)
@@ -50,7 +63,11 @@ static void metal_destroyTextureView(Metal_Device *device_ptr, Metal_TextureView
 	assert(texture_view_ptr);
 
 	OPAL_UNUSED(device_ptr);
-	[texture_view_ptr->texture_view release];
+
+	@autoreleasepool
+	{
+		[texture_view_ptr->texture_view release];
+	}
 }
 
 static void metal_destroySampler(Metal_Device *device_ptr, Metal_Sampler *sampler_ptr)
@@ -59,7 +76,11 @@ static void metal_destroySampler(Metal_Device *device_ptr, Metal_Sampler *sample
 	assert(sampler_ptr);
 
 	OPAL_UNUSED(device_ptr);
-	[sampler_ptr->sampler release];
+
+	@autoreleasepool
+	{
+		[sampler_ptr->sampler release];
+	}
 }
 
 static void metal_destroyCommandAllocator(Metal_Device *device_ptr, Metal_CommandAllocator *command_allocator_ptr)
@@ -78,6 +99,8 @@ static void metal_destroyCommandBuffer(Metal_Device *device_ptr, Metal_CommandBu
 
 	OPAL_UNUSED(device_ptr);
 	OPAL_UNUSED(command_buffer_ptr);
+
+	// TODO:
 }
 
 static void metal_destroyShader(Metal_Device *device_ptr, Metal_Shader *shader_ptr)
@@ -86,7 +109,11 @@ static void metal_destroyShader(Metal_Device *device_ptr, Metal_Shader *shader_p
 	assert(shader_ptr);
 
 	OPAL_UNUSED(device_ptr);
-	[shader_ptr->library release];
+
+	@autoreleasepool
+	{
+		[shader_ptr->library release];
+	}
 }
 
 static void metal_destroyDescriptorHeap(Metal_Device *device_ptr, Metal_DescriptorHeap *descriptor_heap_ptr)
@@ -96,9 +123,11 @@ static void metal_destroyDescriptorHeap(Metal_Device *device_ptr, Metal_Descript
 
 	opal_heapShutdown(&descriptor_heap_ptr->heap);
 
-
-	[descriptor_heap_ptr->buffer release];
-	metal_allocatorFreeMemory(device_ptr, descriptor_heap_ptr->allocation);
+	@autoreleasepool
+	{
+		[descriptor_heap_ptr->buffer release];
+		metal_allocatorFreeMemory(device_ptr, descriptor_heap_ptr->allocation);
+	}
 }
 
 static void metal_destroyDescriptorSetLayout(Metal_Device *device_ptr, Metal_DescriptorSetLayout *descriptor_set_layout_ptr)
@@ -108,14 +137,19 @@ static void metal_destroyDescriptorSetLayout(Metal_Device *device_ptr, Metal_Des
 
 	OPAL_UNUSED(device_ptr);
 
-	[descriptor_set_layout_ptr->encoder release];
-
-	if (descriptor_set_layout_ptr->num_descriptors > 0)
+	@autoreleasepool
 	{
-		free(descriptor_set_layout_ptr->descriptors);
-		descriptor_set_layout_ptr->descriptors = NULL;
-		descriptor_set_layout_ptr->num_descriptors = 0;
+		[descriptor_set_layout_ptr->encoder release];
 	}
+
+	if (descriptor_set_layout_ptr->descriptors)
+	{
+		assert(descriptor_set_layout_ptr->num_descriptors > 0);
+		free(descriptor_set_layout_ptr->descriptors);
+	}
+
+	descriptor_set_layout_ptr->descriptors = NULL;
+	descriptor_set_layout_ptr->num_descriptors = 0;
 }
 
 static void metal_destroyDescriptorSet(Metal_Device *device_ptr, Metal_DescriptorSet *descriptor_set_ptr)
@@ -131,15 +165,17 @@ static void metal_destroyDescriptorSet(Metal_Device *device_ptr, Metal_Descripto
 		Opal_Result opal_result = opal_heapFree(&descriptor_heap_ptr->heap, descriptor_set_ptr->allocation);
 		assert(opal_result == OPAL_SUCCESS);
 
-		descriptor_set_ptr->num_static_descriptors = 0;
 	}
 
-	if (descriptor_set_ptr->num_dynamic_descriptors > 0)
+	if (descriptor_set_ptr->dynamic_descriptors)
 	{
+		assert(descriptor_set_ptr->num_dynamic_descriptors > 0);
 		free(descriptor_set_ptr->dynamic_descriptors);
-		descriptor_set_ptr->dynamic_descriptors = NULL;
-		descriptor_set_ptr->num_dynamic_descriptors = 0;
 	}
+
+	descriptor_set_ptr->dynamic_descriptors = NULL;
+	descriptor_set_ptr->num_static_descriptors = 0;
+	descriptor_set_ptr->num_dynamic_descriptors = 0;
 }
 
 static void metal_destroyPipelineLayout(Metal_Device *device_ptr, Metal_PipelineLayout *pipeline_layout_ptr)
@@ -149,16 +185,21 @@ static void metal_destroyPipelineLayout(Metal_Device *device_ptr, Metal_Pipeline
 
 	OPAL_UNUSED(device_ptr);
 
-	if (pipeline_layout_ptr->num_layouts > 0)
+	if (pipeline_layout_ptr->layouts)
 	{
+		assert(pipeline_layout_ptr->num_layouts > 0);
 		free(pipeline_layout_ptr->layouts);
-		pipeline_layout_ptr->layouts = NULL;
-
-		free(pipeline_layout_ptr->dynamic_binding_offsets);
-		pipeline_layout_ptr->dynamic_binding_offsets = NULL;
-
-		pipeline_layout_ptr->num_layouts = 0;
 	}
+
+	if (pipeline_layout_ptr->dynamic_binding_offsets)
+	{
+		assert(pipeline_layout_ptr->num_layouts > 0);
+		free(pipeline_layout_ptr->dynamic_binding_offsets);
+	}
+
+	pipeline_layout_ptr->layouts = NULL;
+	pipeline_layout_ptr->dynamic_binding_offsets = NULL;
+	pipeline_layout_ptr->num_layouts = 0;
 }
 
 static void metal_destroyPipeline(Metal_Device *device_ptr, Metal_Pipeline *pipeline_ptr)
@@ -168,21 +209,25 @@ static void metal_destroyPipeline(Metal_Device *device_ptr, Metal_Pipeline *pipe
 
 	OPAL_UNUSED(device_ptr);
 
-	if (pipeline_ptr->render_pipeline)
+	@autoreleasepool
 	{
-		assert(pipeline_ptr->depth_stencil_state);
+		if (pipeline_ptr->depth_stencil_state)
+		{
+			[pipeline_ptr->depth_stencil_state release];
+			pipeline_ptr->depth_stencil_state = nil;
+		}
 
-		[pipeline_ptr->render_pipeline release];
-		pipeline_ptr->render_pipeline = nil;
+		if (pipeline_ptr->render_pipeline)
+		{
+			[pipeline_ptr->render_pipeline release];
+			pipeline_ptr->render_pipeline = nil;
+		}
 
-		[pipeline_ptr->depth_stencil_state release];
-		pipeline_ptr->depth_stencil_state = nil;
-	}
-
-	if (pipeline_ptr->compute_pipeline)
-	{
-		[pipeline_ptr->compute_pipeline release];
-		pipeline_ptr->compute_pipeline = nil;
+		if (pipeline_ptr->compute_pipeline)
+		{
+			[pipeline_ptr->compute_pipeline release];
+			pipeline_ptr->compute_pipeline = nil;
+		}
 	}
 }
 
@@ -192,8 +237,12 @@ static void metal_destroySwapchain(Metal_Device *device_ptr, Metal_Swapchain *sw
 	assert(swapchain_ptr);
 
 	OPAL_UNUSED(device_ptr);
-	CGColorSpaceRelease(swapchain_ptr->colorspace);
-	[swapchain_ptr->queue release];
+
+	@autoreleasepool
+	{
+		CGColorSpaceRelease(swapchain_ptr->colorspace);
+		[swapchain_ptr->queue release];
+	}
 }
 
 /*
@@ -371,39 +420,35 @@ static Opal_Result metal_deviceCreateSemaphore(Opal_Device this, const Opal_Sema
 	id<MTLEvent> metal_event = nil;
 	id<MTLSharedEvent> metal_shared_event = nil;
 
-	if (desc->flags & OPAL_SEMAPHORE_CREATION_FLAGS_HOST_OPERATIONS)
+	@autoreleasepool
 	{
-		metal_shared_event = [device_ptr->device newSharedEvent];
-		metal_event = metal_shared_event;
-	}
-	else
-		metal_event = [device_ptr->device newEvent];
-
-	if (!metal_event)
-		return OPAL_METAL_ERROR;
-
-	if (desc->initial_value != 0)
-	{
-		id<MTLCommandQueue> metal_queue = [device_ptr->device newCommandQueue];
-		if (!metal_queue)
+		if (desc->flags & OPAL_SEMAPHORE_CREATION_FLAGS_HOST_OPERATIONS)
 		{
-			[metal_event release];
+			metal_shared_event = [device_ptr->device newSharedEvent];
+			metal_event = metal_shared_event;
+		}
+		else
+			metal_event = [device_ptr->device newEvent];
+
+		if (!metal_event)
 			return OPAL_METAL_ERROR;
+
+		if (desc->initial_value != 0)
+		{
+			id<MTLCommandQueue> metal_queue = [device_ptr->device newCommandQueue];
+			if (!metal_queue)
+				return OPAL_METAL_ERROR;
+
+			id<MTLCommandBuffer> metal_command_buffer = [metal_queue commandBufferWithUnretainedReferences];
+			if (!metal_command_buffer)
+				return OPAL_METAL_ERROR;
+
+			[metal_command_buffer encodeSignalEvent: metal_event value: desc->initial_value];
+			[metal_command_buffer commit];
+			[metal_command_buffer waitUntilCompleted];
 		}
 
-		id<MTLCommandBuffer> metal_command_buffer = [metal_queue commandBufferWithUnretainedReferences];
-		if (!metal_command_buffer)
-		{
-			[metal_event release];
-			[metal_queue release];
-			return OPAL_METAL_ERROR;
-		}
-
-		[metal_command_buffer encodeSignalEvent: metal_event value: desc->initial_value];
-		[metal_command_buffer commit];
-		[metal_command_buffer waitUntilCompleted];
-
-		[metal_queue release];
+		[metal_event retain];
 	}
 
 	// create opal struct
@@ -427,38 +472,43 @@ static Opal_Result metal_deviceCreateBuffer(Opal_Device this, const Opal_BufferD
 	id<MTLBuffer> metal_buffer = nil;
 	Metal_Allocation allocation = {0};
 
-	// fill buffer info
-	MTLResourceOptions options = 0;
-	switch (desc->memory_type)
+	@autoreleasepool
 	{
-		case OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL: options = MTLResourceStorageModePrivate | MTLResourceCPUCacheModeDefaultCache; break;
-		case OPAL_ALLOCATION_MEMORY_TYPE_STREAM: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined; break;
-		case OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache; break;
-		case OPAL_ALLOCATION_MEMORY_TYPE_READBACK: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache; break;
+		// fill buffer info
+		MTLResourceOptions options = 0;
+		switch (desc->memory_type)
+		{
+			case OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL: options = MTLResourceStorageModePrivate | MTLResourceCPUCacheModeDefaultCache; break;
+			case OPAL_ALLOCATION_MEMORY_TYPE_STREAM: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined; break;
+			case OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache; break;
+			case OPAL_ALLOCATION_MEMORY_TYPE_READBACK: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache; break;
 
-		default: assert(false); return OPAL_METAL_ERROR;
-	}
+			default: assert(false); return OPAL_METAL_ERROR;
+		}
 
-	MTLSizeAndAlign allocation_info = [metal_device heapBufferSizeAndAlignWithLength: desc->size options: options];
+		MTLSizeAndAlign allocation_info = [metal_device heapBufferSizeAndAlignWithLength: desc->size options: options];
 
-	// fill allocation info
-	Metal_AllocationDesc allocation_desc = {0};
-	allocation_desc.size = allocation_info.size;
-	allocation_desc.alignment = allocation_info.align;
-	allocation_desc.allocation_type = desc->memory_type;
-	allocation_desc.hint = desc->hint;
+		// fill allocation info
+		Metal_AllocationDesc allocation_desc = {0};
+		allocation_desc.size = allocation_info.size;
+		allocation_desc.alignment = allocation_info.align;
+		allocation_desc.allocation_type = desc->memory_type;
+		allocation_desc.hint = desc->hint;
 
-	Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
-	if (opal_result != OPAL_SUCCESS)
-		return opal_result;
+		Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+		if (opal_result != OPAL_SUCCESS)
+			return opal_result;
 
-	assert(allocation.offset % allocation_info.align == 0);
+		assert(allocation.offset % allocation_info.align == 0);
 
-	metal_buffer = [allocation.memory newBufferWithLength: allocation_desc.size options: options offset: allocation.offset];
-	if (!metal_buffer)
-	{
-		metal_allocatorFreeMemory(device_ptr, allocation);
-		return OPAL_METAL_ERROR;
+		metal_buffer = [allocation.memory newBufferWithLength: allocation_desc.size options: options offset: allocation.offset];
+		if (!metal_buffer)
+		{
+			metal_allocatorFreeMemory(device_ptr, allocation);
+			return OPAL_METAL_ERROR;
+		}
+
+		[metal_buffer retain];
 	}
 
 	// create opal struct
@@ -481,47 +531,48 @@ static Opal_Result metal_deviceCreateTexture(Opal_Device this, const Opal_Textur
 
 	id<MTLTexture> metal_texture = nil;
 	Metal_Allocation allocation = {0};
-
-	// fill texture info
-	MTLTextureDescriptor *info = [[MTLTextureDescriptor alloc] init];
 	MTLPixelFormat metal_format = metal_helperToPixelFormat(desc->format);
 
-	info.textureType = metal_helperToTextureType(desc->type, desc->samples);
-	info.pixelFormat = metal_format;
-	info.width = desc->width;
-	info.height = desc->height;
-	info.depth = desc->depth;
-	info.mipmapLevelCount = desc->mip_count;
-	info.sampleCount = metal_helperToSampleCount(desc->samples);
-	info.arrayLength = desc->layer_count;
-	info.resourceOptions = MTLResourceStorageModePrivate | MTLResourceCPUCacheModeDefaultCache;
-	info.usage = metal_helperToTextureUsage(desc->usage);
-
-	MTLSizeAndAlign allocation_info = [metal_device heapTextureSizeAndAlignWithDescriptor: info];
-
-	// fill allocation info
-	Metal_AllocationDesc allocation_desc = {0};
-	allocation_desc.size = allocation_info.size;
-	allocation_desc.alignment = allocation_info.align;
-	allocation_desc.allocation_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
-	allocation_desc.hint = desc->hint;
-
-	Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
-	if (opal_result != OPAL_SUCCESS)
+	@autoreleasepool
 	{
-		[info release];
-		return opal_result;
-	}
+		// fill texture info
+		MTLTextureDescriptor *info = [[MTLTextureDescriptor alloc] init];
 
-	assert(allocation.offset % allocation_info.align == 0);
+		info.textureType = metal_helperToTextureType(desc->type, desc->samples);
+		info.pixelFormat = metal_format;
+		info.width = desc->width;
+		info.height = desc->height;
+		info.depth = desc->depth;
+		info.mipmapLevelCount = desc->mip_count;
+		info.sampleCount = metal_helperToSampleCount(desc->samples);
+		info.arrayLength = desc->layer_count;
+		info.resourceOptions = MTLResourceStorageModePrivate | MTLResourceCPUCacheModeDefaultCache;
+		info.usage = metal_helperToTextureUsage(desc->usage);
 
-	metal_texture = [allocation.memory newTextureWithDescriptor: info offset: allocation.offset];
-	[info release];
+		MTLSizeAndAlign allocation_info = [metal_device heapTextureSizeAndAlignWithDescriptor: info];
 
-	if (!metal_texture)
-	{
-		metal_allocatorFreeMemory(device_ptr, allocation);
-		return OPAL_METAL_ERROR;
+		// fill allocation info
+		Metal_AllocationDesc allocation_desc = {0};
+		allocation_desc.size = allocation_info.size;
+		allocation_desc.alignment = allocation_info.align;
+		allocation_desc.allocation_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
+		allocation_desc.hint = desc->hint;
+
+		Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+		if (opal_result != OPAL_SUCCESS)
+			return opal_result;
+
+		assert(allocation.offset % allocation_info.align == 0);
+
+		metal_texture = [allocation.memory newTextureWithDescriptor: info offset: allocation.offset];
+
+		if (!metal_texture)
+		{
+			metal_allocatorFreeMemory(device_ptr, allocation);
+			return OPAL_METAL_ERROR;
+		}
+
+		[metal_texture retain];
 	}
 
 	// create opal struct
@@ -546,15 +597,22 @@ static Opal_Result metal_deviceCreateTextureView(Opal_Device this, const Opal_Te
 	Metal_Texture *texture_ptr = (Metal_Texture *)opal_poolGetElement(&device_ptr->textures, (Opal_PoolHandle)desc->texture);
 	assert(texture_ptr);
 
-	id<MTLTexture> metal_texture_view = [texture_ptr->texture
-		newTextureViewWithPixelFormat: texture_ptr->format
-		textureType: metal_helperToTextureViewType(desc->type)
-		levels: NSMakeRange(desc->base_mip, desc->mip_count)
-		slices: NSMakeRange(desc->base_layer, desc->layer_count)
-	];
+	id<MTLTexture> metal_texture_view = nil;
+	
+	@autoreleasepool
+	{
+		metal_texture_view = [texture_ptr->texture
+			newTextureViewWithPixelFormat: texture_ptr->format
+			textureType: metal_helperToTextureViewType(desc->type)
+			levels: NSMakeRange(desc->base_mip, desc->mip_count)
+			slices: NSMakeRange(desc->base_layer, desc->layer_count)
+		];
 
-	if (!metal_texture_view)
-		return OPAL_METAL_ERROR;
+		if (!metal_texture_view)
+			return OPAL_METAL_ERROR;
+
+		[metal_texture_view retain];
+	}
 
 	Metal_TextureView result = {0};
 	result.texture_view = metal_texture_view;
@@ -577,26 +635,30 @@ static Opal_Result metal_deviceCreateSampler(Opal_Device this, const Opal_Sample
 
 	id<MTLSamplerState> metal_sampler = nil;
 
-	// fill sampler info
-	MTLSamplerDescriptor *info = [[MTLSamplerDescriptor alloc] init];
+	@autoreleasepool
+	{
+		// fill sampler info
+		MTLSamplerDescriptor *info = [[MTLSamplerDescriptor alloc] init];
 
-	info.rAddressMode = metal_helperToSamplerAddressMode(desc->address_mode_u);
-	info.sAddressMode = metal_helperToSamplerAddressMode(desc->address_mode_v);
-	info.tAddressMode = metal_helperToSamplerAddressMode(desc->address_mode_w);
-	info.minFilter = metal_helperToSamplerMinMagFilter(desc->min_filter);
-	info.magFilter = metal_helperToSamplerMinMagFilter(desc->mag_filter);
-	info.mipFilter = metal_helperToSamplerMipFilter(desc->mip_filter);
-	info.lodMinClamp = desc->min_lod;
-	info.lodMaxClamp = desc->max_lod;
-	info.maxAnisotropy = desc->max_anisotropy;
-	info.compareFunction = metal_helperToCompareFunction(desc->compare_op);
-	info.supportArgumentBuffers = true;
+		info.rAddressMode = metal_helperToSamplerAddressMode(desc->address_mode_u);
+		info.sAddressMode = metal_helperToSamplerAddressMode(desc->address_mode_v);
+		info.tAddressMode = metal_helperToSamplerAddressMode(desc->address_mode_w);
+		info.minFilter = metal_helperToSamplerMinMagFilter(desc->min_filter);
+		info.magFilter = metal_helperToSamplerMinMagFilter(desc->mag_filter);
+		info.mipFilter = metal_helperToSamplerMipFilter(desc->mip_filter);
+		info.lodMinClamp = desc->min_lod;
+		info.lodMaxClamp = desc->max_lod;
+		info.maxAnisotropy = desc->max_anisotropy;
+		info.compareFunction = metal_helperToCompareFunction(desc->compare_op);
+		info.supportArgumentBuffers = true;
 
-	metal_sampler = [metal_device newSamplerStateWithDescriptor: info];
-	[info release];
+		metal_sampler = [metal_device newSamplerStateWithDescriptor: info];
 
-	if (!metal_sampler)
-		return OPAL_METAL_ERROR;
+		if (!metal_sampler)
+			return OPAL_METAL_ERROR;
+
+		[metal_sampler retain];
+	}
 
 	// create opal struct
 	Metal_Sampler result = {0};
@@ -666,20 +728,22 @@ static Opal_Result metal_deviceCreateShader(Opal_Device this, const Opal_ShaderD
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 
-	dispatch_data_t data = dispatch_data_create(desc->data, desc->size, nil, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
-	assert(data);
+	id<MTLLibrary> metal_library = nil;
 
-	NSError *error = nil;
-	id<MTLLibrary> metal_library = [device_ptr->device newLibraryWithData: data error: &error];
-	[data release];
-
-	if (!metal_library)
+	@autoreleasepool
 	{
-		[error release];
-		return OPAL_METAL_ERROR;
-	}
+		dispatch_data_t data = dispatch_data_create(desc->data, desc->size, nil, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+		assert(data);
 
-	assert(error == nil);
+		NSError *error = nil;
+		metal_library = [device_ptr->device newLibraryWithData: data error: &error];
+
+		if (!metal_library)
+			return OPAL_METAL_ERROR;
+
+		assert(error == nil);
+		[metal_library retain];
+	}
 
 	Metal_Shader result = {0};
 	result.library = metal_library;
@@ -699,68 +763,69 @@ static Opal_Result metal_deviceCreateDescriptorHeap(Opal_Device this, const Opal
 
 	id<MTLBuffer> metal_buffer = nil;
 	Metal_Allocation allocation = {0};
-
-	// estimate argument buffer size
-	MTLDataType types[] =
-	{
-		MTLDataTypePointer,
-		MTLDataTypeSampler,
-	};
-
-	uint32_t counts[] =
-	{
-		desc->num_resource_descriptors,
-		desc->num_sampler_descriptors,
-	};
-
-	// TODO: check if there's a better estimation, i.e. maybe it's possible to calculate descriptor set overhead (MoltenVK does that)
 	MTLSizeAndAlign allocation_info = {0};
-	allocation_info.align = 256;
 
-	for (uint32_t i = 0; i < 2; ++i)
+	@autoreleasepool
 	{
-		MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
-		arg.dataType = types[i];
-		arg.access = MTLBindingAccessReadWrite;
-		arg.index = 0;
-		arg.arrayLength = counts[i];
-		arg.textureType = MTLTextureTypeCubeArray;
+		// estimate argument buffer size
+		MTLDataType types[] =
+		{
+			MTLDataTypePointer,
+			MTLDataTypeSampler,
+		};
 
-		NSArray *args = @[arg];
+		uint32_t counts[] =
+		{
+			desc->num_resource_descriptors,
+			desc->num_sampler_descriptors,
+		};
 
-		id<MTLArgumentEncoder> metal_encoder = [metal_device newArgumentEncoderWithArguments: args];
-		[args release];
-		[arg release];
+		// TODO: check if there's a better estimation, i.e. maybe it's possible to calculate descriptor set overhead (MoltenVK does that)
+		allocation_info.align = 256;
 
-		if (metal_encoder == nil)
+		for (uint32_t i = 0; i < 2; ++i)
+		{
+			MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
+			arg.dataType = types[i];
+			arg.access = MTLBindingAccessReadWrite;
+			arg.index = 0;
+			arg.arrayLength = counts[i];
+			arg.textureType = MTLTextureTypeCubeArray;
+
+			NSArray *args = @[arg];
+			id<MTLArgumentEncoder> metal_encoder = [metal_device newArgumentEncoderWithArguments: args];
+
+			if (metal_encoder == nil)
+				return OPAL_METAL_ERROR;
+
+			allocation_info.size += metal_encoder.encodedLength;
+		}
+
+		allocation_info.size = alignUpul(allocation_info.size, allocation_info.align);
+
+		// fill allocation info
+		Metal_AllocationDesc allocation_desc = {0};
+		allocation_desc.size = allocation_info.size;
+		allocation_desc.alignment = allocation_info.align;
+		allocation_desc.allocation_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
+		allocation_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
+
+		Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+		if (opal_result != OPAL_SUCCESS)
+			return opal_result;
+
+		assert(allocation.offset % allocation_info.align == 0);
+
+		MTLResourceOptions options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache;
+
+		metal_buffer = [allocation.memory newBufferWithLength: allocation_desc.size options: options offset: allocation.offset];
+		if (!metal_buffer)
+		{
+			metal_allocatorFreeMemory(device_ptr, allocation);
 			return OPAL_METAL_ERROR;
+		}
 
-		allocation_info.size += metal_encoder.encodedLength;
-		[metal_encoder release];
-	}
-
-	allocation_info.size = alignUpul(allocation_info.size, allocation_info.align);
-
-	// fill allocation info
-	Metal_AllocationDesc allocation_desc = {0};
-	allocation_desc.size = allocation_info.size;
-	allocation_desc.alignment = allocation_info.align;
-	allocation_desc.allocation_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
-	allocation_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
-
-	Opal_Result opal_result = metal_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
-	if (opal_result != OPAL_SUCCESS)
-		return opal_result;
-
-	assert(allocation.offset % allocation_info.align == 0);
-
-	MTLResourceOptions options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache;
-
-	metal_buffer = [allocation.memory newBufferWithLength: allocation_desc.size options: options offset: allocation.offset];
-	if (!metal_buffer)
-	{
-		metal_allocatorFreeMemory(device_ptr, allocation);
-		return OPAL_METAL_ERROR;
+		[metal_buffer retain];
 	}
 
 	// create opal struct
@@ -769,7 +834,7 @@ static Opal_Result metal_deviceCreateDescriptorHeap(Opal_Device this, const Opal
 	result.allocation = allocation;
 
 	uint32_t num_blocks = (uint32_t)(allocation_info.size / allocation_info.align);
-	opal_result = opal_heapInitialize(&result.heap, num_blocks, num_blocks);
+	Opal_Result opal_result = opal_heapInitialize(&result.heap, num_blocks, num_blocks);
 	assert(opal_result == OPAL_SUCCESS);
 
 	*descriptor_heap = (Opal_Buffer)opal_poolAddElement(&device_ptr->descriptor_heaps, &result);
@@ -785,60 +850,63 @@ static Opal_Result metal_deviceCreateDescriptorSetLayout(Opal_Device this, uint3
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	id<MTLDevice> metal_device = device_ptr->device;
 
+	id<MTLArgumentEncoder> metal_encoder = nil;
+
 	uint32_t num_static_entries = 0;
 	uint32_t num_dynamic_entries = 0;
+	uint32_t num_blocks = 0;
 
-	NSMutableArray<MTLArgumentDescriptor*>* args = [NSMutableArray arrayWithCapacity: num_entries];
-
-	for (uint32_t i = 0; i < num_entries; ++i)
+	@autoreleasepool
 	{
-		const Opal_DescriptorSetLayoutEntry *entry = &entries[i];
+		NSMutableArray<MTLArgumentDescriptor*>* args = [NSMutableArray arrayWithCapacity: num_entries];
 
-		switch (entry->type)
+		for (uint32_t i = 0; i < num_entries; ++i)
 		{
-			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
+			const Opal_DescriptorSetLayoutEntry *entry = &entries[i];
+
+			switch (entry->type)
 			{
-				num_dynamic_entries++;
+				case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
+				{
+					num_dynamic_entries++;
+				}
+				break;
+
+				default:
+				{
+					MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
+					arg.dataType = metal_helperToArgumentDataType(entry->type);
+					arg.access = MTLBindingAccessReadWrite;
+					arg.index = entry->binding;
+					arg.arrayLength = 1;
+					arg.textureType = MTLTextureTypeCubeArray;
+
+					[args addObject: arg];
+
+					num_static_entries++;
+				}
+				break;
 			}
-			break;
+		}
 
-			default:
-			{
-				MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
-				arg.dataType = metal_helperToArgumentDataType(entry->type);
-				arg.access = MTLBindingAccessReadWrite;
-				arg.index = entry->binding;
-				arg.arrayLength = 1;
-				arg.textureType = MTLTextureTypeCubeArray;
+		assert([args count] == num_static_entries);
+		assert(num_static_entries + num_dynamic_entries == num_entries);
 
-				[args addObject: arg];
+		if (num_static_entries > 0)
+		{
+			NSSortDescriptor *argument_sort_desc = [[NSSortDescriptor alloc] initWithKey:@"index" ascending:YES];
+			NSArray *sorted_args = [args sortedArrayUsingDescriptors:@[argument_sort_desc]];
 
-				num_static_entries++;
-			}
-			break;
+			metal_encoder = [metal_device newArgumentEncoderWithArguments: sorted_args];
+
+			if (metal_encoder == nil)
+				return OPAL_METAL_ERROR;
+
+			num_blocks = alignUpul(metal_encoder.encodedLength, 256) / 256;
 		}
 	}
-
-	assert([args count] == num_static_entries);
-	assert(num_static_entries + num_dynamic_entries == num_entries);
-
-	NSSortDescriptor *argument_sort_desc = [[NSSortDescriptor alloc] initWithKey:@"index" ascending:YES];
-	NSArray *sorted_args = [args sortedArrayUsingDescriptors:@[argument_sort_desc]];
-
-	id<MTLArgumentEncoder> metal_encoder = [metal_device newArgumentEncoderWithArguments: sorted_args];
-	[sorted_args release];
-
-	for (uint32_t i = 0; i < num_entries; ++i)
-		[args[i] release];
-
-	[args release];
-
-	if (metal_encoder == nil)
-		return OPAL_METAL_ERROR;
-
-	uint32_t num_blocks = alignUpul(metal_encoder.encodedLength, 256) / 256;
 
 	Metal_DescriptorInfo *metal_entries = NULL;
 	if (num_entries > 0)
@@ -908,14 +976,26 @@ static Opal_Result metal_deviceCreatePipelineLayout(Opal_Device this, uint32_t n
 		result.dynamic_binding_offsets = (uint32_t *)malloc(sizeof(uint32_t) * result.num_layouts);
 		memset(result.dynamic_binding_offsets, 0, sizeof(uint32_t) * result.num_layouts);
 
-		uint32_t offset = result.num_layouts;
+		uint32_t offset = 0;
 		for (uint32_t i = 0; i < result.num_layouts; ++i)
 		{
 			Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
 			assert(descriptor_set_layout_ptr);
 
-			result.dynamic_binding_offsets[i] = offset;
-			offset += descriptor_set_layout_ptr->num_dynamic_descriptors;
+			if (descriptor_set_layout_ptr->num_static_descriptors > 0)
+				offset++;
+		};
+
+		for (uint32_t i = 0; i < result.num_layouts; ++i)
+		{
+			Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
+			assert(descriptor_set_layout_ptr);
+
+			if (descriptor_set_layout_ptr->num_dynamic_descriptors > 0)
+			{
+				result.dynamic_binding_offsets[i] = offset;
+				offset += descriptor_set_layout_ptr->num_dynamic_descriptors;
+			}
 		}
 
 		result.vertex_binding_offset = offset;
@@ -933,140 +1013,164 @@ static Opal_Result metal_deviceCreateGraphicsPipeline(Opal_Device this, const Op
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 
-	MTLRenderPipelineDescriptor *info = [[MTLRenderPipelineDescriptor alloc] init];
-
-	// pipeline layout
 	Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
 	assert(pipeline_layout_ptr);
 
+	id<MTLRenderPipelineState> metal_render_pipeline = nil;
+	id<MTLDepthStencilState> metal_depth_stencil_state = nil;
 
-	// shaders
-
-	// TODO: use tessellation_control shader as post-tessellation vertex function
-
-	Opal_Shader opal_shaders[2] =
+	@autoreleasepool
 	{
-		desc->vertex_function.shader,
-		desc->fragment_function.shader,
-	};
+		MTLRenderPipelineDescriptor *info = [[MTLRenderPipelineDescriptor alloc] init];
 
-	NSString *opal_names[2] =
-	{
-		[NSString stringWithUTF8String: desc->vertex_function.name],
-		[NSString stringWithUTF8String: desc->fragment_function.name],
-	};
+		// shaders
 
-	id<MTLFunction> metal_shader_functions[2] =
-	{
-		nil,
-		nil,
-	};
-	
-	for (uint32_t i = 0; i < 2; ++i)
-	{
-		Metal_Shader *shader_ptr = (Metal_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)opal_shaders[i]);
-		if (shader_ptr == NULL)
-			continue;
+		// TODO: use tessellation_control shader as post-tessellation vertex function
 
-		metal_shader_functions[i] = [shader_ptr->library newFunctionWithName: opal_names[i]];
-	}
-
-	info.vertexFunction = metal_shader_functions[0];
-	info.fragmentFunction = metal_shader_functions[1];
-
-	// vertex input
-	MTLVertexDescriptor *vertex_info = [MTLVertexDescriptor new];
-
-	uint32_t num_attributes = 0;
-	for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
-	{
-		const Opal_VertexStream *vertex_stream = &desc->vertex_streams[i];
-
-		vertex_info.layouts[i].stride = vertex_stream->stride;
-		vertex_info.layouts[i].stepRate = 1;
-		vertex_info.layouts[i].stepFunction = metal_helperToVertexStepFunction(vertex_stream->rate);
-	
-		for (uint32_t j = 0; j < vertex_stream->num_vertex_attributes; ++j)
+		Opal_Shader opal_shaders[2] =
 		{
-			const Opal_VertexAttribute *vertex_attribute = &vertex_stream->attributes[j];
+			desc->vertex_function.shader,
+			desc->fragment_function.shader,
+		};
 
-			vertex_info.attributes[num_attributes].format = metal_helperToVertexFormat(vertex_attribute->format);
-			vertex_info.attributes[num_attributes].offset = vertex_attribute->offset;
-			vertex_info.attributes[num_attributes].bufferIndex = pipeline_layout_ptr->vertex_binding_offset + i;
-			num_attributes++;
+		NSString *opal_names[2] =
+		{
+			[NSString stringWithUTF8String: desc->vertex_function.name],
+			[NSString stringWithUTF8String: desc->fragment_function.name],
+		};
+
+		id<MTLFunction> metal_shader_functions[2] =
+		{
+			nil,
+			nil,
+		};
+		
+		for (uint32_t i = 0; i < 2; ++i)
+		{
+			Metal_Shader *shader_ptr = (Metal_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)opal_shaders[i]);
+			if (shader_ptr == NULL)
+				continue;
+
+			metal_shader_functions[i] = [shader_ptr->library newFunctionWithName: opal_names[i]];
 		}
+
+		info.vertexFunction = metal_shader_functions[0];
+		info.fragmentFunction = metal_shader_functions[1];
+
+		// vertex input
+		MTLVertexDescriptor *vertex_info = [MTLVertexDescriptor new];
+
+		uint32_t num_attributes = 0;
+		for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
+		{
+			const Opal_VertexStream *vertex_stream = &desc->vertex_streams[i];
+
+			uint32_t buffer_index = pipeline_layout_ptr->vertex_binding_offset + i;
+			vertex_info.layouts[buffer_index].stride = vertex_stream->stride;
+			vertex_info.layouts[buffer_index].stepRate = 1;
+			vertex_info.layouts[buffer_index].stepFunction = metal_helperToVertexStepFunction(vertex_stream->rate);
+
+			for (uint32_t j = 0; j < vertex_stream->num_vertex_attributes; ++j)
+			{
+				const Opal_VertexAttribute *vertex_attribute = &vertex_stream->attributes[j];
+
+				vertex_info.attributes[num_attributes].format = metal_helperToVertexFormat(vertex_attribute->format);
+				vertex_info.attributes[num_attributes].offset = vertex_attribute->offset;
+				vertex_info.attributes[num_attributes].bufferIndex = buffer_index;
+				num_attributes++;
+			}
+		}
+
+		info.vertexDescriptor = vertex_info;
+
+		// color attachments
+		for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+		{
+			const Opal_BlendState *opal_blend_state = &desc->color_blend_states[i];
+
+			info.colorAttachments[i].pixelFormat = metal_helperToPixelFormat(desc->color_attachment_formats[i]);
+			info.colorAttachments[i].blendingEnabled = opal_blend_state->enable;
+			info.colorAttachments[i].sourceRGBBlendFactor = metal_helperToBlendFactor(opal_blend_state->src_color);
+			info.colorAttachments[i].destinationRGBBlendFactor = metal_helperToBlendFactor(opal_blend_state->dst_color);
+			info.colorAttachments[i].rgbBlendOperation = metal_helperToBlendOperation(opal_blend_state->color_op);
+			info.colorAttachments[i].sourceAlphaBlendFactor = metal_helperToBlendFactor(opal_blend_state->src_alpha);
+			info.colorAttachments[i].destinationAlphaBlendFactor = metal_helperToBlendFactor(opal_blend_state->dst_alpha);
+			info.colorAttachments[i].alphaBlendOperation = metal_helperToBlendOperation(opal_blend_state->alpha_op);
+		}
+
+		// depthstencil attachment
+		if (desc->depth_stencil_attachment_format)
+		{
+			MTLPixelFormat format = metal_helperToPixelFormat(*desc->depth_stencil_attachment_format);
+
+			info.depthAttachmentPixelFormat = format;
+			info.stencilAttachmentPixelFormat = format;
+		}
+
+		// rasterization state
+		info.inputPrimitiveTopology = metal_helperToPrimitiveTopologyClass(desc->primitive_type);
+		info.rasterSampleCount = metal_helperToSampleCount(desc->rasterization_samples);
+
+		NSError *error = nil;
+		metal_render_pipeline = [device_ptr->device newRenderPipelineStateWithDescriptor: info error: &error];
+
+		if (!metal_render_pipeline)
+			return OPAL_METAL_ERROR;
+
+		MTLDepthStencilDescriptor *depth_stencil_info = nil;
+		
+		if (desc->depth_enable || desc->stencil_enable)
+		{
+			depth_stencil_info = [MTLDepthStencilDescriptor new];
+			assert(depth_stencil_info);
+		}
+
+		if (desc->depth_enable)
+		{
+			depth_stencil_info.depthWriteEnabled = desc->depth_write;
+			depth_stencil_info.depthCompareFunction = metal_helperToCompareFunction(desc->depth_compare_op);
+		}
+
+		MTLStencilDescriptor *stencil_front = nil;
+		MTLStencilDescriptor *stencil_back = nil;
+
+		if (desc->stencil_enable)
+		{
+			stencil_front = [MTLStencilDescriptor new];
+			assert(stencil_front);
+
+			stencil_front.depthStencilPassOperation = metal_helperToStencilOperation(desc->stencil_front.pass_op);
+			stencil_front.depthFailureOperation = metal_helperToStencilOperation(desc->stencil_front.depth_fail_op);
+			stencil_front.stencilFailureOperation = metal_helperToStencilOperation(desc->stencil_front.fail_op);
+			stencil_front.stencilCompareFunction = metal_helperToCompareFunction(desc->stencil_front.compare_op);
+			stencil_front.readMask = desc->stencil_read_mask;
+			stencil_front.writeMask = desc->stencil_write_mask;
+
+			depth_stencil_info.frontFaceStencil = stencil_front;
+
+			stencil_back = [MTLStencilDescriptor new];
+			assert(stencil_back);
+
+			stencil_back.depthStencilPassOperation = metal_helperToStencilOperation(desc->stencil_back.pass_op);
+			stencil_back.depthFailureOperation = metal_helperToStencilOperation(desc->stencil_back.depth_fail_op);
+			stencil_back.stencilFailureOperation = metal_helperToStencilOperation(desc->stencil_back.fail_op);
+			stencil_back.stencilCompareFunction = metal_helperToCompareFunction(desc->stencil_back.compare_op);
+			stencil_back.readMask = desc->stencil_read_mask;
+			stencil_back.writeMask = desc->stencil_write_mask;
+
+			depth_stencil_info.backFaceStencil = stencil_back;
+		}
+
+		metal_depth_stencil_state = [device_ptr->device newDepthStencilStateWithDescriptor: depth_stencil_info];
+
+		if (!metal_depth_stencil_state)
+			return OPAL_METAL_ERROR;
+
+		assert(error == nil);
+
+		[metal_render_pipeline retain];
+		[metal_depth_stencil_state retain];
 	}
-
-	info.vertexDescriptor = vertex_info;
-
-	// color attachments
-	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
-	{
-		const Opal_BlendState *opal_blend_state = &desc->color_blend_states[i];
-
-		info.colorAttachments[i].pixelFormat = metal_helperToPixelFormat(desc->color_attachment_formats[i]);
-		info.colorAttachments[i].blendingEnabled = opal_blend_state->enable;
-		info.colorAttachments[i].sourceRGBBlendFactor = metal_helperToBlendFactor(opal_blend_state->src_color);
-		info.colorAttachments[i].destinationRGBBlendFactor = metal_helperToBlendFactor(opal_blend_state->dst_color);
-		info.colorAttachments[i].rgbBlendOperation = metal_helperToBlendOperation(opal_blend_state->color_op);
-		info.colorAttachments[i].sourceAlphaBlendFactor = metal_helperToBlendFactor(opal_blend_state->src_alpha);
-		info.colorAttachments[i].destinationAlphaBlendFactor = metal_helperToBlendFactor(opal_blend_state->dst_alpha);
-		info.colorAttachments[i].alphaBlendOperation = metal_helperToBlendOperation(opal_blend_state->alpha_op);
-	}
-
-	// depthstencil attachment
-	if (desc->depth_stencil_attachment_format)
-	{
-		MTLPixelFormat format = metal_helperToPixelFormat(*desc->depth_stencil_attachment_format);
-
-		info.depthAttachmentPixelFormat = format;
-		info.stencilAttachmentPixelFormat = format;
-	}
-
-	// rasterization state
-	info.inputPrimitiveTopology = metal_helperToPrimitiveTopologyClass(desc->primitive_type);
-	info.rasterSampleCount = metal_helperToSampleCount(desc->rasterization_samples);
-
-	NSError *error = nil;
-	id<MTLRenderPipelineState> metal_render_pipeline = [device_ptr->device newRenderPipelineStateWithDescriptor: info error: &error];
-	[info release];
-	[vertex_info release];
-
-	for (uint32_t i = 0; i < 2; ++i)
-	{
-		[opal_names[i] release];
-
-		if (metal_shader_functions[i] == nil)
-			continue;
-
-		[metal_shader_functions[i] release];
-	}
-
-	if (!metal_render_pipeline)
-	{
-		[error release];
-		return OPAL_METAL_ERROR;
-	}
-
-	MTLDepthStencilDescriptor *depth_info = [MTLDepthStencilDescriptor new];
-	if (!depth_info)
-	{
-		[metal_render_pipeline release];
-		return OPAL_METAL_ERROR;
-	}
-
-	// TODO: fill depth stencil descriptor
-
-	id<MTLDepthStencilState> metal_depth_stencil_state = [device_ptr->device newDepthStencilStateWithDescriptor: depth_info];
-	[depth_info release];
-
-	if (!metal_depth_stencil_state)
-	{
-		[metal_render_pipeline release];
-		return OPAL_METAL_ERROR;
-	}
-
-	assert(error == nil);
 
 	// create opal struct
 	Metal_Pipeline result = {0};
@@ -1117,6 +1221,9 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	Metal_Instance *instance_ptr = device_ptr->instance;
 
+	id<MTLCommandQueue> metal_queue = nil;
+	CGColorSpaceRef metal_colorspace = nil;
+
 	// surface
 	Metal_Surface *surface_ptr = (Metal_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)desc->surface);
 	assert(surface_ptr);
@@ -1124,43 +1231,48 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 	CAMetalLayer *layer_ptr = surface_ptr->layer;
 	assert(layer_ptr);
 
-	// surface capabilities
-	if (desc->mode == OPAL_PRESENT_MODE_MAILBOX)
-		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
+	@autoreleasepool
+	{
+		// surface capabilities
+		if (desc->mode == OPAL_PRESENT_MODE_MAILBOX)
+			return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
 
-	uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE) ? 1 : 2;
+		uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE) ? 1 : 2;
 
-	// device
-	layer_ptr.device = device_ptr->device;
+		// surface format
+		MTLPixelFormat format = metal_helperToPixelFormat(desc->format.texture_format);
+		if (format == MTLPixelFormatInvalid)
+			return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
 
-	// surface format
-	MTLPixelFormat format = metal_helperToPixelFormat(desc->format.texture_format);
-	if (format == MTLPixelFormatInvalid)
-		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
+		CFStringRef colorspace_name = metal_helperToColorspaceName(desc->format.color_space);
+		if (!colorspace_name)
+			return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
 
-	CFStringRef colorspace_name = metal_helperToColorspaceName(desc->format.color_space);
-	if (!colorspace_name)
-		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
+		// present queue
+		metal_queue = [device_ptr->device newCommandQueue];
 
-	CGColorSpaceRef colorspace = CGColorSpaceCreateWithName(colorspace_name);
+		if (!metal_queue)
+			return OPAL_METAL_ERROR;
 
-	// present queue
-	id<MTLCommandQueue> queue = [device_ptr->device newCommandQueue];
-	assert(queue);
+		// config
+		metal_colorspace = CGColorSpaceCreateWithName(colorspace_name);
 
-	// config
-	layer_ptr.drawableSize = layer_ptr.frame.size;
-	layer_ptr.pixelFormat = format;
-	layer_ptr.colorspace = colorspace;
-	layer_ptr.framebufferOnly = (desc->usage == OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
-	layer_ptr.displaySyncEnabled = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE);
-	layer_ptr.maximumDrawableCount = num_textures;
+		layer_ptr.device = device_ptr->device;
+		layer_ptr.drawableSize = layer_ptr.frame.size;
+		layer_ptr.pixelFormat = format;
+		layer_ptr.colorspace = metal_colorspace;
+		layer_ptr.framebufferOnly = (desc->usage == OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
+		layer_ptr.displaySyncEnabled = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE);
+		layer_ptr.maximumDrawableCount = num_textures;
+
+		[metal_queue retain];
+	}
 
 	// create opal struct
 	Metal_Swapchain result = {0};
 	result.surface = desc->surface;
-	result.queue = queue;
-	result.colorspace = colorspace;
+	result.queue = metal_queue;
+	result.colorspace = metal_colorspace;
 
 	*swapchain = (Opal_Swapchain)opal_poolAddElement(&device_ptr->swapchains, &result);
 	return OPAL_SUCCESS;
@@ -1278,8 +1390,8 @@ static Opal_Result metal_deviceDestroyCommandAllocator(Opal_Device this, Opal_Co
 	assert(command_allocator_ptr);
 
 	metal_destroyCommandAllocator(device_ptr, command_allocator_ptr);
-	opal_poolRemoveElement(&device_ptr->command_allocators, handle);
 
+	opal_poolRemoveElement(&device_ptr->command_allocators, handle);
 	return OPAL_SUCCESS;
 }
 
@@ -1301,8 +1413,8 @@ static Opal_Result metal_deviceDestroyCommandBuffer(Opal_Device this, Opal_Comma
 	command_allocator_ptr->command_buffer_usage--;
 
 	metal_destroyCommandBuffer(device_ptr, command_buffer_ptr);
-	opal_poolRemoveElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 
+	opal_poolRemoveElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	return OPAL_SUCCESS;
 }
 
@@ -1320,8 +1432,8 @@ static Opal_Result metal_deviceDestroyShader(Opal_Device this, Opal_Shader shade
 	assert(shader_ptr);
 
 	metal_destroyShader(device_ptr, shader_ptr);
-	opal_poolRemoveElement(&device_ptr->shaders, handle);
 
+	opal_poolRemoveElement(&device_ptr->shaders, handle);
 	return OPAL_SUCCESS;
 }
 
@@ -1339,8 +1451,8 @@ static Opal_Result metal_deviceDestroyDescriptorHeap(Opal_Device this, Opal_Desc
 	assert(descriptor_heap_ptr);
 
 	metal_destroyDescriptorHeap(device_ptr, descriptor_heap_ptr);
-	opal_poolRemoveElement(&device_ptr->descriptor_heaps, handle);
 
+	opal_poolRemoveElement(&device_ptr->descriptor_heaps, handle);
 	return OPAL_SUCCESS;
 }
 
@@ -1358,8 +1470,8 @@ static Opal_Result metal_deviceDestroyDescriptorSetLayout(Opal_Device this, Opal
 	assert(descriptor_set_layout_ptr);
 
 	metal_destroyDescriptorSetLayout(device_ptr, descriptor_set_layout_ptr);
-	opal_poolRemoveElement(&device_ptr->descriptor_set_layouts, handle);
 
+	opal_poolRemoveElement(&device_ptr->descriptor_set_layouts, handle);
 	return OPAL_SUCCESS;
 }
 
@@ -1377,8 +1489,8 @@ static Opal_Result metal_deviceDestroyPipelineLayout(Opal_Device this, Opal_Pipe
 	assert(pipeline_layout_ptr);
 
 	metal_destroyPipelineLayout(device_ptr, pipeline_layout_ptr);
-	opal_poolRemoveElement(&device_ptr->pipeline_layouts, handle);
 
+	opal_poolRemoveElement(&device_ptr->pipeline_layouts, handle);
 	return OPAL_SUCCESS;
 }
 
@@ -1396,8 +1508,8 @@ static Opal_Result metal_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline p
 	assert(pipeline_ptr);
 
 	metal_destroyPipeline(device_ptr, pipeline_ptr);
-	opal_poolRemoveElement(&device_ptr->pipelines, handle);
 
+	opal_poolRemoveElement(&device_ptr->pipelines, handle);
 	return OPAL_SUCCESS;
 }
 
@@ -1625,12 +1737,15 @@ static Opal_Result metal_deviceDestroy(Opal_Device this)
 
 	opal_bumpShutdown(&ptr->bump);
 
-	Opal_Result result = metal_allocatorShutdown(ptr);
-	assert(result == OPAL_SUCCESS);
+	@autoreleasepool
+	{
+		Opal_Result result = metal_allocatorShutdown(ptr);
+		assert(result == OPAL_SUCCESS);
 
-	OPAL_UNUSED(result);
+		OPAL_UNUSED(result);
 
-	[ptr->device release];
+		[ptr->device release];
+	}
 
 	free(ptr);
 	return OPAL_SUCCESS;
@@ -1729,8 +1844,8 @@ static Opal_Result metal_deviceFreeDescriptorSet(Opal_Device this, Opal_Descript
 {
 	assert(this);
 	assert(descriptor_set);
- 
- 	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_Device *device_ptr = (Metal_Device *)this;
 
 	Metal_DescriptorSet *descriptor_set_ptr = (Metal_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
@@ -1767,6 +1882,7 @@ static Opal_Result metal_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
 	assert(buffer_ptr);
+
 	OPAL_UNUSED(buffer_ptr);
 
 	return OPAL_SUCCESS;
@@ -1846,104 +1962,111 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 		}
 	}
 
-	id<MTLArgumentEncoder> metal_encoder = descriptor_set_layout_ptr->encoder;
-	if (metal_encoder == nil)
-		return OPAL_METAL_ERROR;
-
-	[metal_encoder setArgumentBuffer: descriptor_heap_ptr->buffer offset: descriptor_set_ptr->buffer_offset];
-
-	for (uint32_t i = 0; i < num_static_indices; ++i)
+	@autoreleasepool
 	{
-		uint32_t layout_index = static_layout_indices[i].layout;
-		uint32_t entry_index = static_layout_indices[i].entry;
+		id<MTLArgumentEncoder> metal_encoder = descriptor_set_layout_ptr->encoder;
 
-		const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
-		assert(info->api_type != MTLDataTypeNone);
-
-		const Opal_DescriptorSetEntry *entry = &entries[entry_index];
-		assert(info->binding == entry->binding);
-
-		uint32_t binding = entry->binding;
-	
-		switch (info->api_type)
+		if (num_static_indices > 0)
 		{
-			case MTLDataTypePointer:
-			{
-				Opal_Buffer buffer = OPAL_NULL_HANDLE;
-				uint64_t offset = 0;
+			if (metal_encoder == nil)
+				return OPAL_METAL_ERROR;
 
-				if (info->opal_type == OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-				{
-					buffer = entry->data.buffer_view.buffer;
-					offset = entry->data.buffer_view.offset;
-				}
-				else
-				{
-					buffer = entry->data.storage_buffer_view.buffer;
-					offset = entry->data.storage_buffer_view.offset;
-				}
-
-				Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
-				assert(buffer_ptr);
-
-				[metal_encoder setBuffer: buffer_ptr->buffer offset: offset atIndex: binding];
-			}
-			break;
-
-			case MTLDataTypeTexture:
-			{
-				Opal_TextureView data = entry->data.texture_view;
-
-				Metal_TextureView *texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)data);
-				assert(texture_view_ptr);
-
-				[metal_encoder setTexture: texture_view_ptr->texture_view atIndex: binding];
-			}
-			break;
-
-			case MTLDataTypeSampler:
-			{
-				Opal_Sampler data = entry->data.sampler;
-
-				Metal_Sampler *sampler_ptr = (Metal_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)data);
-				assert(sampler_ptr);
-
-				[metal_encoder setSamplerState: sampler_ptr->sampler atIndex: binding];
-			}
-			break;
-
-			case MTLDataTypeInstanceAccelerationStructure:
-			{
-				Opal_AccelerationStructure data = entry->data.acceleration_structure;
-
-				// TODO:
-				// Metal_AccelerationStructure *acceleration_structure_ptr = (Metal_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)data);
-				// assert(acceleration_structure_ptr);
-
-				// [metal_encoder setAccelerationStructure: acceleration_structure_ptr->acceleration_structure atIndex: binding];
-			}
-			break;
-
-			default:
-			{
-				assert(false);
-			}
-			return OPAL_METAL_ERROR;
+			[metal_encoder setArgumentBuffer: descriptor_heap_ptr->buffer offset: descriptor_set_ptr->buffer_offset];
 		}
-	}
 
-	for (uint32_t i = 0; i < num_dynamic_indices; ++i)
-	{
-		uint32_t layout_index = dynamic_layout_indices[i].layout;
-		uint32_t entry_index = dynamic_layout_indices[i].entry;
+		for (uint32_t i = 0; i < num_static_indices; ++i)
+		{
+			uint32_t layout_index = static_layout_indices[i].layout;
+			uint32_t entry_index = static_layout_indices[i].entry;
 
-		const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
-		assert(info->api_type == MTLDataTypeNone);
+			const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
+			assert(info->api_type != MTLDataTypeNone);
 
-		const Opal_DescriptorSetEntry *entry = &entries[entry_index];
-		assert(info->binding == entry->binding);
+			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
+			assert(info->binding == entry->binding);
 
-		memcpy(&descriptor_set_ptr->dynamic_descriptors[i], entry, sizeof(Opal_DescriptorSetEntry));
+			uint32_t binding = entry->binding;
+		
+			switch (info->api_type)
+			{
+				case MTLDataTypePointer:
+				{
+					Opal_Buffer buffer = OPAL_NULL_HANDLE;
+					uint64_t offset = 0;
+
+					if (info->opal_type == OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+					{
+						buffer = entry->data.buffer_view.buffer;
+						offset = entry->data.buffer_view.offset;
+					}
+					else
+					{
+						buffer = entry->data.storage_buffer_view.buffer;
+						offset = entry->data.storage_buffer_view.offset;
+					}
+
+					Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
+					assert(buffer_ptr);
+
+					[metal_encoder setBuffer: buffer_ptr->buffer offset: offset atIndex: binding];
+				}
+				break;
+
+				case MTLDataTypeTexture:
+				{
+					Opal_TextureView data = entry->data.texture_view;
+
+					Metal_TextureView *texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)data);
+					assert(texture_view_ptr);
+
+					[metal_encoder setTexture: texture_view_ptr->texture_view atIndex: binding];
+				}
+				break;
+
+				case MTLDataTypeSampler:
+				{
+					Opal_Sampler data = entry->data.sampler;
+
+					Metal_Sampler *sampler_ptr = (Metal_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)data);
+					assert(sampler_ptr);
+
+					[metal_encoder setSamplerState: sampler_ptr->sampler atIndex: binding];
+				}
+				break;
+
+				case MTLDataTypeInstanceAccelerationStructure:
+				{
+					Opal_AccelerationStructure data = entry->data.acceleration_structure;
+
+					// TODO:
+					// Metal_AccelerationStructure *acceleration_structure_ptr = (Metal_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)data);
+					// assert(acceleration_structure_ptr);
+
+					// [metal_encoder setAccelerationStructure: acceleration_structure_ptr->acceleration_structure atIndex: binding];
+				}
+				break;
+
+				default:
+				{
+					assert(false);
+				}
+				return OPAL_METAL_ERROR;
+			}
+		}
+
+		for (uint32_t i = 0; i < num_dynamic_indices; ++i)
+		{
+			uint32_t layout_index = dynamic_layout_indices[i].layout;
+			uint32_t entry_index = dynamic_layout_indices[i].entry;
+
+			const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
+			assert(info->api_type == MTLDataTypeNone);
+
+			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
+			assert(info->binding == entry->binding);
+
+			memcpy(&descriptor_set_ptr->dynamic_descriptors[i], entry, sizeof(Opal_DescriptorSetEntry));
+		}
 	}
 
 	return OPAL_SUCCESS;
@@ -1958,6 +2081,8 @@ static Opal_Result metal_deviceBeginCommandBuffer(Opal_Device this, Opal_Command
 
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pool == nil);
+	assert(command_buffer_ptr->command_buffer == nil);
 	assert(command_buffer_ptr->graphics_pass_encoder == nil);
 	assert(command_buffer_ptr->compute_pass_encoder == nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
@@ -1965,11 +2090,19 @@ static Opal_Result metal_deviceBeginCommandBuffer(Opal_Device this, Opal_Command
 	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)command_buffer_ptr->queue);
 	assert(queue_ptr);
 
-	id<MTLCommandBuffer> metal_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
-	if (!metal_command_buffer)
-		return OPAL_METAL_ERROR;
+	id<MTLCommandBuffer> metal_command_buffer = nil;
+
+	@autoreleasepool
+	{
+		metal_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
+		if (!metal_command_buffer)
+			return OPAL_METAL_ERROR;
+
+		[metal_command_buffer retain];
+	}
 
 	command_buffer_ptr->command_buffer = metal_command_buffer;
+	command_buffer_ptr->pool = [[NSAutoreleasePool alloc] init];
 	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
 
 	return OPAL_SUCCESS;
@@ -1985,11 +2118,15 @@ static Opal_Result metal_deviceEndCommandBuffer(Opal_Device this, Opal_CommandBu
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->pool);
 	assert(command_buffer_ptr->graphics_pass_encoder == nil);
 	assert(command_buffer_ptr->compute_pass_encoder == nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
 
+	[command_buffer_ptr->pool drain];
+	command_buffer_ptr->pool = nil;
 	command_buffer_ptr->pipeline_layout = OPAL_NULL_HANDLE;
+
 	return OPAL_SUCCESS;
 }
 
@@ -2041,14 +2178,17 @@ static Opal_Result metal_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore se
 	if (!semaphore_ptr->shared_event)
 		return OPAL_METAL_ERROR;
 
-	// NOTE: for some reason MTLEvent.h in the Metal framework doesn't declare this selector,
-	//       which causes compiler warning 'instance method not found'
-	//
-	//       Let's hope that the documentation is correct, and this selector is actually there :)
-	#pragma clang diagnostic push
-	#pragma clang diagnostic ignored "-Wobjc-method-access"
-	[semaphore_ptr->shared_event waitUntilSignaledValue: value timeoutMS: timeout_milliseconds];
-	#pragma clang diagnostic pop
+	@autoreleasepool
+	{
+		// NOTE: for some reason MTLEvent.h in the Metal framework doesn't declare this selector,
+		//       which causes compiler warning 'instance method not found'
+		//
+		//       Let's hope that the documentation is correct, and this selector is actually there :)
+		// #pragma clang diagnostic push
+		// #pragma clang diagnostic ignored "-Wobjc-method-access"
+		[semaphore_ptr->shared_event waitUntilSignaledValue: value timeoutMS: timeout_milliseconds];
+		// #pragma clang diagnostic pop
+	}
 
 	return OPAL_SUCCESS;
 }
@@ -2063,10 +2203,13 @@ static Opal_Result metal_deviceWaitQueue(Opal_Device this, Opal_Queue queue)
 	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
 	assert(queue_ptr);
 
-	id<MTLCommandBuffer> wait_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
+	@autoreleasepool
+	{
+		id<MTLCommandBuffer> wait_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
 
-	[wait_command_buffer commit];
-	[wait_command_buffer waitUntilCompleted];
+		[wait_command_buffer commit];
+		[wait_command_buffer waitUntilCompleted];
+	}
 
 	return OPAL_SUCCESS;
 }
@@ -2099,64 +2242,69 @@ static Opal_Result metal_deviceSubmit(Opal_Device this, Opal_Queue queue, const 
 	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queue);
 	assert(queue_ptr);
 
-	if (desc->num_wait_semaphores > 0 || desc->num_wait_swapchains > 0)
+	@autoreleasepool
 	{
-		id<MTLCommandBuffer> wait_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
-
-		for (uint32_t i = 0; i < desc->num_wait_semaphores; ++i)
+		if (desc->num_wait_semaphores > 0 || desc->num_wait_swapchains > 0)
 		{
-			Metal_Semaphore *semaphore_ptr = (Metal_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->wait_semaphores[i]);
-			assert(semaphore_ptr);
+			id<MTLCommandBuffer> wait_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
 
-			uint64_t value = desc->wait_values[i];
+			for (uint32_t i = 0; i < desc->num_wait_semaphores; ++i)
+			{
+				Metal_Semaphore *semaphore_ptr = (Metal_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->wait_semaphores[i]);
+				assert(semaphore_ptr);
 
-			[wait_command_buffer encodeWaitForEvent: semaphore_ptr->event value: value];
+				uint64_t value = desc->wait_values[i];
+
+				[wait_command_buffer encodeWaitForEvent: semaphore_ptr->event value: value];
+			}
+
+			for (uint32_t i = 0; i < desc->num_wait_swapchains; ++i)
+			{
+				Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->wait_swapchains[i]);
+				assert(swapchain_ptr);
+
+				// TODO: encode wait command
+			}
+
+			[wait_command_buffer commit];
 		}
 
-		for (uint32_t i = 0; i < desc->num_wait_swapchains; ++i)
+		for (uint32_t i = 0; i < desc->num_command_buffers; ++i)
 		{
-			Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->wait_swapchains[i]);
-			assert(swapchain_ptr);
+			Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)desc->command_buffers[i]);
+			assert(command_buffer_ptr);
+			assert(command_buffer_ptr->command_buffer);
+			assert(command_buffer_ptr->queue == queue);
 
-			// TODO: encode wait command
+			[command_buffer_ptr->command_buffer commit];
+			[command_buffer_ptr->command_buffer release];
+			command_buffer_ptr->command_buffer = nil;
 		}
 
-		[wait_command_buffer commit];
-	}
-
-	for (uint32_t i = 0; i < desc->num_command_buffers; ++i)
-	{
-		Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)desc->command_buffers[i]);
-		assert(command_buffer_ptr);
-		assert(command_buffer_ptr->command_buffer);
-		assert(command_buffer_ptr->queue == queue);
-
-		[command_buffer_ptr->command_buffer commit];
-	}
-
-	if (desc->num_signal_semaphores > 0 || desc->num_signal_swapchains > 0)
-	{
-		id<MTLCommandBuffer> signal_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
-
-		for (uint32_t i = 0; i < desc->num_signal_semaphores; ++i)
+		if (desc->num_signal_semaphores > 0 || desc->num_signal_swapchains > 0)
 		{
-			Metal_Semaphore *semaphore_ptr = (Metal_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->signal_semaphores[i]);
-			assert(semaphore_ptr);
+			id<MTLCommandBuffer> signal_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
 
-			uint64_t value = desc->signal_values[i];
+			for (uint32_t i = 0; i < desc->num_signal_semaphores; ++i)
+			{
+				Metal_Semaphore *semaphore_ptr = (Metal_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)desc->signal_semaphores[i]);
+				assert(semaphore_ptr);
 
-			[signal_command_buffer encodeSignalEvent: semaphore_ptr->event value: value];
+				uint64_t value = desc->signal_values[i];
+
+				[signal_command_buffer encodeSignalEvent: semaphore_ptr->event value: value];
+			}
+
+			for (uint32_t i = 0; i < desc->num_signal_swapchains; ++i)
+			{
+				Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->signal_swapchains[i]);
+				assert(swapchain_ptr);
+
+				// TODO: encode signal command
+			}
+
+			[signal_command_buffer commit];
 		}
-
-		for (uint32_t i = 0; i < desc->num_signal_swapchains; ++i)
-		{
-			Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->signal_swapchains[i]);
-			assert(swapchain_ptr);
-
-			// TODO: encode signal command
-		}
-
-		[signal_command_buffer commit];
 	}
 
 	return OPAL_SUCCESS;
@@ -2183,18 +2331,23 @@ static Opal_Result metal_deviceAcquire(Opal_Device this, Opal_Swapchain swapchai
 	assert(swapchain_ptr->current_texture_view == OPAL_NULL_HANDLE);
 	assert(swapchain_ptr->current_drawable == nil);
 
-	id<CAMetalDrawable> drawable = [surface_ptr->layer nextDrawable];
-	if (!drawable)
-		return OPAL_METAL_ERROR;
+	@autoreleasepool
+	{
+		id<CAMetalDrawable> drawable = [surface_ptr->layer nextDrawable];
+		if (!drawable)
+			return OPAL_METAL_ERROR;
 
-	Metal_TextureView result = {0};
-	result.texture_view = drawable.texture;
+		Metal_TextureView result = {0};
+		result.texture_view = drawable.texture;
 
-	Opal_TextureView handle = (Opal_TextureView)opal_poolAddElement(&device_ptr->texture_views, &result);
-	swapchain_ptr->current_texture_view = handle;
-	swapchain_ptr->current_drawable = drawable;
+		Opal_PoolHandle handle = opal_poolAddElement(&device_ptr->texture_views, &result);
+		assert(handle != OPAL_POOL_HANDLE_NULL);
 
-	*texture_view = handle;
+		swapchain_ptr->current_texture_view = (Opal_TextureView)handle;
+		swapchain_ptr->current_drawable = [drawable retain];
+	}
+
+	*texture_view = swapchain_ptr->current_texture_view;
 	return OPAL_SUCCESS;
 }
 
@@ -2208,21 +2361,27 @@ static Opal_Result metal_devicePresent(Opal_Device this, Opal_Swapchain swapchai
 	Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
 	assert(swapchain_ptr);
 
-	id<MTLCommandBuffer> present_command_buffer = [swapchain_ptr->queue commandBufferWithUnretainedReferences];
-	if (!present_command_buffer)
-		return OPAL_METAL_ERROR;
+	@autoreleasepool
+	{
+		id<MTLCommandBuffer> present_command_buffer = [swapchain_ptr->queue commandBufferWithUnretainedReferences];
+		if (!present_command_buffer)
+			return OPAL_METAL_ERROR;
 
-	[present_command_buffer presentDrawable: swapchain_ptr->current_drawable];
-	[present_command_buffer commit];
+		[present_command_buffer presentDrawable: swapchain_ptr->current_drawable];
+		[present_command_buffer commit];
 
-	opal_poolRemoveElement(&device_ptr->texture_views, swapchain_ptr->current_texture_view);
+		[swapchain_ptr->current_drawable release];
+	}
+
+	Opal_Result opal_result = opal_poolRemoveElement(&device_ptr->texture_views, swapchain_ptr->current_texture_view);
+	assert(opal_result == OPAL_SUCCESS);
+
 	swapchain_ptr->current_texture_view = OPAL_NULL_HANDLE;
-
 	swapchain_ptr->current_drawable = nil;
 
 	// TODO: sync
 
-	return OPAL_SUCCESS;
+	return opal_result;
 }
 
 static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
@@ -2379,10 +2538,11 @@ static Opal_Result metal_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBu
 	assert(command_buffer_ptr->compute_pass_encoder == nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
 
-	command_buffer_ptr->copy_pass_encoder = [command_buffer_ptr->command_buffer blitCommandEncoder];
-	if (command_buffer_ptr->copy_pass_encoder == nil)
+	id<MTLBlitCommandEncoder> metal_pass_encoder = [command_buffer_ptr->command_buffer blitCommandEncoder];
+	if (metal_pass_encoder == nil)
 		return OPAL_METAL_ERROR;
 
+	command_buffer_ptr->copy_pass_encoder = metal_pass_encoder;
 	return OPAL_SUCCESS;
 }
 
@@ -2727,7 +2887,7 @@ static Opal_Result metal_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuff
 		indexCount: num_indices
 		indexType: metal_helperToIndexType(index_buffer.format)
 		indexBuffer: index_buffer_ptr->buffer
-		indexBufferOffset: index_buffer.offset + base_index
+		indexBufferOffset: index_buffer.offset + base_index * metal_helperToIndexSize(index_buffer.format)
 		instanceCount: num_instances
 		baseVertex: vertex_offset
 		baseInstance: base_instance
@@ -2837,13 +2997,48 @@ static Opal_Result metal_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_Comm
 
 static Opal_Result metal_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferTextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder != nil);
+
+	Metal_Buffer *src_buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src.buffer);
+	assert(src_buffer_ptr);
+	assert(src_buffer_ptr->buffer);
+
+	Metal_TextureView *dst_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)dst.texture_view);
+	assert(dst_texture_view_ptr);
+	assert(dst_texture_view_ptr->texture);
+
+	MTLSize src_size = {0};
+	src_size.width = size.width;
+	src_size.height = size.height;
+	src_size.depth = size.depth;
+
+	MTLOrigin dst_origin = {0};
+	dst_origin.x = dst.offset.x;
+	dst_origin.y = dst.offset.y;
+	dst_origin.z = dst.offset.z;
+
+	[command_buffer_ptr->copy_pass_encoder
+		copyFromBuffer: src_buffer_ptr->buffer
+		sourceOffset: (NSUInteger)src.offset
+		sourceBytesPerRow: (NSUInteger)src.row_size
+		sourceBytesPerImage: (NSUInteger)0
+		sourceSize: (MTLSize)src_size
+		toTexture: dst_texture_view_ptr->texture_view
+		destinationSlice: 0
+		destinationLevel: 0
+		destinationOrigin: dst_origin];
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst, Opal_Extent3D size)
@@ -3079,24 +3274,27 @@ Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *ins
 	// queues
 	const Metal_DeviceEnginesInfo *engines_info = &device_ptr->device_engines_info;
 
-	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
+	@autoreleasepool
 	{
-		uint32_t queue_count = engines_info->queue_counts[i];
-
-		Metal_Queue queue = {0};
-
-		Opal_Queue *queue_handles = (Opal_Queue *)malloc(sizeof(Opal_Queue) * queue_count);
-
-		for (uint32_t j = 0; j < queue_count; j++)
+		for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
 		{
-			queue.queue = [device_ptr->device newCommandQueue];
-			assert(queue.queue);
+			uint32_t queue_count = engines_info->queue_counts[i];
 
-			[queue.queue addResidencySet: device_ptr->allocator.residency_set];
-			queue_handles[j] = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &queue);
+			Metal_Queue queue = {0};
+
+			Opal_Queue *queue_handles = (Opal_Queue *)malloc(sizeof(Opal_Queue) * queue_count);
+
+			for (uint32_t j = 0; j < queue_count; j++)
+			{
+				queue.queue = [[device_ptr->device newCommandQueue] retain];
+				assert(queue.queue);
+
+				[queue.queue addResidencySet: device_ptr->allocator.residency_set];
+				queue_handles[j] = (Opal_Queue)opal_poolAddElement(&device_ptr->queues, &queue);
+			}
+
+			device_ptr->queue_handles[i] = queue_handles;
 		}
-
-		device_ptr->queue_handles[i] = queue_handles;
 	}
 
 	return OPAL_SUCCESS;
