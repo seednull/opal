@@ -2642,27 +2642,20 @@ static Opal_Result metal_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Comman
 	assert(command_buffer_ptr->graphics_pass_encoder != nil || command_buffer_ptr->compute_pass_encoder != nil);
 	assert(command_buffer_ptr->copy_pass_encoder == nil);
 
-	Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
-	assert(pipeline_layout_ptr);
-	assert(index < pipeline_layout_ptr->num_layouts);
-
 	Metal_DescriptorSet *descriptor_set_ptr = (Metal_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
-
-	Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
-	assert(descriptor_set_layout_ptr);
-
-	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-	assert(descriptor_heap_ptr);
 
 	uint32_t static_descriptors = descriptor_set_ptr->num_static_descriptors;
 	uint32_t dynamic_descriptors = descriptor_set_ptr->num_dynamic_descriptors;
 
-	id<MTLBuffer> heap_buffer = descriptor_heap_ptr->buffer;
-	uint64_t heap_offset = descriptor_set_ptr->buffer_offset;
-
 	if (static_descriptors > 0)
 	{
+		Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+		assert(descriptor_heap_ptr);
+
+		id<MTLBuffer> heap_buffer = descriptor_heap_ptr->buffer;
+		uint64_t heap_offset = descriptor_set_ptr->buffer_offset;
+
 		if (command_buffer_ptr->graphics_pass_encoder != NULL)
 		{
 			[command_buffer_ptr->graphics_pass_encoder setVertexBuffer: heap_buffer offset: heap_offset atIndex: index];
@@ -2677,6 +2670,13 @@ static Opal_Result metal_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Comman
 
 	if (num_dynamic_offsets > 0)
 	{
+		Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
+		assert(pipeline_layout_ptr);
+		assert(index < pipeline_layout_ptr->num_layouts);
+
+		Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
+		assert(descriptor_set_layout_ptr);
+
 		assert(dynamic_offsets);
 		assert(descriptor_set_layout_ptr->num_dynamic_descriptors == num_dynamic_offsets);
 		assert(descriptor_set_layout_ptr->num_dynamic_descriptors == descriptor_set_ptr->num_dynamic_descriptors);
