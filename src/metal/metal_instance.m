@@ -7,28 +7,27 @@ static Opal_Result metal_instanceEnumerateDevices(Opal_Instance this, uint32_t *
 	assert(this);
 	assert(device_count);
 
-	NSArray<id<MTLDevice>> *metal_devices = MTLCopyAllDevices();
-	if (!metal_devices)
-		return OPAL_METAL_ERROR;
-
-	if (infos)
+	@autoreleasepool
 	{
-		for (uint32_t i = 0; i < metal_devices.count; ++i)
-		{
-			id<MTLDevice> device = metal_devices[i];
+		NSArray<id<MTLDevice>> *metal_devices = MTLCopyAllDevices();
+		if (!metal_devices)
+			return OPAL_METAL_ERROR;
 
-			Opal_Result result = metal_helperFillDeviceInfo(device, &infos[i]);
-			if (result != OPAL_SUCCESS)
+		if (infos)
+		{
+			for (uint32_t i = 0; i < metal_devices.count; ++i)
 			{
-				[metal_devices release];
-				return result;
+				id<MTLDevice> device = metal_devices[i];
+
+				Opal_Result result = metal_helperFillDeviceInfo(device, &infos[i]);
+				if (result != OPAL_SUCCESS)
+					return result;
 			}
 		}
+
+		*device_count = metal_devices.count;
 	}
 
-	*device_count = metal_devices.count;
-
-	[metal_devices release];
 	return OPAL_SUCCESS;
 }
 
@@ -52,35 +51,34 @@ static Opal_Result metal_instanceCreateDefaultDevice(Opal_Instance this, Opal_De
 	assert(this);
 	assert(device);
 
-	NSArray<id<MTLDevice>> *metal_devices = MTLCopyAllDevices();
-	if (!metal_devices)
-		return OPAL_METAL_ERROR;
-
 	uint32_t best_score = 0;
 	id<MTLDevice> best_metal_device = 0;
 
-	for (uint32_t i = 0; i < metal_devices.count; ++i)
+	@autoreleasepool
 	{
-		id<MTLDevice> metal_device = metal_devices[i];
-		Opal_DeviceInfo info = {0};
+		NSArray<id<MTLDevice>> *metal_devices = MTLCopyAllDevices();
+		if (!metal_devices)
+			return OPAL_METAL_ERROR;
 
-		Opal_Result result = metal_helperFillDeviceInfo(metal_device, &info);
-		if (result != OPAL_SUCCESS)
+		for (uint32_t i = 0; i < metal_devices.count; ++i)
 		{
-			[metal_devices release];
-			return result;
+			id<MTLDevice> metal_device = metal_devices[i];
+			Opal_DeviceInfo info = {0};
+
+			Opal_Result result = metal_helperFillDeviceInfo(metal_device, &info);
+			if (result != OPAL_SUCCESS)
+				return result;
+
+			uint32_t score = opal_evaluateDevice(&info, hint);
+			if (best_score < score)
+			{
+				best_score = score;
+				best_metal_device = metal_device;
+			}
 		}
 
-		uint32_t score = opal_evaluateDevice(&info, hint);
-		if (best_score < score)
-		{
-			best_score = score;
-			best_metal_device = metal_device;
-		}
+		[best_metal_device retain];
 	}
-
-	best_metal_device = [best_metal_device retain];
-	[metal_devices release];
 
 	Metal_Instance *instance_ptr = (Metal_Instance *)this;
 	Metal_Device *device_ptr = (Metal_Device *)malloc(sizeof(Metal_Device));
@@ -102,18 +100,19 @@ static Opal_Result metal_instanceCreateDevice(Opal_Instance this, uint32_t index
 	assert(this);
 	assert(device);
 
-	NSArray<id<MTLDevice>> *metal_devices = MTLCopyAllDevices();
-	if (!metal_devices)
-		return OPAL_METAL_ERROR;
+	id<MTLDevice> metal_device = nil;
 
-	if (index >= metal_devices.count)
+	@autoreleasepool
 	{
-		[metal_devices release];
-		return OPAL_INVALID_DEVICE_INDEX;
-	}
+		NSArray<id<MTLDevice>> *metal_devices = MTLCopyAllDevices();
+		if (!metal_devices)
+			return OPAL_METAL_ERROR;
 
-	id<MTLDevice> metal_device = [metal_devices[index] retain];
-	[metal_devices release];
+		if (index >= metal_devices.count)
+			return OPAL_INVALID_DEVICE_INDEX;
+
+		metal_device = [metal_devices[index] retain];
+	}
 
 	Metal_Instance *instance_ptr = (Metal_Instance *)this;
 	Metal_Device *device_ptr = (Metal_Device *)malloc(sizeof(Metal_Device));
