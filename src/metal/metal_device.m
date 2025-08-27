@@ -2180,14 +2180,7 @@ static Opal_Result metal_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore se
 
 	@autoreleasepool
 	{
-		// NOTE: for some reason MTLEvent.h in the Metal framework doesn't declare this selector,
-		//       which causes compiler warning 'instance method not found'
-		//
-		//       Let's hope that the documentation is correct, and this selector is actually there :)
-		// #pragma clang diagnostic push
-		// #pragma clang diagnostic ignored "-Wobjc-method-access"
 		[semaphore_ptr->shared_event waitUntilSignaledValue: value timeoutMS: timeout_milliseconds];
-		// #pragma clang diagnostic pop
 	}
 
 	return OPAL_SUCCESS;
