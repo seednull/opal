@@ -3680,7 +3680,7 @@ static Opal_Result directx12_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Co
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipelines, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
 	assert(pipeline_layout_ptr);
 
 	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
