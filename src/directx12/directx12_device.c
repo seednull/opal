@@ -2938,8 +2938,6 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 	uint32_t resources_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
 	uint32_t samplers_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
 	uint32_t inline_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
-	uint32_t src_handles_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * num_entries);
-	uint32_t dst_handles_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * num_entries);
 
 	uint32_t num_resources = 0;
 	uint32_t num_samplers = 0;
@@ -2987,43 +2985,24 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 	if (num_resources > 0)
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
-		heap_info.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		heap_info.NumDescriptors = num_entries;
-		heap_info.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-		// FIXME: replace by device cbv_srv_uav shader non-visible heap
-		ID3D12DescriptorHeap *src_heap = NULL;
-		HRESULT hr = ID3D12Device_CreateDescriptorHeap(device_ptr->device, &heap_info, &IID_ID3D12DescriptorHeap, &src_heap);
-		if (!SUCCEEDED(hr))
-			return OPAL_DIRECTX12_ERROR;
-
 		UINT offset = descriptor_set_ptr->resource_allocation.offset;
 		UINT stride = ID3D12Device_GetDescriptorHandleIncrementSize(device_ptr->device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE src_start = {0};
-		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(src_heap, &src_start);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE dst_start = {0};
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptor_heap_ptr->resource_memory, &dst_start);
 		dst_start.ptr += stride * offset;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE *src_handles = (D3D12_CPU_DESCRIPTOR_HANDLE *)(device_ptr->bump.data + src_handles_ptr_offset);
-		D3D12_CPU_DESCRIPTOR_HANDLE *dst_handles = (D3D12_CPU_DESCRIPTOR_HANDLE *)(device_ptr->bump.data + dst_handles_ptr_offset);
-		memset(src_handles, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * num_resources);
-		memset(dst_handles, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * num_resources);
 
 		for (uint32_t i = 0; i < num_resources; ++i)
 		{
 			uint32_t layout_index = layout_resource_indices[i].layout;
 			uint32_t entry_index = layout_resource_indices[i].entry;
 
-			src_handles[i].ptr = src_start.ptr + stride * entry_index;
-			dst_handles[i].ptr = dst_start.ptr + stride * layout_index;
-
 			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
 			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
 			assert(info->binding == entry->binding);
+			
+			D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = {0};
+			dst_handle.ptr = dst_start.ptr + stride * layout_index;
 
 			switch (info->opal_type)
 			{
@@ -3037,7 +3016,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					desc.BufferLocation = buffer_ptr->address + buffer_view.offset;
 					desc.SizeInBytes = (UINT)buffer_view.size;
 
-					ID3D12Device_CreateConstantBufferView(device_ptr->device, &desc, src_handles[i]);
+					ID3D12Device_CreateConstantBufferView(device_ptr->device, &desc, dst_handle);
 				}
 				break;
 
@@ -3056,7 +3035,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					desc.Buffer.StructureByteStride = buffer_view.element_size;
 					desc.Buffer.Flags = 0;
 
-					ID3D12Device_CreateShaderResourceView(device_ptr->device, buffer_ptr->buffer, &desc, src_handles[i]);
+					ID3D12Device_CreateShaderResourceView(device_ptr->device, buffer_ptr->buffer, &desc, dst_handle);
 				}
 				break;
 
@@ -3071,7 +3050,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)entry->data.texture_view);
 					assert(texture_view_ptr);
 
-					ID3D12Device_CreateShaderResourceView(device_ptr->device, texture_view_ptr->texture, &texture_view_ptr->srv_desc, src_handles[i]);
+					ID3D12Device_CreateShaderResourceView(device_ptr->device, texture_view_ptr->texture, &texture_view_ptr->srv_desc, dst_handle);
 				}
 				break;
 
@@ -3089,7 +3068,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 					desc.RaytracingAccelerationStructure.Location = buffer_ptr->address + acceleration_structure_ptr->buffer_view.offset;
 
-					ID3D12Device_CreateShaderResourceView(device_ptr->device, NULL, &desc, src_handles[i]);
+					ID3D12Device_CreateShaderResourceView(device_ptr->device, NULL, &desc, dst_handle);
 				}
 				break;
 
@@ -3108,7 +3087,7 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					desc.Buffer.CounterOffsetInBytes = 0;
 					desc.Buffer.Flags = 0;
 
-					ID3D12Device_CreateUnorderedAccessView(device_ptr->device, buffer_ptr->buffer, NULL, &desc, src_handles[i]);
+					ID3D12Device_CreateUnorderedAccessView(device_ptr->device, buffer_ptr->buffer, NULL, &desc, dst_handle);
 				}
 				break;
 
@@ -3120,47 +3099,23 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)entry->data.texture_view);
 					assert(texture_view_ptr);
 
-					ID3D12Device_CreateUnorderedAccessView(device_ptr->device, texture_view_ptr->texture, NULL, &texture_view_ptr->uav_desc, src_handles[i]);
+					ID3D12Device_CreateUnorderedAccessView(device_ptr->device, texture_view_ptr->texture, NULL, &texture_view_ptr->uav_desc, dst_handle);
 				}
 				break;
 
 				default: assert(0); break;
 			}
 		}
-
-		ID3D12Device_CopyDescriptors(device_ptr->device, num_resources, dst_handles, NULL, num_resources, src_handles, NULL, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		// FIXME: replace by device cbv_srv_uav shader non-visible heap
-		ID3D12DescriptorHeap_Release(src_heap);
 	}
 
 	if (num_samplers > 0)
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC heap_info = {0};
-		heap_info.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-		heap_info.NumDescriptors = num_entries;
-		heap_info.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-		// FIXME: replace by device sampler shader non-visible heap
-		ID3D12DescriptorHeap *src_heap = NULL;
-		HRESULT hr = ID3D12Device_CreateDescriptorHeap(device_ptr->device, &heap_info, &IID_ID3D12DescriptorHeap, &src_heap);
-		if (!SUCCEEDED(hr))
-			return OPAL_DIRECTX12_ERROR;
-
 		UINT offset = descriptor_set_ptr->sampler_allocation.offset;
 		UINT stride = ID3D12Device_GetDescriptorHandleIncrementSize(device_ptr->device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE src_start = {0};
-		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(src_heap, &src_start);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE dst_start = {0};
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(descriptor_heap_ptr->sampler_memory, &dst_start);
 		dst_start.ptr += stride * offset;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE *src_handles = (D3D12_CPU_DESCRIPTOR_HANDLE *)(device_ptr->bump.data + src_handles_ptr_offset);
-		D3D12_CPU_DESCRIPTOR_HANDLE *dst_handles = (D3D12_CPU_DESCRIPTOR_HANDLE *)(device_ptr->bump.data + dst_handles_ptr_offset);
-		memset(src_handles, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * num_samplers);
-		memset(dst_handles, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * num_samplers);
 
 		for (uint32_t i = 0; i < num_samplers; ++i)
 		{
@@ -3169,25 +3124,20 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 			assert(layout_index >= num_resources);
 
-			src_handles[i].ptr = src_start.ptr + stride * (layout_index - num_resources);
-			dst_handles[i].ptr = dst_start.ptr + stride * (layout_index - num_resources);
-
 			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
 			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
 			assert(info->binding == entry->binding);
 			assert(info->opal_type == OPAL_DESCRIPTOR_TYPE_SAMPLER);
+			
+			D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = {0};
+			dst_handle.ptr = dst_start.ptr + stride * (layout_index - num_resources);
 
 			Opal_Sampler sampler = entry->data.sampler;
 			DirectX12_Sampler *sampler_ptr = (DirectX12_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)sampler);
 			assert(sampler_ptr);
 
-			ID3D12Device_CreateSampler(device_ptr->device, &sampler_ptr->desc, src_handles[i]);
+			ID3D12Device_CreateSampler(device_ptr->device, &sampler_ptr->desc, dst_handle);
 		}
-
-		ID3D12Device_CopyDescriptors(device_ptr->device, num_samplers, dst_handles, NULL, num_samplers, src_handles, NULL, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-		// FIXME: replace by device sampler shader non-visible heap
-		ID3D12DescriptorHeap_Release(src_heap);
 	}
 
 	for (uint32_t i = 0; i < num_inlines; ++i)
