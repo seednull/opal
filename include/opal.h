@@ -1243,6 +1243,9 @@ typedef struct Opal_ComputePipelineDesc_t
 {
 	Opal_PipelineLayout pipeline_layout;
 	Opal_ShaderFunction compute_function;
+	uint32_t threadgroup_size_x;
+	uint32_t threadgroup_size_y;
+	uint32_t threadgroup_size_z;
 } Opal_ComputePipelineDesc;
 
 typedef struct Opal_HitgroupShader_t
