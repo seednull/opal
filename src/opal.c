@@ -1102,7 +1102,7 @@ Opal_Result opalCmdDrawIndexed(Opal_Device device, Opal_CommandBuffer command_bu
 	return ptr->vtbl->cmdDrawIndexed(device, command_buffer, num_indices, num_instances, base_index, vertex_offset, base_instance);
 }
 
-Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1111,10 +1111,10 @@ Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer comman
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdMeshletDispatch);
 
-	return ptr->vtbl->cmdMeshletDispatch(device, command_buffer, num_groups_x, num_groups_y, num_groups_z);
+	return ptr->vtbl->cmdMeshletDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 }
 
-Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1123,7 +1123,7 @@ Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer comman
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdComputeDispatch);
 
-	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_groups_x, num_groups_y, num_groups_z);
+	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 }
 
 Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)

@@ -2397,18 +2397,18 @@ static Opal_Result webgpu_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result webgpu_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result webgpu_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	assert(this);
 	assert(command_buffer);
@@ -2422,7 +2422,7 @@ static Opal_Result webgpu_deviceCmdComputeDispatch(Opal_Device this, Opal_Comman
 
 	WGPUComputePassEncoder webgpu_compute_encoder = command_buffer_ptr->compute_pass_encoder;
 
-	wgpuComputePassEncoderDispatchWorkgroups(webgpu_compute_encoder, num_groups_x, num_groups_y, num_groups_z);
+	wgpuComputePassEncoderDispatchWorkgroups(webgpu_compute_encoder, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 	return OPAL_SUCCESS;
 }
 

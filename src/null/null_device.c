@@ -702,24 +702,24 @@ static Opal_Result null_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuffe
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result null_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }

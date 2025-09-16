@@ -3918,18 +3918,18 @@ static Opal_Result directx12_deviceCmdDrawIndexed(Opal_Device this, Opal_Command
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result directx12_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3939,7 +3939,7 @@ static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_Com
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	ID3D12GraphicsCommandList4_Dispatch(command_buffer_ptr->list, num_groups_x, num_groups_y, num_groups_z);
+	ID3D12GraphicsCommandList4_Dispatch(command_buffer_ptr->list, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 	return OPAL_SUCCESS;
 }
 

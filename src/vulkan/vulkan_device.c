@@ -3901,7 +3901,7 @@ static Opal_Result vulkan_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuf
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result vulkan_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3911,11 +3911,11 @@ static Opal_Result vulkan_deviceCmdMeshletDispatch(Opal_Device this, Opal_Comman
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	device_ptr->vk.vkCmdDrawMeshTasksEXT(command_buffer_ptr->command_buffer, num_groups_x, num_groups_y, num_groups_z);
+	device_ptr->vk.vkCmdDrawMeshTasksEXT(command_buffer_ptr->command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result vulkan_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3925,7 +3925,7 @@ static Opal_Result vulkan_deviceCmdComputeDispatch(Opal_Device this, Opal_Comman
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	device_ptr->vk.vkCmdDispatch(command_buffer_ptr->command_buffer, num_groups_x, num_groups_y, num_groups_z);
+	device_ptr->vk.vkCmdDispatch(command_buffer_ptr->command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 	return OPAL_SUCCESS;
 }
 
