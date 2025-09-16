@@ -1195,11 +1195,46 @@ static Opal_Result metal_deviceCreateMeshletPipeline(Opal_Device this, const Opa
 
 static Opal_Result metal_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(pipeline);
+	assert(this);
+	assert(desc);
+	assert(pipeline);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	id<MTLComputePipelineState> metal_compute_pipeline = nil;
+
+	@autoreleasepool
+	{
+		Metal_Shader *shader_ptr = (Metal_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->compute_function.shader);
+		if (shader_ptr == NULL)
+			return OPAL_METAL_ERROR;
+
+		NSString *shader_function_name = [NSString stringWithUTF8String: desc->compute_function.name];
+		id<MTLFunction> shader_function = [shader_ptr->library newFunctionWithName: shader_function_name];
+
+		NSError *error = nil;
+		metal_compute_pipeline = [device_ptr->device newComputePipelineStateWithFunction: shader_function error: &error];
+
+		if (!metal_compute_pipeline)
+			return OPAL_METAL_ERROR;
+
+		assert(error == nil);
+
+		[metal_compute_pipeline retain];
+	}
+
+	// create opal struct
+	Metal_Pipeline result = {0};
+	result.compute_pipeline = metal_compute_pipeline;
+	result.threadgroup_size.width = desc->threadgroup_size_x;
+	result.threadgroup_size.height = desc->threadgroup_size_y;
+	result.threadgroup_size.depth = desc->threadgroup_size_z;
+
+	*pipeline = (Opal_Pipeline)opal_poolAddElement(&device_ptr->pipelines, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
@@ -2487,18 +2522,43 @@ static Opal_Result metal_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Command
 
 static Opal_Result metal_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	id<MTLComputeCommandEncoder> metal_pass_encoder = [command_buffer_ptr->command_buffer computeCommandEncoder];
+	if (!metal_pass_encoder)
+		return OPAL_METAL_ERROR;
+
+	command_buffer_ptr->compute_pass_encoder = metal_pass_encoder;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder != nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	[command_buffer_ptr->compute_pass_encoder endEncoding];
+	command_buffer_ptr->compute_pass_encoder = nil;
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
@@ -2622,6 +2682,8 @@ static Opal_Result metal_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuff
 	if (command_buffer_ptr->compute_pass_encoder)
 	{
 		[command_buffer_ptr->compute_pass_encoder setComputePipelineState: pipeline_ptr->compute_pipeline];
+		
+		command_buffer_ptr->threadgroup_size = pipeline_ptr->threadgroup_size;
 	}
 
 	return OPAL_SUCCESS;
@@ -2888,26 +2950,45 @@ static Opal_Result metal_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuff
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result metal_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result metal_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_groups_x, uint32_t num_groups_y, uint32_t num_groups_z)
+static Opal_Result metal_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_groups_x);
-	OPAL_UNUSED(num_groups_y);
-	OPAL_UNUSED(num_groups_z);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder != nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+	assert(command_buffer_ptr->threadgroup_size.width != 0);
+	assert(command_buffer_ptr->threadgroup_size.height != 0);
+	assert(command_buffer_ptr->threadgroup_size.depth != 0);
+
+	MTLSize numThreadgroups = {0};
+	numThreadgroups.width = num_threadgroups_x;
+	numThreadgroups.height = num_threadgroups_y;
+	numThreadgroups.depth = num_threadgroups_z;
+
+	[command_buffer_ptr->compute_pass_encoder
+		dispatchThreadgroups: numThreadgroups
+		threadsPerThreadgroup: command_buffer_ptr->threadgroup_size
+	];
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)

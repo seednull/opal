@@ -156,6 +156,8 @@ typedef struct Metal_CommandBuffer_t
 	uint32_t vertex_binding_offset;
 
 	id<MTLComputeCommandEncoder> compute_pass_encoder;
+	MTLSize threadgroup_size;
+
 	id<MTLBlitCommandEncoder> copy_pass_encoder;
 	Opal_Queue queue;
 } Metal_CommandBuffer;
@@ -212,6 +214,7 @@ typedef struct Metal_PipelineLayout_t
 typedef struct Metal_Pipeline_t
 {
 	id<MTLComputePipelineState> compute_pipeline;
+	MTLSize threadgroup_size;
 
 	id<MTLRenderPipelineState> render_pipeline;
 	id<MTLDepthStencilState> depth_stencil_state;
