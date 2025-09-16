@@ -2625,7 +2625,7 @@ static Opal_Result metal_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comma
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(descriptor_heap);
 
-	return OPAL_NOT_SUPPORTED;
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
