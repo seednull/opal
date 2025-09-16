@@ -2907,14 +2907,26 @@ static Opal_Result metal_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuffe
 
 static Opal_Result metal_deviceCmdDraw(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_vertices);
-	OPAL_UNUSED(num_instances);
-	OPAL_UNUSED(base_vertex);
-	OPAL_UNUSED(base_instance);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder != nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	[command_buffer_ptr->graphics_pass_encoder
+		drawPrimitives: command_buffer_ptr->primitive_type
+		vertexStart: base_vertex
+		vertexCount: num_vertices
+		instanceCount: num_instances
+		baseInstance: base_instance
+	];
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
