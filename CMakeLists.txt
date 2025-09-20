@@ -104,4 +104,8 @@ if (OPAL_BUILD_SAMPLES)
 	add_subdirectory(samples/02_buffers)
 	add_subdirectory(samples/03_textures)
 	add_subdirectory(samples/04_triangle)
+
+	if (NOT EMSCRIPTEN)
+		add_subdirectory(samples/05_rt_triangle)
+	endif()
 endif()

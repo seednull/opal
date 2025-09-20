@@ -7,12 +7,25 @@ function(compile_glsl SRC)
 	get_filename_component(FILE_DIRECTORY ${SRC} DIRECTORY)
 	set(SPV_FILE ${FILE_DIRECTORY}/${FILE_NAME}.spv)
 
-	if(FILE_EXT MATCHES "^\\.vert")
-		set(ENTRY vertexMain)
-	elseif(FILE_EXT MATCHES "^\\.frag")
-		set(ENTRY fragmentMain)
-	else()
-		set(ENTRY main)
+	list(APPEND REGEXPS "^\\.vert" "^\\.tesc" "^\\.tese" "^\\.geom" "^\\.comp"
+						"^\\.frag" "^\\.mesh" "^\\.task" "^\\.rgen" "^\\.rint"
+						"^\\.rahit" "^\\.rchit" "^\\.rmiss" "^\\.rcall")
+
+	list(APPEND ENTRY_POINTS vertexMain main main main main
+							 fragmentMain main main rayGenerationMain rayIntersectionMain
+							 rayAnyHitMain rayClosestHitMain rayMissMain main)
+
+	set(ENTRY "")
+
+	foreach(VALUE IN ZIP_LISTS REGEXPS ENTRY_POINTS)
+		if(FILE_EXT MATCHES ${VALUE_0})
+			set(ENTRY ${VALUE_1})
+			break()
+		endif()
+	endforeach()
+
+	if(NOT ENTRY)
+		message(FATAL_ERROR "No GLSL entry point found for ${SRC} (${FILE_EXT})")
 	endif()
 
 	add_custom_command(
@@ -41,8 +54,8 @@ function(compile_hlsl SRC)
 						 lib_6_3 lib_6_3 lib_6_3 lib_6_3)
 
 	list(APPEND ENTRY_POINTS vertexMain main main main main
-							 fragmentMain main main main main
-							 main main main main)
+							 fragmentMain main main rayGenerationMain rayIntersectionMain
+							 rayAnyHitMain rayClosestHitMain rayMissMain main)
 
 	set(PROFILE "")
 	set(ENTRY "")
