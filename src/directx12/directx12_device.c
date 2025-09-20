@@ -1686,7 +1686,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	{
 		assert(desc->raygen_functions[i].name);
 
-		int size = MultiByteToWideChar(CP_UTF8, 0, desc->raygen_functions[i].name, 0, NULL, 0);
+		int size = MultiByteToWideChar(CP_UTF8, 0, desc->raygen_functions[i].name, -1, NULL, 0);
 
 		*name_lengths++ = size;
 		name_buffer_size += size;
@@ -1697,7 +1697,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	{
 		assert(desc->miss_functions[i].name);
 
-		int size = MultiByteToWideChar(CP_UTF8, 0, desc->miss_functions[i].name, 0, NULL, 0);
+		int size = MultiByteToWideChar(CP_UTF8, 0, desc->miss_functions[i].name, -1, NULL, 0);
 
 		*name_lengths++ = size;
 		name_buffer_size += size;
@@ -1716,7 +1716,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		{
 			assert(desc->hitgroup_functions[i].anyhit_function.name);
 
-			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, 0, NULL, 0);
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, -1, NULL, 0);
 
 			*name_lengths++ = size;
 			name_buffer_size += size;
@@ -1727,7 +1727,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		{
 			assert(desc->hitgroup_functions[i].closesthit_function.name);
 
-			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, 0, NULL, 0);
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, -1, NULL, 0);
 
 			*name_lengths++ = size;
 			name_buffer_size += size;
@@ -1738,7 +1738,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		{
 			assert(desc->hitgroup_functions[i].intersection_function.name);
 
-			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, 0, NULL, 0);
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, -1, NULL, 0);
 
 			*name_lengths++ = size;
 			name_buffer_size += size;
@@ -1797,7 +1797,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rgen%d", num_shaders - 1);
 
 		int size = *name_lengths++;
-		MultiByteToWideChar(CP_UTF8, 0, desc->raygen_functions[i].name, 0, names, size);
+		MultiByteToWideChar(CP_UTF8, 0, desc->raygen_functions[i].name, -1, names, size);
 
 		shader->export.Name = shader->id;
 		shader->export.ExportToRename = names;
@@ -1822,7 +1822,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rmiss%d", num_shaders - 1);
 
 		int size = *name_lengths++;
-		MultiByteToWideChar(CP_UTF8, 0, desc->miss_functions[i].name, 0, names, size);
+		MultiByteToWideChar(CP_UTF8, 0, desc->miss_functions[i].name, -1, names, size);
 
 		shader->export.Name = shader->id;
 		shader->export.ExportToRename = names;
@@ -1861,7 +1861,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rahit%d", num_shaders - 1);
 	
 			int size = *name_lengths++;
-			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, 0, names, size);
+			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, -1, names, size);
 
 			shader->export.Name = shader->id;
 			shader->export.ExportToRename = names;
@@ -1885,7 +1885,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rchit%d", num_shaders - 1);
 	
 			int size = *name_lengths++;
-			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, 0, names, size);
+			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, -1, names, size);
 
 			shader->export.Name = shader->id;
 			shader->export.ExportToRename = names;
@@ -1909,7 +1909,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rint%d", num_shaders - 1);
 	
 			int size = *name_lengths++;
-			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, 0, names, size);
+			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, -1, names, size);
 
 			shader->export.Name = shader->id;
 			shader->export.ExportToRename = names;
