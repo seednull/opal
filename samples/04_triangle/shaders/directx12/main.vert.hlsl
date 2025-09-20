@@ -10,7 +10,7 @@ struct VertexOutput
 	float4 color: COLOR0;
 };
 
-VertexOutput main(VertexInput input)
+VertexOutput vertexMain(VertexInput input)
 {
 	VertexOutput result;
 
