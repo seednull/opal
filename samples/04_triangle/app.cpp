@@ -1,21 +1,17 @@
-#ifdef OPAL_PLATFORM_WINDOWS
-#	define WIN32_LEAN_AND_MEAN
-#	define TARGET_API OPAL_API_DIRECTX12
-#	include <windows.h>
-#elif OPAL_PLATFORM_MACOS
-#	define TARGET_API OPAL_API_METAL
-#	include <Cocoa/Cocoa.h>
-#	include <QuartzCore/CAMetalLayer.h>
-#	include <QuartzCore/CADisplayLink.h>
-#elif OPAL_PLATFORM_WEB
-#	define TARGET_API OPAL_API_WEBGPU
-#	include <emscripten.h>
-#	include <emscripten/html5.h>
-#endif
+#include "app.h"
 
-#include <opal.h>
+#include <cstddef>
 #include <cassert>
-#include <iostream>
+#include <cstdio>
+#include <cstring>
+
+#ifdef OPAL_PLATFORM_WINDOWS
+static constexpr Opal_Api target_api = OPAL_API_DIRECTX12;
+#elif OPAL_PLATFORM_MACOS
+static constexpr Opal_Api target_api = OPAL_API_METAL;
+#elif OPAL_PLATFORM_WEB
+static constexpr Opal_Api target_api = OPAL_API_WEBGPU;
+#endif
 
 #define UNUSED(x) do { (void)(x); } while(0)
 
@@ -25,7 +21,7 @@ static const char *vertex_paths[] =
 	"samples/04_triangle/shaders/directx12/main.vert.cso",
 	"samples/04_triangle/shaders/metal/main.vert.metallib",
 	"samples/04_triangle/shaders/webgpu/main.vert.wgsl",
-	NULL,
+	nullptr,
 };
 
 static const char *fragment_paths[] =
@@ -34,7 +30,7 @@ static const char *fragment_paths[] =
 	"samples/04_triangle/shaders/directx12/main.frag.cso",
 	"samples/04_triangle/shaders/metal/main.frag.metallib",
 	"samples/04_triangle/shaders/webgpu/main.frag.wgsl",
-	NULL,
+	nullptr,
 };
 
 static Opal_ShaderSourceType shader_types[] =
@@ -44,6 +40,30 @@ static Opal_ShaderSourceType shader_types[] =
 	OPAL_SHADER_SOURCE_TYPE_METALLIB_BINARY,
 	OPAL_SHADER_SOURCE_TYPE_WGSL_SOURCE,
 	OPAL_SHADER_SOURCE_ENUM_FORCE32,
+};
+
+struct Vertex
+{
+	float position[4];
+	float color[4];
+};
+
+struct TriangleData
+{
+	Vertex vertices[3];
+	uint32_t indices[4];
+};
+
+static TriangleData triangle_data =
+{
+	// vertices
+	// position               color
+	-1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+	 1.0f,  1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+	 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+
+	// indices
+	0, 1, 2,
 };
 
 bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device, Opal_Shader *shader)
@@ -80,61 +100,9 @@ bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device
 	Opal_Result result = opalCreateShader(device, &desc, shader);
 	assert(result == OPAL_SUCCESS);
 
-	free(data);
+	delete[] data;
 	return result == OPAL_SUCCESS;
 }
-
-/*
- */
-class Application
-{
-public:
-	void init(void *handle, uint32_t width, uint32_t height);
-	void shutdown();
-	void update(float dt);
-	void resize(uint32_t width, uint32_t height);
-	void render();
-	void present();
-
-private:
-	struct Vertex
-	{
-		float position[4];
-		float color[4];
-	};
-
-	struct TriangleData
-	{
-		Vertex vertices[3];
-		uint32_t indices[4];
-	};
-
-	enum
-	{
-		IN_FLIGHT_FRAMES = 2,
-		WAIT_TIMEOUT_MS = 1000,
-	};
-
-private:
-	Opal_Instance instance {OPAL_NULL_HANDLE};
-	Opal_Surface surface {OPAL_NULL_HANDLE};
-	Opal_Swapchain swapchain {OPAL_NULL_HANDLE};
-	Opal_Device device {OPAL_NULL_HANDLE};
-	Opal_Queue queue {OPAL_NULL_HANDLE};
-	Opal_Buffer triangle_buffer {OPAL_NULL_HANDLE};
-	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
-	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
-	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
-	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
-	Opal_CommandAllocator command_allocators[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE};
-	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
-	Opal_Semaphore semaphores[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
-	uint64_t semaphore_values[IN_FLIGHT_FRAMES] {0, 0};
-
-	uint32_t current_in_flight_frame {0};
-	uint32_t width {0};
-	uint32_t height {0};
-};
 
 /*
  */
@@ -156,7 +124,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		OPAL_INSTANCE_CREATION_FLAGS_USE_DEBUG_LAYERS,
 	};
 
-	Opal_Result result = opalCreateInstance(TARGET_API, &instance_desc, &instance);
+	Opal_Result result = opalCreateInstance(target_api, &instance_desc, &instance);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCreateSurface(instance, handle, &surface);
@@ -193,20 +161,6 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
 	assert(result == OPAL_SUCCESS);
-
-	TriangleData triangle_data =
-	{
-		// vertices
-		{
-			// position                  color
-			 -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-			  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-			  0.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-		},
-
-		// indices
-		0, 1, 2,
-	};
 
 	// copy
 	Opal_BufferDesc staging_buffer_desc =
@@ -283,10 +237,10 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	assert(result == OPAL_SUCCESS);
 
 	// shaders
-	bool loaded = loadShader(vertex_paths[TARGET_API], shader_types[TARGET_API], device, &vertex_shader);
+	bool loaded = loadShader(vertex_paths[target_api], shader_types[target_api], device, &vertex_shader);
 	assert(loaded == true);
 
-	loaded = loadShader(fragment_paths[TARGET_API], shader_types[TARGET_API], device, &fragment_shader);
+	loaded = loadShader(fragment_paths[target_api], shader_types[target_api], device, &fragment_shader);
 	assert(loaded == true);
 
 	// pipeline
@@ -531,311 +485,3 @@ void Application::present()
 
 	current_in_flight_frame = (current_in_flight_frame + 1) % IN_FLIGHT_FRAMES;
 }
-
-#ifdef OPAL_PLATFORM_WINDOWS
-
-/*
- */
-LRESULT CALLBACK windowProc(HWND handle, UINT message, WPARAM w_param, LPARAM l_param)
-{
-	Application *app = reinterpret_cast<Application *>(GetWindowLongPtrW(handle, GWLP_USERDATA));
-
-	switch (message)
-	{
-		case WM_SIZE:
-		{
-			uint32_t width = static_cast<uint32_t>(LOWORD(l_param));
-			uint32_t height = static_cast<uint32_t>(HIWORD(l_param));
-
-			if (app)
-				app->resize(width, height);
-		}
-		break;
-
-		case WM_CLOSE:
-		{
-			PostQuitMessage(0);
-		}
-		break;
-
-		default:
-			return DefWindowProcW(handle, message, w_param, l_param);
-	}
-
-	return 0;
-}
-
-HWND createWindow(const char *title, uint32_t width, uint32_t height)
-{
-	HINSTANCE instance = GetModuleHandle(nullptr);
-	WNDCLASSEXW wc = {};
-
-	wc.cbSize = sizeof(WNDCLASSEXW);
-	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = windowProc;
-	wc.hInstance = instance;
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.lpszClassName = L"Opal Window";
-
-	RegisterClassExW(&wc);
-
-	assert(title);
-	int size = static_cast<int>(strlen(title));
-
-	wchar_t titlew[4096] = {};
-	MultiByteToWideChar(CP_UTF8, 0, title, size, titlew, 4096);
-
-	RECT rect = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
-	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-
-	HWND handle = CreateWindowExW(
-		0,
-		wc.lpszClassName,
-		titlew,
-		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT,
-		rect.right - rect.left,
-		rect.bottom - rect.top,
-		NULL,
-		NULL,
-		instance,
-		NULL
-	);
-
-	assert(handle != NULL);
-	return handle;
-}
-
-void destroyWindow(HWND handle)
-{
-	DestroyWindow(handle);
-}
-
-int main()
-{
-	const char *title = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
-	const uint32_t width = 800;
-	const uint32_t height = 600;
-
-	Application app;
-
-	HWND handle = createWindow(title, width, height);
-
-	SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&app));
-	ShowWindow(handle, SW_SHOW);
-	UpdateWindow(handle);
-
-	app.init(handle, width, height);
-
-	MSG msg = {};
-	LARGE_INTEGER begin_time = {};
-	LARGE_INTEGER end_time = {};
-	LARGE_INTEGER frequency = {};
-	float dt = 0.0f;
-
-	QueryPerformanceFrequency(&frequency);
-	double denominator = 1.0 / frequency.QuadPart;
-
-	while (true)
-	{
-		QueryPerformanceCounter(&begin_time);
-		if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) > 0)
-		{
-			if (msg.message == WM_QUIT)
-				break;
-
-			TranslateMessage(&msg);
-			DispatchMessageW(&msg);
-		}
-
-		app.update(dt);
-		app.render();
-		app.present();
-
-		QueryPerformanceCounter(&end_time);
-		dt = static_cast<float>((end_time.QuadPart - begin_time.QuadPart) * denominator);
-	}
-
-	app.shutdown();
-
-	destroyWindow(handle);
-	return 0;
-}
-
-#elif OPAL_PLATFORM_WEB
-
-static int default_width = 800;
-static int default_height = 600;
-static int current_width = 800;
-static int current_height = 600;
-static bool need_resize = false;
-static char canvas_handle[] = "#canvas";
-
-static EM_BOOL onFullscreenChange(int event_type, const EmscriptenFullscreenChangeEvent *event, void *user_data)
-{
-	current_width = (event->isFullscreen) ? event->screenWidth : default_width;
-	current_height = (event->isFullscreen) ? event->screenHeight : default_height;
-
-	need_resize = true;
-	return EM_FALSE;
-}
-
-void frame(void *user_data)
-{
-	Application *app = reinterpret_cast<Application *>(user_data);
-	assert(app);
-
-	if (need_resize)
-	{
-		assert(current_width > 0 && current_height > 0);
-		emscripten_set_canvas_element_size(canvas_handle, current_width, current_height);
-
-		app->resize(static_cast<uint32_t>(current_width), static_cast<uint32_t>(current_height));
-		need_resize = false;
-	}
-
-	static float dt = 0.0f;
-	const float denominator = 1.0f / 1000.0f;
-
-	double start_time = emscripten_performance_now();
-
-	app->update(dt);
-	app->render();
-	app->present();
-
-	dt = static_cast<float>((emscripten_performance_now() - start_time) * denominator);
-}
-
-int main()
-{
-	emscripten_set_canvas_element_size(canvas_handle, default_width, default_height);
-
-	Application app;
-	app.init(canvas_handle, static_cast<uint32_t>(default_width), static_cast<uint32_t>(default_height));
-
-	emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, 0, onFullscreenChange);
-	emscripten_set_main_loop_arg(frame, &app, 0, 1);
-
-	app.shutdown();
-	return 0;
-}
-
-#else
-
-@interface AppDelegate : NSObject <NSApplicationDelegate>
-@end
-
-@implementation AppDelegate
-- (BOOL) applicationShouldTerminateAfterLastWindowClosed:(NSApplication *) sender
-{
-	return YES;
-}
-@end
-
-@interface WindowDelegate : NSObject <NSWindowDelegate>
-@property Application *app;
-@property NSSize size;
-@end
-
-@implementation WindowDelegate
-- (NSSize) windowWillResize:(NSWindow *) sender toSize:(NSSize) size
-{
-	NSRect frame = sender.frame;
-	frame.size = size;
-
-	NSRect content = [sender contentRectForFrameRect: frame];
-	self.size = content.size;
-
-	return size;
-}
-
-- (void) windowDidResize:(NSNotification *) notification
-{
-	assert(self.app);
-	self.app->resize(self.size.width, self.size.height);
-}
-
-- (void) windowWillClose:(NSWindow *) sender
-{
-	assert(self.app);
-	self.app->shutdown();
-}
-@end
-
-@interface WindowView : NSView
-@property Application *app;
-@end
-
-@implementation WindowView
-- (instancetype)initWithFrame:(NSRect) rect
-{
-	self = [super initWithFrame: rect];
-
-	self.wantsLayer = YES;
-	self.layer = [CAMetalLayer layer];
-
-	CADisplayLink *link = [self displayLinkWithTarget:self selector:@selector(update:)];
-	[link addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
-
-	return self;
-}
-
-- (void) update:(CADisplayLink *) sender
-{
-	assert(self.app);
-
-	float dt = static_cast<float>(1.0 / (sender.targetTimestamp - sender.timestamp));
-
-	self.app->update(dt);
-	self.app->render();
-	self.app->present();
-}
-@end
-
-int main(int argc, const char *argv[])
-{
-	NSRect screen = [[NSScreen mainScreen] frame];
-
-	int w = 800;
-	int h = 600;
-	int x = screen.size.width / 2 - w / 2;
-	int y = screen.size.height / 2 - h / 2;
-
-	NSRect view = NSMakeRect(x, y, w, h);
-
-	Application app;
-
-	[NSApplication sharedApplication];
-	NSApp.delegate = [[AppDelegate alloc] init];
-	NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
-
-	[NSApp finishLaunching];
-
-	NSWindow *window = [
-		[NSWindow alloc]
-		initWithContentRect: view
-		styleMask: (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable)
-		backing: NSBackingStoreBuffered
-		defer: NO
-	];
-
-	WindowDelegate *window_delegate = [[WindowDelegate alloc] init];
-	window_delegate.app = &app;
-
-	WindowView *window_view = [[WindowView alloc] initWithFrame: view];
-	window_view.app = &app;
-
-	window.delegate = window_delegate;
-	window.contentView = window_view;
-	window.acceptsMouseMovedEvents = YES;
-	window.title = @"Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
-
-	[window makeKeyAndOrderFront:nil];
-
-	app.init(window_view.layer, w, h);
-	[NSApp run];
-
-	return 0;
-}
-
-#endif
