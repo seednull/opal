@@ -83,7 +83,7 @@ void destroyWindow(HWND handle)
 
 int main()
 {
-	const char *title = "Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
+	const char *title = "Opal Sample (04_triangle)";
 	const uint32_t width = 800;
 	const uint32_t height = 600;
 

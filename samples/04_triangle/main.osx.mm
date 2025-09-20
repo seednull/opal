@@ -111,7 +111,7 @@ int main(int argc, const char *argv[])
 	window.delegate = window_delegate;
 	window.contentView = window_view;
 	window.acceptsMouseMovedEvents = YES;
-	window.title = @"Opal Sample (04_triangle) Привет! ÁÉ¢¿耷靼";
+	window.title = @"Opal Sample (04_triangle)";
 
 	[window makeKeyAndOrderFront:nil];
 
