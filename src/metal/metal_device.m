@@ -1117,14 +1117,9 @@ static Opal_Result metal_deviceCreateGraphicsPipeline(Opal_Device this, const Op
 		if (!metal_render_pipeline)
 			return OPAL_METAL_ERROR;
 
-		MTLDepthStencilDescriptor *depth_stencil_info = nil;
+		MTLDepthStencilDescriptor *depth_stencil_info = [MTLDepthStencilDescriptor new];;
+		assert(depth_stencil_info);
 		
-		if (desc->depth_enable || desc->stencil_enable)
-		{
-			depth_stencil_info = [MTLDepthStencilDescriptor new];
-			assert(depth_stencil_info);
-		}
-
 		if (desc->depth_enable)
 		{
 			depth_stencil_info.depthWriteEnabled = desc->depth_write;
@@ -1168,8 +1163,8 @@ static Opal_Result metal_deviceCreateGraphicsPipeline(Opal_Device this, const Op
 
 		assert(error == nil);
 
-		[metal_render_pipeline retain];
 		[metal_depth_stencil_state retain];
+		[metal_render_pipeline retain];
 	}
 
 	// create opal struct
