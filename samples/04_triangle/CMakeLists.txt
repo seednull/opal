@@ -101,7 +101,7 @@ endforeach()
 # Target
 # ==================================================================================================
 add_executable(${TARGET} ${SOURCES} ${HEADERS})
-add_custom_target(Shaders ALL DEPENDS ${COMPILED_SHADERS})
+add_custom_target(${TARGET}_Shaders ALL DEPENDS ${COMPILED_SHADERS})
 
 set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX d)
 
