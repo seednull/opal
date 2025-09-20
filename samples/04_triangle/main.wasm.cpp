@@ -4,17 +4,30 @@
 
 #include "app.h"
 
-static int default_width = 800;
-static int default_height = 600;
 static int current_width = 800;
 static int current_height = 600;
 static bool need_resize = false;
 static char canvas_handle[] = "#canvas";
 
+static EM_BOOL onCanvasResize(int event_type, const EmscriptenUiEvent *event, void *user_data)
+{
+	if (event_type != EMSCRIPTEN_EVENT_RESIZE)
+		return EM_FALSE;
+
+	current_width = static_cast<uint32_t>(event->windowInnerWidth);
+	current_height = static_cast<uint32_t>(event->windowInnerHeight);
+
+	need_resize = true;
+	return EM_FALSE;
+}
+
 static EM_BOOL onFullscreenChange(int event_type, const EmscriptenFullscreenChangeEvent *event, void *user_data)
 {
-	current_width = (event->isFullscreen) ? event->screenWidth : default_width;
-	current_height = (event->isFullscreen) ? event->screenHeight : default_height;
+	if (event->isFullscreen)
+	{
+		current_width = event->screenWidth;
+		current_height = event->screenHeight;
+	}
 
 	need_resize = true;
 	return EM_FALSE;
@@ -48,12 +61,13 @@ void frame(void *user_data)
 
 int main()
 {
-	emscripten_set_canvas_element_size(canvas_handle, default_width, default_height);
+	emscripten_get_canvas_element_size(canvas_handle, &current_width, &current_height);
 
 	Application app;
-	app.init(canvas_handle, static_cast<uint32_t>(default_width), static_cast<uint32_t>(default_height));
+	app.init(canvas_handle, static_cast<uint32_t>(current_width), static_cast<uint32_t>(current_height));
 
 	emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, 0, onFullscreenChange);
+	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, 0, onCanvasResize);
 	emscripten_set_main_loop_arg(frame, &app, 0, 1);
 
 	app.shutdown();

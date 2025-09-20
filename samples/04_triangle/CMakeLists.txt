@@ -123,6 +123,7 @@ if (EMSCRIPTEN)
 	set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "
 		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/main.vert.wgsl@samples/04_triangle/shaders/webgpu/main.vert.wgsl
 		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/main.frag.wgsl@samples/04_triangle/shaders/webgpu/main.frag.wgsl
+		--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/main.wasm.html
 	")
 endif()
 
