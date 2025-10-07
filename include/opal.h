@@ -1169,7 +1169,6 @@ typedef struct Opal_ShaderBindingTablePrebuildInfo_t
 	uint64_t base_raygen_offset;
 	uint64_t base_hitgroup_offset;
 	uint64_t base_miss_offset;
-	uint64_t aligned_handle_size;
 } Opal_ShaderBindingTablePrebuildInfo;
 
 typedef struct Opal_GraphicsPipelineDesc_t
@@ -1592,7 +1591,6 @@ OPAL_APIENTRY Opal_Result opalDestroyDevice(Opal_Device device);
 OPAL_APIENTRY Opal_Result opalBuildShaderBindingTable(Opal_Device device, const Opal_ShaderBindingTableBuildDesc *desc);
 OPAL_APIENTRY Opal_Result opalBuildAccelerationStructureInstanceBuffer(Opal_Device device, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc);
 OPAL_APIENTRY Opal_Result opalResetCommandAllocator(Opal_Device device, Opal_CommandAllocator command_allocator);
-OPAL_APIENTRY Opal_Result opalResetCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalAllocateDescriptorSet(Opal_Device device, const Opal_DescriptorSetAllocationDesc *desc, Opal_DescriptorSet *descriptor_set);
 OPAL_APIENTRY Opal_Result opalFreeDescriptorSet(Opal_Device device, Opal_DescriptorSet descriptor_set);
 OPAL_APIENTRY Opal_Result opalMapBuffer(Opal_Device device, Opal_Buffer buffer, void **ptr);

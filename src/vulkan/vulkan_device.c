@@ -332,7 +332,6 @@ static Opal_Result vulkan_deviceGetShaderBindingTablePrebuildInfo(Opal_Device th
 	info->base_raygen_offset = 0;
 	info->base_hitgroup_offset = raygen_size;
 	info->base_miss_offset = raygen_size + hitgroup_size;
-	info->aligned_handle_size = aligned_handle_size;
 
 	return OPAL_SUCCESS;
 }
