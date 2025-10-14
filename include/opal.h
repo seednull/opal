@@ -1133,9 +1133,10 @@ typedef struct Opal_AccelerationStructurePostbuildInfo_t
 typedef struct Opal_AccelerationStructureInstance_t
 {
 	float transform[3][4];
-	uint8_t mask : 8;
+	uint32_t custom_index : 24;
+	uint32_t mask : 8;
 	uint32_t sbt_hitgroup_index_offset : 24;
-	Opal_AccelerationStructureInstanceFlags flags;
+	Opal_AccelerationStructureInstanceFlags flags : 8;
 	Opal_AccelerationStructure blas;
 } Opal_AccelerationStructureInstance;
 

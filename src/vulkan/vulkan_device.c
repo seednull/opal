@@ -2717,7 +2717,7 @@ static Opal_Result vulkan_deviceBuildAccelerationStructureInstanceBuffer(Opal_De
 		assert(blas_ptr);
 
 		memcpy(&vulkan_instance->transform, opal_instance->transform, sizeof(VkTransformMatrixKHR));
-		vulkan_instance->instanceCustomIndex = 0;
+		vulkan_instance->instanceCustomIndex = opal_instance->custom_index;
 		vulkan_instance->mask = opal_instance->mask;
 		vulkan_instance->instanceShaderBindingTableRecordOffset = opal_instance->sbt_hitgroup_index_offset;
 		vulkan_instance->flags = vulkan_helperToAccelerationStructureGeometryInstanceFlags(opal_instance->flags);

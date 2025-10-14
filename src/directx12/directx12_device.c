@@ -2771,7 +2771,7 @@ static Opal_Result directx12_deviceBuildAccelerationStructureInstanceBuffer(Opal
 		assert(blas_ptr);
 
 		memcpy(&d3d12_instance->Transform, opal_instance->transform, sizeof(FLOAT) * 12);
-		d3d12_instance->InstanceID = 0;
+		d3d12_instance->InstanceID = opal_instance->custom_index;
 		d3d12_instance->InstanceMask = opal_instance->mask;
 		d3d12_instance->InstanceContributionToHitGroupIndex = opal_instance->sbt_hitgroup_index_offset;
 		d3d12_instance->Flags = directx12_helperToAccelerationStructureInstanceFlags(opal_instance->flags);
