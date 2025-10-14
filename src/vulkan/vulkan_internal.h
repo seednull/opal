@@ -191,6 +191,11 @@ typedef struct Vulkan_Sampler_t
 
 typedef struct Vulkan_AccelerationStructure_t
 {
+	VkBuffer buffer;
+#ifdef OPAL_HAS_VMA
+	VmaAllocation vma_allocation;
+#endif
+	Vulkan_Allocation allocation;
 	VkAccelerationStructureKHR acceleration_structure;
 	VkDeviceAddress device_address;
 	VkQueryPool size_pool;
@@ -285,7 +290,6 @@ typedef struct Vulkan_Swapchain_t
 } Vulkan_Swapchain;
 
 Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *instance_ptr, VkPhysicalDevice physical_device, VkDevice device);
-Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation);
 
 Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info, VkDevice *device);
 Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo *info);

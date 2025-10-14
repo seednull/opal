@@ -256,12 +256,6 @@ void Application::shutdown()
 	result = opalDestroyAccelerationStructure(device, tlas);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyBuffer(device, blas_buffer);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalDestroyBuffer(device, tlas_buffer);
-	assert(result == OPAL_SUCCESS);
-
 	result = opalDestroyBuffer(device, sbt_buffer);
 	assert(result == OPAL_SUCCESS);
 
@@ -640,7 +634,7 @@ void Application::buildBLAS()
 
 	// create geometry
 	Opal_BufferDesc buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_VERTEX | OPAL_BUFFER_USAGE_INDEX | OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT);
+	buffer_desc.usage = OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT;
 	buffer_desc.size = sizeof(Triangle);
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
 	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
@@ -685,15 +679,6 @@ void Application::buildBLAS()
 
 	// create acceleration structure
 	buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE);
-	buffer_desc.size = blas_build_info.acceleration_structure_size;
-	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
-	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
-
-	result = opalCreateBuffer(device, &buffer_desc, &blas_buffer);
-	assert(result == OPAL_SUCCESS);
-
-	buffer_desc = {};
 	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_STORAGE);
 	buffer_desc.size = blas_build_info.build_scratch_size;
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
@@ -705,7 +690,7 @@ void Application::buildBLAS()
 
 	Opal_AccelerationStructureDesc blas_desc = {};
 	blas_desc.type = OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-	blas_desc.buffer = {blas_buffer, 0, blas_build_info.acceleration_structure_size};
+	blas_desc.size = blas_build_info.acceleration_structure_size;
 
 	result = opalCreateAccelerationStructure(device, &blas_desc, &blas);
 	assert(result == OPAL_SUCCESS);
@@ -764,7 +749,7 @@ void Application::buildTLAS()
 	tlas_instance.mask = 0xFF;
 
 	Opal_BufferDesc buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT);
+	buffer_desc.usage = OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT;
 	buffer_desc.size = sizeof(Opal_AccelerationStructureInstance);
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
 	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
@@ -796,15 +781,6 @@ void Application::buildTLAS()
 
 	// create acceleration structure
 	buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE);
-	buffer_desc.size = tlas_build_info.acceleration_structure_size;
-	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
-	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
-
-	result = opalCreateBuffer(device, &buffer_desc, &tlas_buffer);
-	assert(result == OPAL_SUCCESS);
-
-	buffer_desc = {};
 	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_STORAGE);
 	buffer_desc.size = tlas_build_info.build_scratch_size;
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
@@ -816,7 +792,7 @@ void Application::buildTLAS()
 
 	Opal_AccelerationStructureDesc tlas_desc = {};
 	tlas_desc.type = OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	tlas_desc.buffer = {tlas_buffer, 0, tlas_build_info.acceleration_structure_size};
+	tlas_desc.size = tlas_build_info.acceleration_structure_size;
 
 	result = opalCreateAccelerationStructure(device, &tlas_desc, &tlas);
 	assert(result == OPAL_SUCCESS);

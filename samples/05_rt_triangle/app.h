@@ -40,10 +40,7 @@ private:
 	Opal_Queue queue {OPAL_NULL_HANDLE};
 
 	Opal_AccelerationStructure blas {OPAL_NULL_HANDLE};
-	Opal_Buffer blas_buffer {OPAL_NULL_HANDLE};
-
 	Opal_AccelerationStructure tlas {OPAL_NULL_HANDLE};
-	Opal_Buffer tlas_buffer {OPAL_NULL_HANDLE};
 
 	Opal_ShaderBindingTablePrebuildInfo sbt_info;
 	Opal_Buffer sbt_buffer {OPAL_NULL_HANDLE};

@@ -187,9 +187,11 @@ typedef struct DirectX12_Sampler_t
 
 typedef struct DirectX12_AccelerationStructure_t
 {
-	Opal_BufferView buffer_view;
+	ID3D12Resource *buffer;
+	D3D12_GPU_VIRTUAL_ADDRESS address;
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE type;
 	uint32_t allow_compaction;
+	DirectX12_Allocation allocation;
 } DirectX12_AccelerationStructure;
 
 typedef struct DirectX12_CommandAllocator_t

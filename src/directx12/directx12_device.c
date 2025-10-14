@@ -114,10 +114,11 @@ static void directx12_destroySampler(DirectX12_Device *device_ptr, DirectX12_Sam
 
 static void directx12_destroyAccelerationStructure(DirectX12_Device *device_ptr, DirectX12_AccelerationStructure *acceleration_structure_ptr)
 {
-	OPAL_UNUSED(device_ptr);
-	OPAL_UNUSED(acceleration_structure_ptr);
+	assert(device_ptr);
+	assert(acceleration_structure_ptr);
 
-	// do nothing
+	ID3D12Resource_Release(acceleration_structure_ptr->buffer);
+	directx12_allocatorFreeMemory(device_ptr, acceleration_structure_ptr->allocation);
 }
 
 static void directx12_destroyCommandAllocator(DirectX12_Device *device_ptr, DirectX12_CommandAllocator *command_allocator_ptr)
@@ -548,10 +549,7 @@ static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_Buf
 	buffer_info.SampleDesc.Count = 1;
 	buffer_info.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-	if (desc->usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE)
-		buffer_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-	if (desc->usage & OPAL_BUFFER_USAGE_STORAGE)
+	if (desc->memory_type == OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL && desc->usage & OPAL_BUFFER_USAGE_STORAGE)
 		buffer_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = {0};
@@ -864,9 +862,53 @@ static Opal_Result directx12_deviceCreateAccelerationStructure(Opal_Device this,
 	assert(acceleration_structure);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	ID3D12Resource *d3d12_buffer = NULL;
+	DirectX12_Allocation allocation = {0};
+
+	// fill buffer info
+	D3D12_RESOURCE_DESC buffer_info = {0};
+	buffer_info.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	buffer_info.Alignment = 0;
+	buffer_info.Width = desc->size;
+	buffer_info.Height = 1;
+	buffer_info.DepthOrArraySize = 1;
+	buffer_info.MipLevels = 1;
+	buffer_info.Format = DXGI_FORMAT_UNKNOWN;
+	buffer_info.SampleDesc.Count = 1;
+	buffer_info.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	buffer_info.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = {0};
+	ID3D12Device_GetResourceAllocationInfo(d3d12_device, &allocation_info, 0, 1, &buffer_info);
+
+	// fill allocation info
+	DirectX12_AllocationDesc allocation_desc = {0};
+	allocation_desc.size = allocation_info.SizeInBytes;
+	allocation_desc.alignment = allocation_info.Alignment;
+	allocation_desc.resource_type = DIRECTX12_RESOURCE_TYPE_BUFFER;
+	allocation_desc.allocation_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
+	allocation_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
+
+	Opal_Result opal_result = directx12_deviceAllocateMemory(device_ptr, &allocation_desc, &allocation);
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
+
+	assert(allocation.offset % allocation_info.Alignment == 0);
+
+	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &buffer_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_buffer);
+	if (!SUCCEEDED(hr))
+	{
+		directx12_allocatorFreeMemory(device_ptr, allocation);
+		return OPAL_DIRECTX12_ERROR;
+	}
 
 	DirectX12_AccelerationStructure result = {0};
-	result.buffer_view = desc->buffer;
+	result.buffer = d3d12_buffer;
+	result.address = ID3D12Resource_GetGPUVirtualAddress(d3d12_buffer);
+	result.allocation = allocation;
 	result.type = directx12_helperToAccelerationStructureType(desc->type);
 
 	*acceleration_structure = (Opal_AccelerationStructure)opal_poolAddElement(&device_ptr->acceleration_structures, &result);
@@ -2728,15 +2770,12 @@ static Opal_Result directx12_deviceBuildAccelerationStructureInstanceBuffer(Opal
 		DirectX12_AccelerationStructure *blas_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)opal_instance->blas);
 		assert(blas_ptr);
 
-		DirectX12_Buffer *blas_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)blas_ptr->buffer_view.buffer);
-		assert(blas_buffer_ptr);
-
 		memcpy(&d3d12_instance->Transform, opal_instance->transform, sizeof(FLOAT) * 12);
 		d3d12_instance->InstanceID = opal_instance->custom_index;
 		d3d12_instance->InstanceMask = opal_instance->mask;
 		d3d12_instance->InstanceContributionToHitGroupIndex = opal_instance->sbt_hitgroup_index_offset;
 		d3d12_instance->Flags = directx12_helperToAccelerationStructureInstanceFlags(opal_instance->flags);
-		d3d12_instance->AccelerationStructure = blas_buffer_ptr->address + blas_ptr->buffer_view.offset;
+		d3d12_instance->AccelerationStructure = blas_ptr->address;
 
 		dst_data += sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 	}
@@ -3058,14 +3097,11 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 					DirectX12_AccelerationStructure *acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)entry->data.acceleration_structure);
 					assert(acceleration_structure_ptr);
 
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)acceleration_structure_ptr->buffer_view.buffer);
-					assert(buffer_ptr);
-
 					D3D12_SHADER_RESOURCE_VIEW_DESC desc = {0};
 					desc.Format = DXGI_FORMAT_UNKNOWN;
 					desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
 					desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-					desc.RaytracingAccelerationStructure.Location = buffer_ptr->address + acceleration_structure_ptr->buffer_view.offset;
+					desc.RaytracingAccelerationStructure.Location = acceleration_structure_ptr->address;
 
 					ID3D12Device_CreateShaderResourceView(device_ptr->device, NULL, &desc, dst_handle);
 				}
@@ -4016,9 +4052,6 @@ static Opal_Result directx12_deviceCmdBuildAccelerationStructures(Opal_Device th
 
 		dst_acceleration_structure_ptr->allow_compaction = (desc->build_flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_ALLOW_COMPACTION) != 0;
 
-		const DirectX12_Buffer *dst_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_acceleration_structure_ptr->buffer_view.buffer);
-		assert(dst_buffer_ptr);
-
 		const DirectX12_AccelerationStructure *src_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
 
 		const DirectX12_Buffer *scratch_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
@@ -4029,16 +4062,11 @@ static Opal_Result directx12_deviceCmdBuildAccelerationStructures(Opal_Device th
 		build_desc.Inputs.Type = directx12_helperToAccelerationStructureType(desc->type);
 		build_desc.Inputs.Flags = directx12_helperToAccelerationStructureBuildFlags(desc->build_flags);
 		build_desc.Inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-		build_desc.DestAccelerationStructureData = dst_buffer_ptr->address + dst_acceleration_structure_ptr->buffer_view.offset;
+		build_desc.DestAccelerationStructureData = dst_acceleration_structure_ptr->address;
 		build_desc.ScratchAccelerationStructureData = scratch_buffer_ptr->address + desc->scratch_buffer.offset;
 
 		if (src_acceleration_structure_ptr)
-		{
-			const DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_acceleration_structure_ptr->buffer_view.buffer);
-			assert(src_buffer_ptr);
-
-			build_desc.SourceAccelerationStructureData = src_buffer_ptr->address + src_acceleration_structure_ptr->buffer_view.offset;
-		}
+			build_desc.SourceAccelerationStructureData = src_acceleration_structure_ptr->address;
 
 		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
 		{
@@ -4134,17 +4162,11 @@ static Opal_Result directx12_deviceCmdCopyAccelerationStructure(Opal_Device this
 	const DirectX12_AccelerationStructure *src_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src);
 	assert(src_acceleration_structure_ptr);
 
-	const DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_acceleration_structure_ptr->buffer_view.buffer);
-	assert(src_buffer_ptr);
-
 	const DirectX12_AccelerationStructure *dst_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)dst);
 	assert(dst_acceleration_structure_ptr);
 
-	const DirectX12_Buffer *dst_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_acceleration_structure_ptr->buffer_view.buffer);
-	assert(dst_buffer_ptr);
-
-	D3D12_GPU_VIRTUAL_ADDRESS src_address = src_buffer_ptr->address + src_acceleration_structure_ptr->buffer_view.offset;
-	D3D12_GPU_VIRTUAL_ADDRESS dst_address = dst_buffer_ptr->address + dst_acceleration_structure_ptr->buffer_view.offset;
+	D3D12_GPU_VIRTUAL_ADDRESS src_address = src_acceleration_structure_ptr->address;
+	D3D12_GPU_VIRTUAL_ADDRESS dst_address = dst_acceleration_structure_ptr->address;
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE copy_mode = directx12_helperToAccelerationStructureCopyMode(mode);
 
 	ID3D12GraphicsCommandList4_CopyRaytracingAccelerationStructure(command_buffer_ptr->list, dst_address, src_address, copy_mode);
@@ -4181,10 +4203,7 @@ static Opal_Result directx12_deviceCmdCopyAccelerationStructuresPostbuildInfo(Op
 		const DirectX12_AccelerationStructure *src_acceleration_structure_ptr = (DirectX12_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src_acceleration_structures[i]);
 		assert(src_acceleration_structure_ptr);
 	
-		const DirectX12_Buffer *src_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)src_acceleration_structure_ptr->buffer_view.buffer);
-		assert(src_buffer_ptr);
-
-		D3D12_GPU_VIRTUAL_ADDRESS src_address = src_buffer_ptr->address + src_acceleration_structure_ptr->buffer_view.offset;
+		D3D12_GPU_VIRTUAL_ADDRESS src_address = src_acceleration_structure_ptr->address;
 
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC desc = {0};
 		desc.DestBuffer = current_address + size_offset;
