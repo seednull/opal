@@ -436,7 +436,7 @@ void Application::render()
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferView raygen_entry = {sbt_buffer, sbt_info.base_raygen_offset};
-	Opal_BufferView hitgroup_entry = {sbt_buffer, sbt_info.base_hitgroup_offset};
+	Opal_BufferView intersection_group_entry = {sbt_buffer, sbt_info.base_intersection_group_offset};
 	Opal_BufferView miss_entry = {sbt_buffer, sbt_info.base_miss_offset};
 
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
@@ -451,7 +451,7 @@ void Application::render()
 	result = opalCmdSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdRaytraceDispatch(device, command_buffer, raygen_entry, hitgroup_entry, miss_entry, width, height, 1);
+	result = opalCmdRaytraceDispatch(device, command_buffer, raygen_entry, intersection_group_entry, miss_entry, width, height, 1);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdEndRaytracePass(device, command_buffer);
@@ -564,14 +564,14 @@ void Application::buildPipeline()
 	pipeline_desc.pipeline_layout = pipeline_layout;
 
 	Opal_ShaderFunction raygen_functions[] = {{shaders[0], "rayGenerationMain"}};
-	Opal_HitgroupShader hitgroup_functions[] = {{{}, {}, {shaders[1], "rayClosestHitMain"}}};
+	Opal_ShaderIntersectionGroup intersection_group_functions[] = {{{}, {}, {shaders[1], "rayClosestHitMain"}}};
 	Opal_ShaderFunction miss_functions[] = {{shaders[2], "rayMissMain"}};
 
 	pipeline_desc.num_raygen_functions = 1;
 	pipeline_desc.raygen_functions = raygen_functions;
 
-	pipeline_desc.num_hitgroup_functions = 1;
-	pipeline_desc.hitgroup_functions = hitgroup_functions;
+	pipeline_desc.num_intersection_group_functions = 1;
+	pipeline_desc.intersection_group_functions = intersection_group_functions;
 
 	pipeline_desc.num_miss_functions = 1;
 	pipeline_desc.miss_functions = miss_functions;
@@ -596,14 +596,14 @@ void Application::buildSBT()
 	sbt_build_desc.pipeline = pipeline;
 
 	uint32_t raygen_indices[] = {0};
-	uint32_t hitgroup_indices[] = {0};
+	uint32_t intersection_group_indices[] = {0};
 	uint32_t miss_indices[] = {0};
 
 	sbt_build_desc.num_raygen_indices = 1;
 	sbt_build_desc.raygen_indices = raygen_indices;
 
-	sbt_build_desc.num_hitgroup_indices = 1;
-	sbt_build_desc.hitgroup_indices = hitgroup_indices;
+	sbt_build_desc.num_intersection_group_indices = 1;
+	sbt_build_desc.intersection_group_indices = intersection_group_indices;
 
 	sbt_build_desc.num_miss_indices = 1;
 	sbt_build_desc.miss_indices = miss_indices;

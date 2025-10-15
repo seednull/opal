@@ -268,7 +268,7 @@ typedef struct Vulkan_Pipeline_t
 	VkPipeline pipeline;
 	VkPipelineBindPoint bind_point;
 	uint32_t num_raygen_groups;
-	uint32_t num_hitgroup_groups;
+	uint32_t num_intersection_groups;
 	uint32_t num_miss_groups;
 } Vulkan_Pipeline;
 

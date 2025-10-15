@@ -271,7 +271,7 @@ typedef struct DirectX12_Pipeline_t
 	ID3D12RootSignature *root_signature;
 	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
 	uint32_t num_raygen_shaders;
-	uint32_t num_hitgroups;
+	uint32_t num_intersection_groups;
 	uint32_t num_miss_shaders;
 	uint8_t *shader_handles;
 } DirectX12_Pipeline;

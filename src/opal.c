@@ -1126,7 +1126,7 @@ Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 }
 
-Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView intersection_group_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1135,7 +1135,7 @@ Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer comma
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdRaytraceDispatch);
 
-	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, raygen_entry, hitgroup_entry, miss_entry, width, height, depth);
+	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, raygen_entry, intersection_group_entry, miss_entry, width, height, depth);
 }
 
 Opal_Result opalCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)

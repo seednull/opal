@@ -367,16 +367,16 @@ static Opal_Result directx12_deviceGetShaderBindingTablePrebuildInfo(Opal_Device
 	uint32_t aligned_handle_size = alignUp(handle_size, handle_alignment);
 
 	uint32_t raygen_size = alignUp(desc->num_raygen_indices * aligned_handle_size, base_alignment);
-	uint32_t hitgroup_size = alignUp(desc->num_hitgroup_indices * aligned_handle_size, base_alignment);
+	uint32_t intersection_group_size = alignUp(desc->num_intersection_group_indices * aligned_handle_size, base_alignment);
 
 	// Note: we don't need to align miss part since the buffer offset could be either 0 or already aligned to base_alignment
 	uint32_t miss_size = desc->num_miss_indices * aligned_handle_size;
 
-	info->buffer_size = raygen_size + hitgroup_size + miss_size;
+	info->buffer_size = raygen_size + intersection_group_size + miss_size;
 
 	info->base_raygen_offset = 0;
-	info->base_hitgroup_offset = raygen_size;
-	info->base_miss_offset = raygen_size + hitgroup_size;
+	info->base_intersection_group_offset = raygen_size;
+	info->base_miss_offset = raygen_size + intersection_group_size;
 
 	return OPAL_SUCCESS;
 }
@@ -1697,11 +1697,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
 	assert(pipeline_layout_ptr);
 
-	uint32_t max_shaders = desc->num_raygen_functions + desc->num_hitgroup_functions * 3 + desc->num_miss_functions;
-	uint32_t max_hitgroups = desc->num_hitgroup_functions;
-	uint32_t max_subobjects = 3 + max_shaders + max_hitgroups;
+	uint32_t max_shaders = desc->num_raygen_functions + desc->num_intersection_group_functions * 3 + desc->num_miss_functions;
+	uint32_t max_intersection_groups = desc->num_intersection_group_functions;
+	uint32_t max_subobjects = 3 + max_shaders + max_intersection_groups;
 	uint32_t num_shaders = 0;
-	uint32_t num_hitgroups = 0;
+	uint32_t num_intersection_groups = 0;
 	uint32_t num_subobjects = 0;
 
 	typedef struct ShaderStage_t
@@ -1711,11 +1711,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		WCHAR id[16];
 	} ShaderStage;
 
-	typedef struct HitgroupStage_t
+	typedef struct ShaderIntersectionGroupStage_t
 	{
 		D3D12_HIT_GROUP_DESC desc;
 		WCHAR id[16];
-	} HitgroupStage;
+	} ShaderIntersectionGroupStage;
 
 	uint32_t name_buffer_size = 0;
 
@@ -1745,19 +1745,19 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		name_buffer_size++;
 	}
 
-	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
+	for (uint32_t i = 0; i < desc->num_intersection_group_functions; ++i)
 	{
-		Opal_PoolHandle anyhit_shader_handle = (Opal_PoolHandle)desc->hitgroup_functions[i].anyhit_function.shader;
-		Opal_PoolHandle closesthit_shader_handle = (Opal_PoolHandle)desc->hitgroup_functions[i].closesthit_function.shader;
-		Opal_PoolHandle intersection_shader_handle = (Opal_PoolHandle)desc->hitgroup_functions[i].intersection_function.shader;
+		Opal_PoolHandle anyhit_shader_handle = (Opal_PoolHandle)desc->intersection_group_functions[i].anyhit_function.shader;
+		Opal_PoolHandle closesthit_shader_handle = (Opal_PoolHandle)desc->intersection_group_functions[i].closesthit_function.shader;
+		Opal_PoolHandle intersection_shader_handle = (Opal_PoolHandle)desc->intersection_group_functions[i].intersection_function.shader;
 
 		assert(anyhit_shader_handle != OPAL_NULL_HANDLE || closesthit_shader_handle != OPAL_NULL_HANDLE || intersection_shader_handle != OPAL_NULL_HANDLE);
 
 		if (anyhit_shader_handle != OPAL_NULL_HANDLE)
 		{
-			assert(desc->hitgroup_functions[i].anyhit_function.name);
+			assert(desc->intersection_group_functions[i].anyhit_function.name);
 
-			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, -1, NULL, 0);
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->intersection_group_functions[i].anyhit_function.name, -1, NULL, 0);
 
 			*name_lengths++ = size;
 			name_buffer_size += size;
@@ -1766,9 +1766,9 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 		if (closesthit_shader_handle != OPAL_NULL_HANDLE)
 		{
-			assert(desc->hitgroup_functions[i].closesthit_function.name);
+			assert(desc->intersection_group_functions[i].closesthit_function.name);
 
-			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, -1, NULL, 0);
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->intersection_group_functions[i].closesthit_function.name, -1, NULL, 0);
 
 			*name_lengths++ = size;
 			name_buffer_size += size;
@@ -1777,9 +1777,9 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 
 		if (intersection_shader_handle != OPAL_NULL_HANDLE)
 		{
-			assert(desc->hitgroup_functions[i].intersection_function.name);
+			assert(desc->intersection_group_functions[i].intersection_function.name);
 
-			int size = MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, -1, NULL, 0);
+			int size = MultiByteToWideChar(CP_UTF8, 0, desc->intersection_group_functions[i].intersection_function.name, -1, NULL, 0);
 
 			*name_lengths++ = size;
 			name_buffer_size += size;
@@ -1790,18 +1790,18 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	uint32_t names_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(WCHAR) * name_buffer_size);
 	uint32_t subobjects_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_STATE_SUBOBJECT) * max_subobjects);
 	uint32_t shaders_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(ShaderStage) * max_shaders);
-	uint32_t hitgroups_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(HitgroupStage) * max_hitgroups);
+	uint32_t intersection_groups_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(ShaderIntersectionGroupStage) * max_intersection_groups);
 
 	name_lengths = (int *)(device_ptr->bump.data + name_lenghts_offset);
 	WCHAR *names = (WCHAR *)(device_ptr->bump.data + names_offset);
 	D3D12_STATE_SUBOBJECT *subobjects = (D3D12_STATE_SUBOBJECT *)(device_ptr->bump.data + subobjects_offset);
 	ShaderStage *shaders = (ShaderStage *)(device_ptr->bump.data + shaders_offset);
-	HitgroupStage *hitgroups = (HitgroupStage *)(device_ptr->bump.data + hitgroups_offset);
+	ShaderIntersectionGroupStage *intersection_groups = (ShaderIntersectionGroupStage *)(device_ptr->bump.data + intersection_groups_offset);
 
 	memset(names, 0, sizeof(WCHAR) * name_buffer_size);
 	memset(subobjects, 0, sizeof(D3D12_STATE_SUBOBJECT) * max_subobjects);
 	memset(shaders, 0, sizeof(ShaderStage) * max_shaders);
-	memset(hitgroups, 0, sizeof(HitgroupStage) * max_hitgroups);
+	memset(intersection_groups, 0, sizeof(ShaderIntersectionGroupStage) * max_intersection_groups);
 
 	// root signature
 	D3D12_GLOBAL_ROOT_SIGNATURE global_root_signature =
@@ -1878,22 +1878,22 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		names++;
 	}
 
-	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
+	for (uint32_t i = 0; i < desc->num_intersection_group_functions; ++i)
 	{
-		DirectX12_Shader *anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].anyhit_function.shader);
-		DirectX12_Shader *closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].closesthit_function.shader);
-		DirectX12_Shader *intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->hitgroup_functions[i].intersection_function.shader);
+		DirectX12_Shader *anyhit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->intersection_group_functions[i].anyhit_function.shader);
+		DirectX12_Shader *closesthit_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->intersection_group_functions[i].closesthit_function.shader);
+		DirectX12_Shader *intersection_shader_ptr = opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->intersection_group_functions[i].intersection_function.shader);
 
 		assert(anyhit_shader_ptr || closesthit_shader_ptr || intersection_shader_ptr);
 
-		HitgroupStage *hitgroup = &hitgroups[num_hitgroups++];
+		ShaderIntersectionGroupStage *intersection_group = &intersection_groups[num_intersection_groups++];
 
-		StringCbPrintfW(hitgroup->id, 16 * sizeof(WCHAR), L"hitgroup%d", num_hitgroups - 1);
+		StringCbPrintfW(intersection_group->id, 16 * sizeof(WCHAR), L"intersection_group%d", num_intersection_groups - 1);
 
-		hitgroup->desc.HitGroupExport = hitgroup->id;
-		hitgroup->desc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+		intersection_group->desc.HitGroupExport = intersection_group->id;
+		intersection_group->desc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
 		
-		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitgroup->desc };
+		subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &intersection_group->desc };
 
 		if (anyhit_shader_ptr != NULL)
 		{
@@ -1902,7 +1902,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rahit%d", num_shaders - 1);
 	
 			int size = *name_lengths++;
-			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].anyhit_function.name, -1, names, size);
+			MultiByteToWideChar(CP_UTF8, 0, desc->intersection_group_functions[i].anyhit_function.name, -1, names, size);
 
 			shader->export.Name = shader->id;
 			shader->export.ExportToRename = names;
@@ -1914,7 +1914,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	
 			subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
 
-			hitgroup->desc.AnyHitShaderImport = shader->id;
+			intersection_group->desc.AnyHitShaderImport = shader->id;
 			names += size;
 			names++;
 		}
@@ -1926,7 +1926,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rchit%d", num_shaders - 1);
 	
 			int size = *name_lengths++;
-			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].closesthit_function.name, -1, names, size);
+			MultiByteToWideChar(CP_UTF8, 0, desc->intersection_group_functions[i].closesthit_function.name, -1, names, size);
 
 			shader->export.Name = shader->id;
 			shader->export.ExportToRename = names;
@@ -1938,7 +1938,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	
 			subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
 
-			hitgroup->desc.ClosestHitShaderImport = shader->id;
+			intersection_group->desc.ClosestHitShaderImport = shader->id;
 			names += size;
 			names++;
 		}
@@ -1950,7 +1950,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 			StringCbPrintfW(shader->id, 16 * sizeof(WCHAR), L"rint%d", num_shaders - 1);
 	
 			int size = *name_lengths++;
-			MultiByteToWideChar(CP_UTF8, 0, desc->hitgroup_functions[i].intersection_function.name, -1, names, size);
+			MultiByteToWideChar(CP_UTF8, 0, desc->intersection_group_functions[i].intersection_function.name, -1, names, size);
 
 			shader->export.Name = shader->id;
 			shader->export.ExportToRename = names;
@@ -1962,8 +1962,8 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	
 			subobjects[num_subobjects++] = (D3D12_STATE_SUBOBJECT){ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &shader->desc };
 
-			hitgroup->desc.IntersectionShaderImport = shader->id;
-			hitgroup->desc.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+			intersection_group->desc.IntersectionShaderImport = shader->id;
+			intersection_group->desc.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
 			names += size;
 			names++;
 		}
@@ -1994,7 +1994,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		return OPAL_DIRECTX12_ERROR;
 	}
 
-	uint8_t *handles = (uint8_t *)malloc((desc->num_raygen_functions + desc->num_miss_functions + desc->num_hitgroup_functions) * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+	uint8_t *handles = (uint8_t *)malloc((desc->num_raygen_functions + desc->num_miss_functions + desc->num_intersection_group_functions) * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	uint8_t *current_handle = handles;
 
 	for (uint32_t i = 0; i < desc->num_raygen_functions; ++i)
@@ -2020,11 +2020,11 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 		current_handle += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 	}
 
-	for (uint32_t i = 0; i < desc->num_hitgroup_functions; ++i)
+	for (uint32_t i = 0; i < desc->num_intersection_group_functions; ++i)
 	{
-		HitgroupStage *hitgroup = &hitgroups[i];
+		ShaderIntersectionGroupStage *intersection_group = &intersection_groups[i];
 
-		void *ptr = ID3D12StateObjectProperties_GetShaderIdentifier(d3d12_state_properties, hitgroup->id);
+		void *ptr = ID3D12StateObjectProperties_GetShaderIdentifier(d3d12_state_properties, intersection_group->id);
 		assert(ptr);
 
 		memcpy(current_handle, ptr, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
@@ -2039,7 +2039,7 @@ static Opal_Result directx12_deviceCreateRaytracePipeline(Opal_Device this, cons
 	result.root_signature = pipeline_layout_ptr->root_signature;
 	result.primitive_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	result.num_raygen_shaders = desc->num_raygen_functions;
-	result.num_hitgroups = desc->num_hitgroup_functions;
+	result.num_intersection_groups = desc->num_intersection_group_functions;
 	result.num_miss_shaders = desc->num_miss_functions;
 	result.shader_handles = handles;
 
@@ -2695,7 +2695,7 @@ static Opal_Result directx12_deviceBuildShaderBindingTable(Opal_Device this, con
 	uint32_t aligned_handle_size = alignUp(handle_size, handle_alignment);
 
 	uint32_t raygen_size = alignUp(desc->num_raygen_indices * aligned_handle_size, base_alignment);
-	uint32_t hitgroup_size = alignUp(desc->num_hitgroup_indices * aligned_handle_size, base_alignment);
+	uint32_t intersection_group_size = alignUp(desc->num_intersection_group_indices * aligned_handle_size, base_alignment);
 
 	assert(isAlignedul(desc->sbt.offset, base_alignment));
 
@@ -2709,11 +2709,11 @@ static Opal_Result directx12_deviceBuildShaderBindingTable(Opal_Device this, con
 
 	uint8_t *src_raygen_handles = pipeline_ptr->shader_handles;
 	uint8_t *src_miss_handles = src_raygen_handles + pipeline_ptr->num_raygen_shaders * handle_size;
-	uint8_t *src_hitgroup_handles = src_miss_handles + pipeline_ptr->num_miss_shaders * handle_size;
+	uint8_t *src_intersection_group_handles = src_miss_handles + pipeline_ptr->num_miss_shaders * handle_size;
 
 	uint8_t *dst_raygen_handles = (uint8_t *)ptr + desc->sbt.offset;
-	uint8_t *dst_hitgroup_handles = dst_raygen_handles + raygen_size;
-	uint8_t *dst_miss_handles = dst_hitgroup_handles + hitgroup_size;
+	uint8_t *dst_intersection_group_handles = dst_raygen_handles + raygen_size;
+	uint8_t *dst_miss_handles = dst_intersection_group_handles + intersection_group_size;
 
 	uint8_t *dst = dst_raygen_handles;
 	for (uint32_t i = 0; i < desc->num_raygen_indices; ++i)
@@ -2725,11 +2725,11 @@ static Opal_Result directx12_deviceBuildShaderBindingTable(Opal_Device this, con
 		dst += aligned_handle_size;
 	}
 
-	dst = dst_hitgroup_handles;
-	for (uint32_t i = 0; i < desc->num_hitgroup_indices; ++i)
+	dst = dst_intersection_group_handles;
+	for (uint32_t i = 0; i < desc->num_intersection_group_indices; ++i)
 	{
-		uint32_t index = desc->hitgroup_indices[i];
-		uint8_t *src = src_hitgroup_handles + index * handle_size;
+		uint32_t index = desc->intersection_group_indices[i];
+		uint8_t *src = src_intersection_group_handles + index * handle_size;
 
 		memcpy(dst, src, handle_size);
 		dst += aligned_handle_size;
@@ -2773,7 +2773,7 @@ static Opal_Result directx12_deviceBuildAccelerationStructureInstanceBuffer(Opal
 		memcpy(&d3d12_instance->Transform, opal_instance->transform, sizeof(FLOAT) * 12);
 		d3d12_instance->InstanceID = opal_instance->custom_index;
 		d3d12_instance->InstanceMask = opal_instance->mask;
-		d3d12_instance->InstanceContributionToHitGroupIndex = opal_instance->sbt_hitgroup_index_offset;
+		d3d12_instance->InstanceContributionToHitGroupIndex = opal_instance->intersection_index_offset;
 		d3d12_instance->Flags = directx12_helperToAccelerationStructureInstanceFlags(opal_instance->flags);
 		d3d12_instance->AccelerationStructure = blas_ptr->address;
 
@@ -3978,7 +3978,7 @@ static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView hitgroup_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView intersection_group_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4017,12 +4017,12 @@ static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Co
 		desc.MissShaderTable.StrideInBytes = aligned_handle_size;
 	}
 
-	DirectX12_Buffer *hitgroup_sbt_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)hitgroup_entry.buffer);
-	if (hitgroup_sbt_buffer_ptr)
+	DirectX12_Buffer *intersection_group_sbt_buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)intersection_group_entry.buffer);
+	if (intersection_group_sbt_buffer_ptr)
 	{
-		assert(isAlignedul(hitgroup_entry.offset, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+		assert(isAlignedul(intersection_group_entry.offset, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
 
-		desc.HitGroupTable.StartAddress = hitgroup_sbt_buffer_ptr->address + hitgroup_entry.offset;
+		desc.HitGroupTable.StartAddress = intersection_group_sbt_buffer_ptr->address + intersection_group_entry.offset;
 		desc.HitGroupTable.SizeInBytes = aligned_handle_size;
 		desc.HitGroupTable.StrideInBytes = aligned_handle_size;
 	}
