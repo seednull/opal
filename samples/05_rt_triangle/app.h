@@ -42,8 +42,7 @@ private:
 	Opal_AccelerationStructure blas {OPAL_NULL_HANDLE};
 	Opal_AccelerationStructure tlas {OPAL_NULL_HANDLE};
 
-	Opal_ShaderBindingTablePrebuildInfo sbt_info;
-	Opal_Buffer sbt_buffer {OPAL_NULL_HANDLE};
+	Opal_ShaderBindingTable sbt {OPAL_NULL_HANDLE};
 
 	Opal_Buffer camera_buffer {OPAL_NULL_HANDLE};
 	Camera *camera_ptr {nullptr};

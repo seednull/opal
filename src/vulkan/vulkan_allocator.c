@@ -458,7 +458,7 @@ Opal_Result vulkan_allocatorMapMemory(Vulkan_Device *device, Vulkan_Allocation a
 	}
 
 	block->map_count++;
-	*ptr = block->mapped_ptr;
+	*ptr = block->mapped_ptr + allocation.offset;
 
 	return OPAL_SUCCESS;
 }

@@ -256,7 +256,7 @@ void Application::shutdown()
 	result = opalDestroyAccelerationStructure(device, tlas);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyBuffer(device, sbt_buffer);
+	result = opalDestroyShaderBindingTable(device, sbt);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyBuffer(device, camera_buffer);
@@ -435,10 +435,6 @@ void Application::render()
 	result = opalCmdBeginRaytracePass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_BufferView raygen_entry = {sbt_buffer, sbt_info.base_raygen_offset};
-	Opal_BufferView intersection_group_entry = {sbt_buffer, sbt_info.base_intersection_group_offset};
-	Opal_BufferView miss_entry = {sbt_buffer, sbt_info.base_miss_offset};
-
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 	assert(result == OPAL_SUCCESS);
 
@@ -448,10 +444,13 @@ void Application::render()
 	result = opalCmdSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 
+	result = opalCmdSetShaderBindingTable(device, command_buffer, sbt);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalCmdSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdRaytraceDispatch(device, command_buffer, raygen_entry, intersection_group_entry, miss_entry, width, height, 1);
+	result = opalCmdRaytraceDispatch(device, command_buffer, width, height, 1);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdEndRaytracePass(device, command_buffer);
@@ -564,17 +563,17 @@ void Application::buildPipeline()
 	pipeline_desc.pipeline_layout = pipeline_layout;
 
 	Opal_ShaderFunction raygen_functions[] = {{shaders[0], "rayGenerationMain"}};
-	Opal_ShaderIntersectionGroup intersection_group_functions[] = {{{}, {}, {shaders[1], "rayClosestHitMain"}}};
+	Opal_ShaderIntersectionGroup intersection_functions[] = {{{}, {}, {shaders[1], "rayClosestHitMain"}}};
 	Opal_ShaderFunction miss_functions[] = {{shaders[2], "rayMissMain"}};
 
 	pipeline_desc.num_raygen_functions = 1;
 	pipeline_desc.raygen_functions = raygen_functions;
 
-	pipeline_desc.num_intersection_group_functions = 1;
-	pipeline_desc.intersection_group_functions = intersection_group_functions;
-
 	pipeline_desc.num_miss_functions = 1;
 	pipeline_desc.miss_functions = miss_functions;
+
+	pipeline_desc.num_intersection_functions = 1;
+	pipeline_desc.intersection_functions = intersection_functions;
 
 	pipeline_desc.max_recursion_depth = 1;
 	pipeline_desc.max_ray_payload_size = sizeof(float) * 4;
@@ -592,37 +591,25 @@ void Application::buildPipeline()
 
 void Application::buildSBT()
 {
+	Opal_Result result = opalCreateShaderBindingTable(device, pipeline, &sbt);
+	assert(result == OPAL_SUCCESS);
+
 	Opal_ShaderBindingTableBuildDesc sbt_build_desc = {};
-	sbt_build_desc.pipeline = pipeline;
 
 	uint32_t raygen_indices[] = {0};
-	uint32_t intersection_group_indices[] = {0};
 	uint32_t miss_indices[] = {0};
+	uint32_t intersection_indices[] = {0};
 
 	sbt_build_desc.num_raygen_indices = 1;
 	sbt_build_desc.raygen_indices = raygen_indices;
 
-	sbt_build_desc.num_intersection_group_indices = 1;
-	sbt_build_desc.intersection_group_indices = intersection_group_indices;
-
 	sbt_build_desc.num_miss_indices = 1;
 	sbt_build_desc.miss_indices = miss_indices;
 
-	Opal_Result result = opalGetShaderBindingTablePrebuildInfo(device, &sbt_build_desc, &sbt_info);
-	assert(result == OPAL_SUCCESS);
+	sbt_build_desc.num_intersection_indices = 1;
+	sbt_build_desc.intersection_indices = intersection_indices;
 
-	Opal_BufferDesc buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE);
-	buffer_desc.size = sbt_info.buffer_size;
-	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
-	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
-
-	result = opalCreateBuffer(device, &buffer_desc, &sbt_buffer);
-	assert(result == OPAL_SUCCESS);
-
-	sbt_build_desc.sbt = {sbt_buffer, 0, sbt_info.buffer_size};
-
-	result = opalBuildShaderBindingTable(device, &sbt_build_desc);
+	result = opalBuildShaderBindingTable(device, sbt, &sbt_build_desc);
 	assert(result == OPAL_SUCCESS);
 }
 

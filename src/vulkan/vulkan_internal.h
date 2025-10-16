@@ -26,7 +26,7 @@ typedef struct Vulkan_MemoryBlock_t
 {
 	VkDeviceMemory memory;
 	VkDeviceSize size;
-	void *mapped_ptr;
+	uint8_t *mapped_ptr;
 	uint32_t memory_type;
 	uint32_t map_count;
 	uint32_t heap;
@@ -117,6 +117,7 @@ typedef struct Vulkan_Device_t
 	Opal_Pool image_views;
 	Opal_Pool samplers;
 	Opal_Pool acceleration_structures;
+	Opal_Pool shader_binding_tables;
 	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -204,6 +205,25 @@ typedef struct Vulkan_AccelerationStructure_t
 	uint32_t allow_compaction;
 } Vulkan_AccelerationStructure;
 
+typedef struct Vulkan_ShaderBindingTable_t
+{
+	VkDeviceAddress raygen_entry;
+	VkDeviceAddress miss_entry;
+	VkDeviceAddress intersection_entry;
+	VkBuffer buffer;
+	VkDeviceAddress device_address;
+	uint64_t buffer_size;
+	void *buffer_ptr;
+	uint32_t num_raygen_handles;
+	uint32_t num_miss_handles;
+	uint32_t num_intersection_handles;
+	Opal_Pipeline pipeline;
+#ifdef OPAL_HAS_VMA
+	VmaAllocation vma_allocation;
+#endif
+	Vulkan_Allocation allocation;
+} Vulkan_ShaderBindingTable;
+
 typedef struct Vulkan_CommandAllocator_t
 {
 	VkCommandPool pool;
@@ -214,6 +234,9 @@ typedef struct Vulkan_CommandBuffer_t
 	VkCommandBuffer command_buffer;
 	Opal_PipelineLayout pipeline_layout;
 	VkPipelineBindPoint pipeline_bind_point;
+	VkDeviceAddress raygen_entry;
+	VkDeviceAddress miss_entry;
+	VkDeviceAddress intersection_entry;
 } Vulkan_CommandBuffer;
 
 typedef struct Vulkan_Shader_t
@@ -267,9 +290,10 @@ typedef struct Vulkan_Pipeline_t
 {
 	VkPipeline pipeline;
 	VkPipelineBindPoint bind_point;
-	uint32_t num_raygen_groups;
-	uint32_t num_intersection_groups;
-	uint32_t num_miss_groups;
+	uint32_t num_raygen_handles;
+	uint32_t num_miss_handles;
+	uint32_t num_intersection_handles;
+	void *shader_handles;
 } Vulkan_Pipeline;
 
 typedef struct Vulkan_Surface_t

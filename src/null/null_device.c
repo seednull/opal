@@ -41,15 +41,6 @@ static Opal_Result null_deviceGetAccelerationStructurePrebuildInfo(Opal_Device t
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceGetShaderBindingTablePrebuildInfo(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc, Opal_ShaderBindingTablePrebuildInfo *info)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(info);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result null_deviceGetSupportedSurfaceFormats(Opal_Device this, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
 {
 	OPAL_UNUSED(this);
@@ -138,6 +129,15 @@ static Opal_Result null_deviceCreateAccelerationStructure(Opal_Device this, cons
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
 	OPAL_UNUSED(acceleration_structure);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCreateShaderBindingTable(Opal_Device this, Opal_Pipeline pipeline, Opal_ShaderBindingTable *shader_binding_table)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(pipeline);
+	OPAL_UNUSED(shader_binding_table);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -292,6 +292,14 @@ static Opal_Result null_deviceDestroyAccelerationStructure(Opal_Device this, Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceDestroyShaderBindingTable(Opal_Device this, Opal_ShaderBindingTable shader_binding_table)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(shader_binding_table);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceDestroyCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
 {
 	OPAL_UNUSED(this);
@@ -367,9 +375,10 @@ static Opal_Result null_deviceDestroy(Opal_Device this)
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result null_deviceBuildShaderBindingTable(Opal_Device this, const Opal_ShaderBindingTableBuildDesc *desc)
+static Opal_Result null_deviceBuildShaderBindingTable(Opal_Device this, Opal_ShaderBindingTable shader_binding_table, const Opal_ShaderBindingTableBuildDesc *desc)
 {
 	OPAL_UNUSED(this);
+	OPAL_UNUSED(shader_binding_table);
 	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
@@ -637,6 +646,15 @@ static Opal_Result null_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdSetShaderBindingTable(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTable shader_binding_table)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(shader_binding_table);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	OPAL_UNUSED(this);
@@ -724,13 +742,10 @@ static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView raygen_entry, Opal_BufferView intersection_group_entry, Opal_BufferView miss_entry, uint32_t width, uint32_t height, uint32_t depth)
+static Opal_Result null_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(raygen_entry);
-	OPAL_UNUSED(intersection_group_entry);
-	OPAL_UNUSED(miss_entry);
 	OPAL_UNUSED(width);
 	OPAL_UNUSED(height);
 	OPAL_UNUSED(depth);
@@ -885,7 +900,6 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceGetInfo,
 	null_deviceGetQueue,
 	null_deviceGetAccelerationStructurePrebuildInfo,
-	null_deviceGetShaderBindingTablePrebuildInfo,
 
 	null_deviceGetSupportedSurfaceFormats,
 	null_deviceGetSupportedPresentModes,
@@ -898,6 +912,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateTextureView,
 	null_deviceCreateSampler,
 	null_deviceCreateAccelerationStructure,
+	null_deviceCreateShaderBindingTable,
 	null_deviceCreateCommandAllocator,
 	null_deviceCreateCommandBuffer,
 	null_deviceCreateShader,
@@ -916,6 +931,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyTextureView,
 	null_deviceDestroySampler,
 	null_deviceDestroyAccelerationStructure,
+	null_deviceDestroyShaderBindingTable,
 	null_deviceDestroyCommandAllocator,
 	null_deviceDestroyCommandBuffer,
 	null_deviceDestroyShader,
@@ -958,6 +974,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdSetPipelineLayout,
 	null_deviceCmdSetPipeline,
 	null_deviceCmdSetDescriptorSet,
+	null_deviceCmdSetShaderBindingTable,
 	null_deviceCmdSetVertexBuffers,
 	null_deviceCmdSetIndexBuffer,
 	null_deviceCmdSetViewport,

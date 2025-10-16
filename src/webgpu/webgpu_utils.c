@@ -7,8 +7,7 @@
  */
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type)
 {
-	assert((flags & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE) == 0);
-	assert((flags & OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE) == 0);
+	assert((flags & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT) == 0);
 
 	WGPUBufferUsageFlags result = 0;
 

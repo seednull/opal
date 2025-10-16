@@ -79,9 +79,6 @@ D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_Allocati
 	if (flags & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT)
 		result |= D3D12_RESOURCE_STATE_GENERIC_READ;
 
-	if (flags & OPAL_BUFFER_USAGE_SHADER_BINDING_TABLE)
-		result |= D3D12_RESOURCE_STATE_GENERIC_READ;
-
 	return result;
 }
 

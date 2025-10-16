@@ -121,6 +121,7 @@ typedef struct DirectX12_Device_t
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
 	Opal_Pool acceleration_structures;
+	Opal_Pool shader_binding_tables;
 	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -194,6 +195,22 @@ typedef struct DirectX12_AccelerationStructure_t
 	DirectX12_Allocation allocation;
 } DirectX12_AccelerationStructure;
 
+typedef struct DirectX12_ShaderBindingTable_t
+{
+	D3D12_GPU_VIRTUAL_ADDRESS raygen_entry;
+	D3D12_GPU_VIRTUAL_ADDRESS miss_entry;
+	D3D12_GPU_VIRTUAL_ADDRESS intersection_entry;
+	ID3D12Resource *buffer;
+	D3D12_GPU_VIRTUAL_ADDRESS address;
+	uint64_t buffer_size;
+	void *buffer_ptr;
+	uint32_t num_raygen_handles;
+	uint32_t num_intersection_handles;
+	uint32_t num_miss_handles;
+	Opal_Pipeline pipeline;
+	DirectX12_Allocation allocation;
+} DirectX12_ShaderBindingTable;
+
 typedef struct DirectX12_CommandAllocator_t
 {
 	ID3D12CommandAllocator *allocator;
@@ -208,6 +225,9 @@ typedef struct DirectX12_CommandBuffer_t
 	uint32_t recording;
 	DirectX12_PassType pass;
 	Opal_PipelineLayout pipeline_layout;
+	D3D12_GPU_VIRTUAL_ADDRESS raygen_entry;
+	D3D12_GPU_VIRTUAL_ADDRESS miss_entry;
+	D3D12_GPU_VIRTUAL_ADDRESS intersection_entry;
 } DirectX12_CommandBuffer;
 
 typedef struct DirectX12_Shader_t
@@ -270,10 +290,10 @@ typedef struct DirectX12_Pipeline_t
 	ID3D12StateObject *state_object;
 	ID3D12RootSignature *root_signature;
 	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
-	uint32_t num_raygen_shaders;
-	uint32_t num_intersection_groups;
-	uint32_t num_miss_shaders;
-	uint8_t *shader_handles;
+	uint32_t num_raygen_handles;
+	uint32_t num_intersection_handles;
+	uint32_t num_miss_handles;
+	void *shader_handles;
 } DirectX12_Pipeline;
 
 typedef struct DirectX12_Surface_t
@@ -300,7 +320,6 @@ extern PFN_DXGI_CREATE_FACTORY opal_dxgiCreateFactory1;
 Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device *device, Opal_DeviceInfo *info);
 Opal_Result directx12_helperFillDeviceEnginesInfo(DirectX12_DeviceEnginesInfo *info);
 Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_Instance *instance_ptr, IDXGIAdapter1 *adapter, ID3D12Device *device);
-Opal_Result directx12_deviceAllocateMemory(DirectX12_Device *device_ptr, const DirectX12_AllocationDesc *desc, DirectX12_Allocation *allocation);
 
 D3D12_RESOURCE_STATES directx12_helperToResourceState(Opal_ResourceState state);
 D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags flags);
