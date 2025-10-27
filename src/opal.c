@@ -570,7 +570,7 @@ Opal_Result opalDestroyCommandAllocator(Opal_Device device, Opal_CommandAllocato
 	return ptr->vtbl->destroyCommandAllocator(device, command_allocator);
 }
 
-Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -579,7 +579,7 @@ Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandAllocator c
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->destroyCommandBuffer);
 
-	return ptr->vtbl->destroyCommandBuffer(device, command_allocator, command_buffer);
+	return ptr->vtbl->destroyCommandBuffer(device, command_buffer);
 }
 
 Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader)

@@ -308,10 +308,9 @@ static Opal_Result null_deviceDestroyCommandAllocator(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_allocator);
 	OPAL_UNUSED(command_buffer);
 
 	return OPAL_NOT_SUPPORTED;

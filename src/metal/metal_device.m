@@ -715,6 +715,7 @@ static Opal_Result metal_deviceCreateCommandBuffer(Opal_Device this, Opal_Comman
 
 	Metal_CommandBuffer result = {0};
 	result.queue = command_allocator_ptr->queue;
+	result.command_allocator = command_allocator;
 
 	*command_buffer = (Opal_CommandBuffer)opal_poolAddElement(&device_ptr->command_buffers, &result);
 	return OPAL_SUCCESS;
@@ -1433,19 +1434,18 @@ static Opal_Result metal_deviceDestroyCommandAllocator(Opal_Device this, Opal_Co
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+static Opal_Result metal_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	assert(this);
-	assert(command_allocator);
 	assert(command_buffer);
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 
-	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
-	assert(command_allocator_ptr);
-
 	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+
+	Metal_CommandAllocator *command_allocator_ptr = (Metal_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_buffer_ptr->command_allocator);
+	assert(command_allocator_ptr);
 
 	assert(command_allocator_ptr->command_buffer_usage > 0);
 	command_allocator_ptr->command_buffer_usage--;

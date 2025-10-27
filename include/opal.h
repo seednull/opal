@@ -1340,7 +1340,7 @@ typedef Opal_Result (*PFN_opalDestroySampler)(Opal_Device device, Opal_Sampler s
 typedef Opal_Result (*PFN_opalDestroyAccelerationStructure)(Opal_Device device, Opal_AccelerationStructure acceleration_structure);
 typedef Opal_Result (*PFN_opalDestroyShaderBindingTable)(Opal_Device device, Opal_ShaderBindingTable shader_binding_table);
 typedef Opal_Result (*PFN_opalDestroyCommandAllocator)(Opal_Device device, Opal_CommandAllocator command_allocator);
-typedef Opal_Result (*PFN_opalDestroyCommandBuffer)(Opal_Device device, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer);
+typedef Opal_Result (*PFN_opalDestroyCommandBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer);
 typedef Opal_Result (*PFN_opalDestroyShader)(Opal_Device device, Opal_Shader shader);
 typedef Opal_Result (*PFN_opalDestroyDescriptorHeap)(Opal_Device device, Opal_DescriptorHeap descriptor_buffer);
 typedef Opal_Result (*PFN_opalDestroyDescriptorSetLayout)(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout);
@@ -1572,7 +1572,7 @@ OPAL_APIENTRY Opal_Result opalDestroySampler(Opal_Device device, Opal_Sampler sa
 OPAL_APIENTRY Opal_Result opalDestroyAccelerationStructure(Opal_Device device, Opal_AccelerationStructure acceleration_structure);
 OPAL_APIENTRY Opal_Result opalDestroyShaderBindingTable(Opal_Device device, Opal_ShaderBindingTable shader_binding_table);
 OPAL_APIENTRY Opal_Result opalDestroyCommandAllocator(Opal_Device device, Opal_CommandAllocator command_allocator);
-OPAL_APIENTRY Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer);
+OPAL_APIENTRY Opal_Result opalDestroyCommandBuffer(Opal_Device device, Opal_CommandBuffer command_buffer);
 OPAL_APIENTRY Opal_Result opalDestroyShader(Opal_Device device, Opal_Shader shader);
 OPAL_APIENTRY Opal_Result opalDestroyDescriptorHeap(Opal_Device device, Opal_DescriptorHeap descriptor_buffer);
 OPAL_APIENTRY Opal_Result opalDestroyDescriptorSetLayout(Opal_Device device, Opal_DescriptorSetLayout descriptor_set_layout);

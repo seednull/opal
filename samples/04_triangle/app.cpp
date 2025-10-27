@@ -227,7 +227,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalWaitQueue(device, queue);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyCommandBuffer(device, staging_command_allocator, staging_command_buffer);
+	result = opalDestroyCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandAllocator(device, staging_command_allocator);
@@ -329,7 +329,7 @@ void Application::shutdown()
 
 	for (uint32_t i = 0; i < IN_FLIGHT_FRAMES; ++i)
 	{
-		result = opalDestroyCommandBuffer(device, command_allocators[i], command_buffers[i]);
+		result = opalDestroyCommandBuffer(device, command_buffers[i]);
 		assert(result == OPAL_SUCCESS);
 
 		result = opalDestroyCommandAllocator(device, command_allocators[i]);

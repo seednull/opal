@@ -101,6 +101,7 @@ typedef struct WebGPU_CommandBuffer_t
 	WGPURenderPassEncoder render_pass_encoder;
 	WGPUComputePassEncoder compute_pass_encoder;
 	WGPUCommandBuffer command_buffer;
+	Opal_CommandAllocator command_allocator;
 } WebGPU_CommandBuffer;
 
 typedef struct WebGPU_Shader_t

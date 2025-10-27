@@ -273,7 +273,7 @@ void Application::shutdown()
 		result = opalFreeDescriptorSet(device, descriptor_sets[i]);
 		assert(result == OPAL_SUCCESS);
 
-		result = opalDestroyCommandBuffer(device, command_allocators[i], command_buffers[i]);
+		result = opalDestroyCommandBuffer(device, command_buffers[i]);
 		assert(result == OPAL_SUCCESS);
 
 		result = opalDestroyCommandAllocator(device, command_allocators[i]);
@@ -713,7 +713,7 @@ void Application::buildBLAS()
 	result = opalWaitIdle(device);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyCommandBuffer(device, command_allocator, command_buffer);
+	result = opalDestroyCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandAllocator(device, command_allocator);
@@ -815,7 +815,7 @@ void Application::buildTLAS()
 	result = opalWaitIdle(device);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyCommandBuffer(device, command_allocator, command_buffer);
+	result = opalDestroyCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyCommandAllocator(device, command_allocator);

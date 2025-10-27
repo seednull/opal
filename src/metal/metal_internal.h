@@ -160,6 +160,7 @@ typedef struct Metal_CommandBuffer_t
 
 	id<MTLBlitCommandEncoder> copy_pass_encoder;
 	Opal_Queue queue;
+	Opal_CommandAllocator command_allocator;
 } Metal_CommandBuffer;
 
 typedef struct Metal_Shader_t

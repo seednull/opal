@@ -237,6 +237,7 @@ typedef struct Vulkan_CommandBuffer_t
 	VkDeviceAddress raygen_entry;
 	VkDeviceAddress miss_entry;
 	VkDeviceAddress intersection_entry;
+	Opal_CommandAllocator command_allocator;
 } Vulkan_CommandBuffer;
 
 typedef struct Vulkan_Shader_t

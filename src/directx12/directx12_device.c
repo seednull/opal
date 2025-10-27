@@ -2294,10 +2294,9 @@ static Opal_Result directx12_deviceDestroyCommandAllocator(Opal_Device this, Opa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	assert(this);
-	OPAL_UNUSED(command_allocator);
 	assert(command_buffer);
  
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;

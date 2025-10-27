@@ -1062,6 +1062,7 @@ static Opal_Result vulkan_deviceCreateCommandBuffer(Opal_Device this, Opal_Comma
 	Vulkan_CommandBuffer result = {0};
 	result.command_buffer = vulkan_command_buffer;
 	result.pipeline_bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+	result.command_allocator = command_allcoator;
 
 	// TODO: add handle to Vulkan_CommandAllocator instance
 
@@ -2327,20 +2328,19 @@ static Opal_Result vulkan_deviceDestroyCommandAllocator(Opal_Device this, Opal_C
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer command_buffer)
+static Opal_Result vulkan_deviceDestroyCommandBuffer(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	assert(this);
-	assert(command_allocator);
 	assert(command_buffer);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 	VkDevice vulkan_device = device_ptr->device;
 
-	Vulkan_CommandAllocator *command_allocator_ptr = (Vulkan_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
-	assert(command_allocator_ptr);
-
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
+
+	Vulkan_CommandAllocator *command_allocator_ptr = (Vulkan_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_buffer_ptr->command_allocator);
+	assert(command_allocator_ptr);
 
 	device_ptr->vk.vkFreeCommandBuffers(vulkan_device, command_allocator_ptr->pool, 1, &command_buffer_ptr->command_buffer);
 
