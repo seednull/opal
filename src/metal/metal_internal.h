@@ -88,6 +88,7 @@ typedef struct Metal_Device_t
 	Opal_Pool textures;
 	Opal_Pool texture_views;
 	Opal_Pool samplers;
+	Opal_Pool acceleration_structures;
 	Opal_Pool command_allocators;
 	Opal_Pool command_buffers;
 	Opal_Pool shaders;
@@ -137,6 +138,12 @@ typedef struct Metal_Sampler_t
 {
 	id<MTLSamplerState> sampler;
 } Metal_Sampler;
+
+typedef struct Metal_AccelerationStructure_t
+{
+	id<MTLAccelerationStructure> acceleration_structure;
+	Metal_Allocation allocation;
+} Metal_AccelerationStructure;
 
 typedef struct Metal_CommandAllocator_t
 {
@@ -258,6 +265,7 @@ MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode);
 MTLStencilOperation metal_helperToStencilOperation(Opal_StencilOp op);
 MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op);
 
+MTLAttributeFormat metal_helperToAttributeFormat(Opal_VertexFormat format);
 MTLVertexFormat metal_helperToVertexFormat(Opal_VertexFormat format);
 MTLVertexStepFunction metal_helperToVertexStepFunction(Opal_VertexInputRate rate);
 

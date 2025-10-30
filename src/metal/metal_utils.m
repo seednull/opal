@@ -277,6 +277,56 @@ MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op)
 	return metal_functions[op];
 }
 
+MTLAttributeFormat metal_helperToAttributeFormat(Opal_VertexFormat format)
+{
+	static MTLAttributeFormat metal_formats[] =
+	{
+		MTLAttributeFormatInvalid,
+
+		MTLAttributeFormatUChar2Normalized,
+		MTLAttributeFormatChar2Normalized,
+		MTLAttributeFormatUChar2,
+		MTLAttributeFormatChar2,
+
+		MTLAttributeFormatUChar4Normalized,
+		MTLAttributeFormatChar4Normalized,
+		MTLAttributeFormatUChar4,
+		MTLAttributeFormatChar4,
+
+		MTLAttributeFormatUShort2Normalized,
+		MTLAttributeFormatShort2Normalized,
+		MTLAttributeFormatUShort2,
+		MTLAttributeFormatShort2,
+		MTLAttributeFormatHalf2,
+
+		MTLAttributeFormatUShort4Normalized,
+		MTLAttributeFormatShort4Normalized,
+		MTLAttributeFormatUShort4,
+		MTLAttributeFormatShort4,
+		MTLAttributeFormatHalf4,
+
+		MTLAttributeFormatUInt,
+		MTLAttributeFormatInt,
+		MTLAttributeFormatFloat,
+
+		MTLAttributeFormatUInt2,
+		MTLAttributeFormatInt2,
+		MTLAttributeFormatFloat2,
+
+		MTLAttributeFormatUInt3,
+		MTLAttributeFormatInt3,
+		MTLAttributeFormatFloat3,
+
+		MTLAttributeFormatUInt4,
+		MTLAttributeFormatInt4,
+		MTLAttributeFormatFloat4,
+
+		MTLAttributeFormatUInt1010102Normalized,
+	};
+
+	return metal_formats[format];
+}
+
 MTLVertexFormat metal_helperToVertexFormat(Opal_VertexFormat format)
 {
 	static MTLVertexFormat metal_formats[] =
