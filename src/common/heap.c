@@ -405,6 +405,8 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 		// try merge with previous free node
 		if (prev_node != NULL && prev_node->used == 0)
 		{
+			assert(prev_node->next_neighbour == prev_index);
+
 			remainder_begin_offset = prev_node->offset;
 			remainder_begin_size += prev_node->size;
 
@@ -414,6 +416,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 			opal_heapReleaseNodeIndex(heap, prev_index);
 
 			prev_index = prev_prev_index;
+			prev_node = NULL;
 		}
 
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
@@ -437,6 +440,8 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 		// try merge with previous free node
 		if (next_node != NULL && next_node->used == 0)
 		{
+			assert(next_node->prev_neighbour == next_index);
+
 			remainder_end_size += next_node->size;
 
 			Opal_NodeIndex next_next_index = next_node->next_neighbour;
@@ -445,6 +450,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 			opal_heapReleaseNodeIndex(heap, next_index);
 
 			next_index = next_next_index;
+			next_node = NULL;
 		}
 
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
@@ -481,11 +487,14 @@ Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 	Opal_NodeIndex new_prev_index = prev_index;
 	Opal_NodeIndex new_next_index = next_index;
 
+	uint32_t size = node->size;
+	uint32_t offset = node->offset;
+
 	// try merge with previous free node
 	if (prev_node != NULL && prev_node->used == 0)
 	{
-		node->offset = prev_node->offset;
-		node->size += prev_node->size;
+		offset = prev_node->offset;
+		size += prev_node->size;
 
 		new_prev_index = prev_node->prev_neighbour;
 
@@ -496,7 +505,7 @@ Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 	// try merge with previous next node
 	if (next_node != NULL && next_node->used == 0)
 	{
-		node->size += next_node->size;
+		size += next_node->size;
 
 		new_next_index = next_node->next_neighbour;
 
@@ -507,7 +516,7 @@ Opal_Result opal_heapFree(Opal_Heap *heap, Opal_HeapAllocation allocation)
 	opal_heapReleaseNodeIndex(heap, allocation.metadata);
 
 	Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
-	opal_heapAddNodeToBin(heap, new_index, node->size, node->offset);
+	opal_heapAddNodeToBin(heap, new_index, size, offset);
 
 	node = &heap->nodes[new_index];
 	node->prev_neighbour = new_prev_index;
