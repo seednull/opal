@@ -297,6 +297,7 @@ Opal_Result opal_heapStageAlloc(const Opal_Heap *heap, uint32_t size, Opal_NodeI
 	Opal_HeapNode *node = &heap->nodes[*node_index];
 
 	assert(node);
+	assert(node->size >= size);
 	*offset = node->offset;
 
 	return OPAL_SUCCESS;
@@ -308,6 +309,7 @@ Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uin
 	assert(node_index);
 	assert(offset);
 	assert(size > 0);
+	assert(alignment > 0);
 	assert(isPow2u(alignment));
 
 	Opal_BinIndex bin_index = 0;
@@ -323,6 +325,7 @@ Opal_Result opal_heapStageAllocAligned(const Opal_Heap *heap, uint32_t size, uin
 	Opal_HeapNode *node = &heap->nodes[*node_index];
 
 	assert(node);
+	assert(node->size >= size);
 	*offset = alignUp(node->offset, alignment);
 
 	uint32_t remainder_begin_size = *offset - node->offset;
