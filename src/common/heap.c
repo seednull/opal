@@ -405,7 +405,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 		// try merge with previous free node
 		if (prev_node != NULL && prev_node->used == 0)
 		{
-			assert(prev_node->next_neighbour == prev_index);
+			assert(prev_node->next_neighbour == node_index);
 
 			remainder_begin_offset = prev_node->offset;
 			remainder_begin_size += prev_node->size;
@@ -416,7 +416,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 			opal_heapReleaseNodeIndex(heap, prev_index);
 
 			prev_index = prev_prev_index;
-			prev_node = NULL;
+			prev_node = (prev_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[prev_index] : NULL;
 		}
 
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
@@ -440,7 +440,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 		// try merge with previous free node
 		if (next_node != NULL && next_node->used == 0)
 		{
-			assert(next_node->prev_neighbour == next_index);
+			assert(next_node->prev_neighbour == node_index);
 
 			remainder_end_size += next_node->size;
 
@@ -450,7 +450,7 @@ Opal_Result opal_heapCommitAlloc(Opal_Heap *heap, Opal_NodeIndex node_index, uin
 			opal_heapReleaseNodeIndex(heap, next_index);
 
 			next_index = next_next_index;
-			next_node = NULL;
+			next_node = (next_index != OPAL_NODE_INDEX_NULL) ? &heap->nodes[next_index] : NULL;
 		}
 
 		Opal_NodeIndex new_index = opal_heapGrabNodeIndex(heap);
