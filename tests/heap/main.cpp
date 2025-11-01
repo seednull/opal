@@ -26,6 +26,20 @@ protected:
 	Opal_Heap heap;
 };
 
+TEST_F(HeapTest, InterleavedReallocSameBinBiggerSize)
+{
+	Opal_HeapAllocation allocs[2];
+
+	EXPECT_EQ(opal_heapAlloc(&heap, 5888, &allocs[0]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAlloc(&heap, 12, &allocs[1]), OPAL_SUCCESS);
+
+	EXPECT_EQ(opal_heapFree(&heap, allocs[0]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapAlloc(&heap, 6144, &allocs[0]), OPAL_SUCCESS);
+
+	EXPECT_EQ(opal_heapFree(&heap, allocs[0]), OPAL_SUCCESS);
+	EXPECT_EQ(opal_heapFree(&heap, allocs[1]), OPAL_SUCCESS);
+}
+
 TEST_F(HeapTest, AlignedAllocsSameAlignment)
 {
 	constexpr uint32_t alignment = 16;
