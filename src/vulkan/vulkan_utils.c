@@ -1520,6 +1520,7 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 
 	memcpy(info->features.queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
 
+	info->features.acceleration_structure_instance_size = sizeof(VkAccelerationStructureInstanceKHR);
 	info->features.tessellation_shader = (features.features.tessellationShader == VK_TRUE);
 	info->features.geometry_shader = (features.features.geometryShader == VK_TRUE);
 	info->features.compute_pipeline = 1;

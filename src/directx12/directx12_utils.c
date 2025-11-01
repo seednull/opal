@@ -686,6 +686,7 @@ Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device 
 
 	memcpy(info->features.queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
 
+	info->features.acceleration_structure_instance_size = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 	info->features.tessellation_shader = 1;
 	info->features.geometry_shader = 1;
 	info->features.compute_pipeline = 1;

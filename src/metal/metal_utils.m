@@ -707,6 +707,7 @@ Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceIn
 
 	memcpy(info->features.queue_count, &device_engines_info.queue_counts, sizeof(uint32_t) * OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX);
 
+	info->features.acceleration_structure_instance_size = sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
 	// TODO: enable tessellation shader back once it's implemented in the backend
 	// info->features.tessellation_shader = is_apple3_or_greater || is_mac2 || is_common2_or_greater;
 	info->features.compute_pipeline = 1;

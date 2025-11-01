@@ -781,6 +781,7 @@ typedef struct Opal_DeviceLimits_t
 typedef struct Opal_DeviceFeatures_t
 {
 	uint32_t queue_count[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
+	uint32_t acceleration_structure_instance_size;
 	uint8_t tessellation_shader;
 	uint8_t geometry_shader;
 	uint8_t compute_pipeline;
