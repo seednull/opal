@@ -143,6 +143,9 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCreateDefaultDevice(instance, OPAL_DEVICE_HINT_DEFAULT, &device);
 	assert(result == OPAL_SUCCESS);
 
+	result = opalGetDeviceInfo(device, &device_info);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalGetDeviceQueue(device, OPAL_DEVICE_ENGINE_TYPE_MAIN, 0, &queue);
 	assert(result == OPAL_SUCCESS);
 
@@ -737,7 +740,7 @@ void Application::buildTLAS()
 
 	Opal_BufferDesc buffer_desc = {};
 	buffer_desc.usage = OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT;
-	buffer_desc.size = sizeof(Opal_AccelerationStructureInstance);
+	buffer_desc.size = device_info.features.acceleration_structure_instance_size;
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
 	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 

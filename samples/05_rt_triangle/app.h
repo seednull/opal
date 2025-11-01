@@ -39,6 +39,8 @@ private:
 	Opal_Device device {OPAL_NULL_HANDLE};
 	Opal_Queue queue {OPAL_NULL_HANDLE};
 
+	Opal_DeviceInfo device_info {};
+
 	Opal_AccelerationStructure blas {OPAL_NULL_HANDLE};
 	Opal_AccelerationStructure tlas {OPAL_NULL_HANDLE};
 
