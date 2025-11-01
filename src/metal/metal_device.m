@@ -3,6 +3,8 @@
 
 /*
  */
+static Opal_Result metal_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr);
+static Opal_Result metal_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
 static Opal_Result metal_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
 static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
 
@@ -352,8 +354,8 @@ static Opal_Result metal_deviceGetAccelerationStructurePrebuildInfo(Opal_Device 
 			const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
 
 			MTLInstanceAccelerationStructureDescriptor *tlas_desc = [MTLInstanceAccelerationStructureDescriptor descriptor];
-			tlas_desc.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeUserID;
-			tlas_desc.instanceDescriptorStride = sizeof(MTLAccelerationStructureUserIDInstanceDescriptor);
+			tlas_desc.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeIndirect;
+			tlas_desc.instanceDescriptorStride = sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
 			tlas_desc.instanceCount = input->num_instances;
 
 			build_info = tlas_desc;
@@ -559,7 +561,7 @@ static Opal_Result metal_deviceCreateBuffer(Opal_Device this, const Opal_BufferD
 			case OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache; break;
 			case OPAL_ALLOCATION_MEMORY_TYPE_READBACK: options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache; break;
 
-			default: assert(false); return OPAL_METAL_ERROR;
+			default: assert(0); return OPAL_METAL_ERROR;
 		}
 
 		MTLSizeAndAlign allocation_info = [metal_device heapBufferSizeAndAlignWithLength: desc->size options: options];
@@ -1948,10 +1950,37 @@ static Opal_Result metal_deviceBuildShaderBindingTable(Opal_Device this, Opal_Sh
 
 static Opal_Result metal_deviceBuildAccelerationStructureInstanceBuffer(Opal_Device this, const Opal_AccelerationStructureInstanceBufferBuildDesc *desc)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
+	assert(this);
+	assert(desc);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	uint8_t *dst_data;
+	Opal_Result result = metal_deviceMapBuffer(this, desc->buffer.buffer, (void **)&dst_data);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	dst_data += desc->buffer.offset;
+
+	for (uint32_t i = 0; i < desc->num_instances; ++i)
+	{
+		const Opal_AccelerationStructureInstance *opal_instance = &desc->instances[i];
+		MTLIndirectAccelerationStructureInstanceDescriptor *metal_instance = (MTLIndirectAccelerationStructureInstanceDescriptor *)dst_data;
+
+		Metal_AccelerationStructure *blas_ptr = (Metal_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)opal_instance->blas);
+		assert(blas_ptr);
+
+		memcpy(&metal_instance->transformationMatrix, opal_instance->transform, sizeof(MTLPackedFloat4x3));
+		metal_instance->userID = opal_instance->custom_index;
+		metal_instance->mask = opal_instance->mask;
+		metal_instance->intersectionFunctionTableOffset = opal_instance->intersection_index_offset;
+		metal_instance->options = metal_helperToAccelerationStructureInstanceOptions(opal_instance->flags);
+		metal_instance->accelerationStructureID = blas_ptr->acceleration_structure.gpuResourceID;
+
+		dst_data += sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
+	}
+
+	return metal_deviceUnmapBuffer(this, desc->buffer.buffer);
 }
 
 static Opal_Result metal_deviceResetCommandAllocator(Opal_Device this, Opal_CommandAllocator command_allocator)
@@ -2233,11 +2262,7 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 				}
 				break;
 
-				default:
-				{
-					assert(false);
-				}
-				return OPAL_METAL_ERROR;
+				default: assert(0); return OPAL_METAL_ERROR;
 			}
 		}
 
@@ -2934,7 +2959,7 @@ static Opal_Result metal_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Comman
 				}
 				break;
 
-				default: assert(0); break;
+				default: assert(0); return OPAL_METAL_ERROR;
 			}
 
 			assert(metal_buffer != nil);
@@ -3177,12 +3202,166 @@ static Opal_Result metal_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comman
 
 static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_build_descs);
-	OPAL_UNUSED(descs);
+	assert(this);
+	assert(command_buffer);
+	assert(num_build_descs > 0);
+	assert(descs);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+
+	id<MTLAccelerationStructureCommandEncoder> metal_pass_encoder = [command_buffer_ptr->command_buffer accelerationStructureCommandEncoder];
+	if (metal_pass_encoder == nil)
+		return OPAL_METAL_ERROR;
+
+	for (uint32_t i = 0; i < num_build_descs; ++i)
+	{
+		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
+
+		const Metal_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
+		assert(dst_acceleration_structure_ptr);
+
+		const Metal_Buffer *scratch_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
+		assert(scratch_buffer_ptr);
+
+		const Metal_AccelerationStructure *src_acceleration_structure_ptr = NULL;
+		if (desc->src_acceleration_structure)
+		{
+			src_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
+			assert(src_acceleration_structure_ptr);
+		}
+
+		MTLAccelerationStructureDescriptor *build_desc = NULL;
+
+		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+		{
+			uint32_t num_entries = desc->input.bottom_level.num_geometries;
+			MTLPrimitiveAccelerationStructureDescriptor *blas_desc = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+
+			NSMutableArray<MTLAccelerationStructureGeometryDescriptor*>* geometries = [NSMutableArray arrayWithCapacity: num_entries];
+
+			for (uint32_t i = 0; i < num_entries; ++i)
+			{
+				const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[i];
+
+				if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
+				{
+					const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
+					MTLAccelerationStructureTriangleGeometryDescriptor *triangles = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+
+					const Metal_Buffer *vertex_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
+					assert(vertex_buffer_ptr);
+
+					triangles.vertexFormat = metal_helperToAttributeFormat(opal_triangles->vertex_format);
+					triangles.vertexBuffer = vertex_buffer_ptr->buffer;
+					triangles.vertexBufferOffset = opal_triangles->vertex_buffer.offset;
+					triangles.vertexStride = opal_triangles->vertex_stride;
+	
+					if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
+					{
+						const Metal_Buffer *index_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->index_buffer.buffer);
+						assert(index_buffer_ptr);
+
+						triangles.indexType = metal_helperToIndexType(opal_triangles->index_format);
+						triangles.indexBuffer = index_buffer_ptr->buffer;
+						triangles.indexBufferOffset = opal_triangles->index_buffer.offset;
+
+						triangles.triangleCount = opal_triangles->num_indices / 3;
+					}
+					else
+						triangles.triangleCount = opal_triangles->num_vertices / 3;
+
+					if (opal_triangles->transform_buffer.buffer != OPAL_NULL_HANDLE)
+					{
+						const Metal_Buffer *transform_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->transform_buffer.buffer);
+						assert(transform_buffer_ptr);
+
+						triangles.transformationMatrixLayout = MTLMatrixLayoutRowMajor;
+						triangles.transformationMatrixBuffer = transform_buffer_ptr->buffer;
+						triangles.transformationMatrixBufferOffset = opal_triangles->transform_buffer.offset;
+					}
+
+					[geometries addObject: triangles];
+				}
+				else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
+				{
+					const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
+					MTLAccelerationStructureBoundingBoxGeometryDescriptor *aabbs = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+
+					Metal_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
+					assert(entries_buffer_ptr);
+
+					aabbs.boundingBoxCount = opal_aabbs->num_entries;
+					aabbs.boundingBoxBuffer = entries_buffer_ptr->buffer;
+					aabbs.boundingBoxBufferOffset = opal_aabbs->entries_buffer.offset;
+					aabbs.boundingBoxStride = opal_aabbs->stride;
+
+					[geometries addObject: aabbs];
+				}
+				else
+					assert(0);
+			}
+
+			blas_desc.geometryDescriptors = geometries;
+			build_desc = blas_desc;
+		}
+		else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+		{
+			const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
+
+			Metal_Buffer *instances_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)input->instance_buffer.buffer);
+			assert(instances_buffer_ptr);
+
+			MTLInstanceAccelerationStructureDescriptor *tlas_desc = [MTLInstanceAccelerationStructureDescriptor descriptor];
+			tlas_desc.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeIndirect;
+			tlas_desc.instanceDescriptorBuffer = instances_buffer_ptr->buffer;
+			tlas_desc.instanceDescriptorBufferOffset = input->instance_buffer.offset;
+			tlas_desc.instanceDescriptorStride = sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
+			tlas_desc.instanceTransformationMatrixLayout = MTLMatrixLayoutRowMajor;
+			tlas_desc.instanceCount = input->num_instances;
+
+			build_desc = tlas_desc;
+		}
+
+		assert(build_desc);
+
+		switch (desc->build_mode)
+		{
+			case OPAL_ACCELERATION_STRUCTURE_BUILD_MODE_BUILD:
+			{
+				[metal_pass_encoder
+					buildAccelerationStructure: dst_acceleration_structure_ptr->acceleration_structure
+					descriptor: build_desc
+					scratchBuffer: scratch_buffer_ptr->buffer
+					scratchBufferOffset: desc->scratch_buffer.offset
+				];
+			}
+			break;
+
+			case OPAL_ACCELERATION_STRUCTURE_BUILD_MODE_UPDATE:
+			{
+				[metal_pass_encoder
+					refitAccelerationStructure: src_acceleration_structure_ptr->acceleration_structure
+					descriptor: build_desc
+					destination: dst_acceleration_structure_ptr->acceleration_structure
+					scratchBuffer: scratch_buffer_ptr->buffer
+					scratchBufferOffset: desc->scratch_buffer.offset
+				];
+			}
+			break;
+
+			default: assert(0); return OPAL_METAL_ERROR;
+		}
+	}
+
+	[metal_pass_encoder endEncoding];
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)

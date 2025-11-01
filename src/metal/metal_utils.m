@@ -243,6 +243,25 @@ MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode)
 	return metal_filters[mode];
 }
 
+MTLAccelerationStructureInstanceOptions metal_helperToAccelerationStructureInstanceOptions(Opal_AccelerationStructureInstanceFlags flags)
+{
+	MTLAccelerationStructureInstanceOptions result = MTLAccelerationStructureInstanceOptionNone;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_TRIANGLE_CULL_DISABLE)
+		result |= MTLAccelerationStructureInstanceOptionDisableTriangleCulling;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_TRIANGLE_FRONT_COUNTER_CLOCKWISE)
+		result |= MTLAccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_FORCE_OPAQUE)
+		result |= MTLAccelerationStructureInstanceOptionOpaque;
+
+	if (flags & OPAL_ACCELERATION_STRUCTURE_INSTANCE_FLAGS_FORCE_NO_OPAQUE)
+		result |= MTLAccelerationStructureInstanceOptionNonOpaque;
+
+	return result;
+}
+
 MTLStencilOperation metal_helperToStencilOperation(Opal_StencilOp op)
 {
 	static MTLStencilOperation metal_ops[] =

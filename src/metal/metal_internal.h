@@ -262,6 +262,8 @@ MTLSamplerAddressMode metal_helperToSamplerAddressMode(Opal_SamplerAddressMode m
 MTLSamplerMinMagFilter metal_helperToSamplerMinMagFilter(Opal_SamplerFilterMode mode);
 MTLSamplerMipFilter metal_helperToSamplerMipFilter(Opal_SamplerFilterMode mode);
 
+MTLAccelerationStructureInstanceOptions metal_helperToAccelerationStructureInstanceOptions(Opal_AccelerationStructureInstanceFlags flags);
+
 MTLStencilOperation metal_helperToStencilOperation(Opal_StencilOp op);
 MTLCompareFunction metal_helperToCompareFunction(Opal_CompareOp op);
 
