@@ -16,6 +16,16 @@ static constexpr Opal_Api target_api = OPAL_API_WEBGPU;
 
 #define UNUSED(x) do { (void)(x); } while(0)
 
+#ifdef OPAL_PLATFORM_MACOS
+static const char *compute_shader_paths[] =
+{
+	nullptr,
+	nullptr,
+	"samples/05_rt_triangle/shaders/metal/main.comp.metallib",
+	nullptr,
+	nullptr,
+};
+#else
 static const char *raygen_shader_paths[] =
 {
 	"samples/05_rt_triangle/shaders/vulkan/main.rgen.spv",
@@ -42,6 +52,7 @@ static const char *miss_shader_paths[] =
 	nullptr,
 	nullptr,
 };
+#endif
 
 static Opal_ShaderSourceType shader_types[] =
 {
@@ -170,8 +181,11 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCreateSemaphore(device, &semaphore_desc, &semaphore);
 	assert(result == OPAL_SUCCESS);
 
+	buildPipelineLayout();
 	buildPipeline();
+#ifndef OPAL_PLATFORM_MACOS
 	buildSBT();
+#endif
 	buildBLAS();
 	buildTLAS();
 
@@ -259,8 +273,10 @@ void Application::shutdown()
 	result = opalDestroyAccelerationStructure(device, tlas);
 	assert(result == OPAL_SUCCESS);
 
+#ifndef OPAL_PLATFORM_MACOS
 	result = opalDestroyShaderBindingTable(device, sbt);
 	assert(result == OPAL_SUCCESS);
+#endif
 
 	result = opalDestroyBuffer(device, camera_buffer);
 	assert(result == OPAL_SUCCESS);
@@ -435,8 +451,13 @@ void Application::render()
 	result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_COPY_SOURCE, OPAL_RESOURCE_STATE_UNORDERED_ACCESS);
 	assert(result == OPAL_SUCCESS);
 
+#ifdef OPAL_PLATFORM_MACOS
+	result = opalCmdBeginComputePass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+#else
 	result = opalCmdBeginRaytracePass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
+#endif
 
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 	assert(result == OPAL_SUCCESS);
@@ -447,10 +468,17 @@ void Application::render()
 	result = opalCmdSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetShaderBindingTable(device, command_buffer, sbt);
+	result = opalCmdSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetPipeline(device, command_buffer, pipeline);
+#ifdef OPAL_PLATFORM_MACOS
+	result = opalCmdComputeDispatch(device, command_buffer, width, height, 1);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdEndComputePass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+#else
+	result = opalCmdSetShaderBindingTable(device, command_buffer, sbt);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceDispatch(device, command_buffer, width, height, 1);
@@ -458,6 +486,7 @@ void Application::render()
 
 	result = opalCmdEndRaytracePass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
+#endif
 
 	result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
@@ -511,7 +540,7 @@ void Application::present()
 
 /*
  */
-void Application::buildPipeline()
+void Application::buildPipelineLayout()
 {
 	// descriptor set layout
 	Opal_DescriptorSetLayoutEntry layout_entries[] =
@@ -537,7 +566,51 @@ void Application::buildPipeline()
 	// pipeline layout
 	result = opalCreatePipelineLayout(device, 1, &descriptor_set_layout, &pipeline_layout);
 	assert(result == OPAL_SUCCESS);
+}
 
+#ifdef OPAL_PLATFORM_MACOS
+void Application::buildPipeline()
+{
+	// shaders
+	Opal_Shader shaders[1] =
+	{
+		OPAL_NULL_HANDLE,
+	};
+
+	const char *paths[1] =
+	{
+		compute_shader_paths[target_api],
+	};
+
+	Opal_ShaderSourceType shader_type = shader_types[target_api];
+
+	for (uint32_t i = 0; i < 1; ++i)
+	{
+		bool success = loadShader(paths[i], shader_type, device, &shaders[i]);
+		assert(success);
+	}
+
+	// pipeline
+	Opal_ComputePipelineDesc pipeline_desc = {};
+	pipeline_desc.pipeline_layout = pipeline_layout;
+
+	pipeline_desc.compute_function = {shaders[0], "computeMain"};
+	pipeline_desc.threadgroup_size_x = 1;
+	pipeline_desc.threadgroup_size_y = 1;
+	pipeline_desc.threadgroup_size_z = 1;
+
+	Opal_Result result = opalCreateComputePipeline(device, &pipeline_desc, &pipeline);
+	assert(result == OPAL_SUCCESS);
+
+	for (uint32_t i = 0; i < 1; ++i)
+	{
+		result = opalDestroyShader(device, shaders[i]);
+		assert(result == OPAL_SUCCESS);
+	}
+}
+#else
+void Application::buildPipeline()
+{
 	// shaders
 	Opal_Shader shaders[3] =
 	{
@@ -582,7 +655,7 @@ void Application::buildPipeline()
 	pipeline_desc.max_ray_payload_size = sizeof(float) * 4;
 	pipeline_desc.max_hit_attribute_size = sizeof(float) * 2;
 
-	result = opalCreateRaytracePipeline(device, &pipeline_desc, &pipeline);
+	Opal_Result result = opalCreateRaytracePipeline(device, &pipeline_desc, &pipeline);
 	assert(result == OPAL_SUCCESS);
 
 	for (uint32_t i = 0; i < 3; ++i)
@@ -591,6 +664,7 @@ void Application::buildPipeline()
 		assert(result == OPAL_SUCCESS);
 	}
 }
+#endif
 
 void Application::buildSBT()
 {

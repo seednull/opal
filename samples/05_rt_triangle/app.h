@@ -15,6 +15,7 @@ public:
 	void present();
 
 private:
+	void buildPipelineLayout();
 	void buildPipeline();
 	void buildSBT();
 	void buildBLAS();
