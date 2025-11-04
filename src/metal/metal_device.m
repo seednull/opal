@@ -2267,11 +2267,10 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 				{
 					Opal_AccelerationStructure data = entry->data.acceleration_structure;
 
-					// TODO:
-					// Metal_AccelerationStructure *acceleration_structure_ptr = (Metal_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)data);
-					// assert(acceleration_structure_ptr);
+					Metal_AccelerationStructure *acceleration_structure_ptr = (Metal_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)data);
+					assert(acceleration_structure_ptr);
 
-					// [metal_encoder setAccelerationStructure: acceleration_structure_ptr->acceleration_structure atIndex: binding];
+					[metal_encoder setAccelerationStructure: acceleration_structure_ptr->acceleration_structure atIndex: binding];
 				}
 				break;
 
