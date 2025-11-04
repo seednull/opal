@@ -314,10 +314,16 @@ static Opal_Result metal_deviceGetAccelerationStructurePrebuildInfo(Opal_Device 
 			{
 				const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[i];
 
+				bool opaque =  (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_OPAQUE) != 0;
+				bool allowDuplicateIntersections = (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_NO_DUPLICATE_ANYHIT) == 0;
+
 				if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
 				{
 					const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
 					MTLAccelerationStructureTriangleGeometryDescriptor *triangles = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+
+					triangles.opaque = opaque;
+					triangles.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
 
 					triangles.vertexFormat = metal_helperToAttributeFormat(opal_triangles->vertex_format);
 					triangles.vertexStride = opal_triangles->vertex_stride;
@@ -336,6 +342,9 @@ static Opal_Result metal_deviceGetAccelerationStructurePrebuildInfo(Opal_Device 
 				{
 					const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
 					MTLAccelerationStructureBoundingBoxGeometryDescriptor *aabbs = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+
+					aabbs.opaque = opaque;
+					aabbs.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
 
 					aabbs.boundingBoxStride = opal_aabbs->stride;
 					aabbs.boundingBoxCount = opal_aabbs->num_entries;
@@ -3250,6 +3259,9 @@ static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, 
 			{
 				const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[i];
 
+				bool opaque =  (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_OPAQUE) != 0;
+				bool allowDuplicateIntersections = (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_NO_DUPLICATE_ANYHIT) == 0;
+
 				if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
 				{
 					const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
@@ -3257,6 +3269,9 @@ static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, 
 
 					const Metal_Buffer *vertex_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
 					assert(vertex_buffer_ptr);
+
+					triangles.opaque = opaque;
+					triangles.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
 
 					triangles.vertexFormat = metal_helperToAttributeFormat(opal_triangles->vertex_format);
 					triangles.vertexBuffer = vertex_buffer_ptr->buffer;
@@ -3296,6 +3311,9 @@ static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, 
 
 					Metal_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
 					assert(entries_buffer_ptr);
+
+					aabbs.opaque = opaque;
+					aabbs.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
 
 					aabbs.boundingBoxCount = opal_aabbs->num_entries;
 					aabbs.boundingBoxBuffer = entries_buffer_ptr->buffer;
