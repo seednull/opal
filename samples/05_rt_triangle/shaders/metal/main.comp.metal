@@ -51,12 +51,11 @@ kernel void computeMain(
 	ray.min_distance = 0.001f;
 	ray.max_distance = 10000.0f;
 
-	intersector<triangle_data, instancing> tlas_intersector;
-	tlas_intersector.accept_any_intersection(false);
+	intersector<instancing, triangle_data> intersector;
+	intersection_result<instancing, triangle_data> intersection;
 
-	intersector<triangle_data, instancing>::result_type intersection;
-
-	intersection = tlas_intersector.intersect(ray, bindings.tlas);
+	intersector.accept_any_intersection(false);
+	intersection = intersector.intersect(ray, bindings.tlas);
 
 	float3 color = float3(0.0f);
 	
