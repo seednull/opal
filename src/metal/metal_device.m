@@ -334,8 +334,6 @@ static Opal_Result metal_deviceGetAccelerationStructurePrebuildInfo(Opal_Device 
 					if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
 						triangles.triangleCount = opal_triangles->num_indices / 3;
 
-					triangles.transformationMatrixLayout = MTLMatrixLayoutRowMajor;
-
 					[geometries addObject: triangles];
 				}
 				else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
@@ -1979,7 +1977,13 @@ static Opal_Result metal_deviceBuildAccelerationStructureInstanceBuffer(Opal_Dev
 		Metal_AccelerationStructure *blas_ptr = (Metal_AccelerationStructure *)opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)opal_instance->blas);
 		assert(blas_ptr);
 
-		memcpy(&metal_instance->transformationMatrix, opal_instance->transform, sizeof(MTLPackedFloat4x3));
+		for (uint32_t col = 0; col < 4; ++col)
+		{
+			metal_instance->transformationMatrix.columns[i].x = opal_instance->transform[0][i];
+			metal_instance->transformationMatrix.columns[i].y = opal_instance->transform[1][i];
+			metal_instance->transformationMatrix.columns[i].z = opal_instance->transform[2][i];
+		}
+
 		metal_instance->userID = opal_instance->custom_index;
 		metal_instance->mask = opal_instance->mask;
 		metal_instance->intersectionFunctionTableOffset = opal_instance->intersection_index_offset;
@@ -3297,7 +3301,6 @@ static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, 
 						const Metal_Buffer *transform_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->transform_buffer.buffer);
 						assert(transform_buffer_ptr);
 
-						triangles.transformationMatrixLayout = MTLMatrixLayoutRowMajor;
 						triangles.transformationMatrixBuffer = transform_buffer_ptr->buffer;
 						triangles.transformationMatrixBufferOffset = opal_triangles->transform_buffer.offset;
 					}
@@ -3341,7 +3344,6 @@ static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, 
 			tlas_desc.instanceDescriptorBuffer = instances_buffer_ptr->buffer;
 			tlas_desc.instanceDescriptorBufferOffset = input->instance_buffer.offset;
 			tlas_desc.instanceDescriptorStride = sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
-			tlas_desc.instanceTransformationMatrixLayout = MTLMatrixLayoutRowMajor;
 			tlas_desc.instanceCount = input->num_instances;
 
 			build_desc = tlas_desc;
