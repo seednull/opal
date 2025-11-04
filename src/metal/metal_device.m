@@ -1979,9 +1979,9 @@ static Opal_Result metal_deviceBuildAccelerationStructureInstanceBuffer(Opal_Dev
 
 		for (uint32_t col = 0; col < 4; ++col)
 		{
-			metal_instance->transformationMatrix.columns[i].x = opal_instance->transform[0][i];
-			metal_instance->transformationMatrix.columns[i].y = opal_instance->transform[1][i];
-			metal_instance->transformationMatrix.columns[i].z = opal_instance->transform[2][i];
+			metal_instance->transformationMatrix.columns[col].x = opal_instance->transform[0][col];
+			metal_instance->transformationMatrix.columns[col].y = opal_instance->transform[1][col];
+			metal_instance->transformationMatrix.columns[col].z = opal_instance->transform[2][col];
 		}
 
 		metal_instance->userID = opal_instance->custom_index;
