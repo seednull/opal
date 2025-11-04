@@ -3438,7 +3438,7 @@ static Opal_Result metal_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Com
 
 	Metal_TextureView *dst_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)dst.texture_view);
 	assert(dst_texture_view_ptr);
-	assert(dst_texture_view_ptr->texture);
+	assert(dst_texture_view_ptr->texture_view);
 
 	MTLSize src_size = {0};
 	src_size.width = size.width;
@@ -3455,10 +3455,10 @@ static Opal_Result metal_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Com
 		sourceOffset: (NSUInteger)src.offset
 		sourceBytesPerRow: (NSUInteger)src.row_size
 		sourceBytesPerImage: (NSUInteger)0
-		sourceSize: (MTLSize)src_size
+		sourceSize: src_size
 		toTexture: dst_texture_view_ptr->texture_view
-		destinationSlice: 0
-		destinationLevel: 0
+		destinationSlice: dst_texture_view_ptr->base_layer
+		destinationLevel: dst_texture_view_ptr->base_mip
 		destinationOrigin: dst_origin];
 
 	return OPAL_SUCCESS;
@@ -3477,13 +3477,53 @@ static Opal_Result metal_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_Com
 
 static Opal_Result metal_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder != nil);
+
+	Metal_TextureView *src_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)src.texture_view);
+	assert(src_texture_view_ptr);
+	assert(src_texture_view_ptr->texture_view);
+
+	Metal_TextureView *dst_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)dst.texture_view);
+	assert(dst_texture_view_ptr);
+	assert(dst_texture_view_ptr->texture_view);
+
+	MTLSize src_size = {0};
+	src_size.width = size.width;
+	src_size.height = size.height;
+	src_size.depth = size.depth;
+
+	MTLOrigin src_origin = {0};
+	src_origin.x = src.offset.x;
+	src_origin.y = src.offset.y;
+	src_origin.z = src.offset.z;
+
+	MTLOrigin dst_origin = {0};
+	dst_origin.x = dst.offset.x;
+	dst_origin.y = dst.offset.y;
+	dst_origin.z = dst.offset.z;
+
+	[command_buffer_ptr->copy_pass_encoder
+		copyFromTexture: src_texture_view_ptr->texture_view
+		sourceSlice: src_texture_view_ptr->base_layer
+		sourceLevel: src_texture_view_ptr->base_mip
+		sourceOrigin: src_origin
+		sourceSize: src_size
+		toTexture: dst_texture_view_ptr->texture_view
+		destinationSlice: dst_texture_view_ptr->base_layer
+		destinationLevel: dst_texture_view_ptr->base_mip
+		destinationOrigin: dst_origin];
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
