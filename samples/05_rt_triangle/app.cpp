@@ -501,7 +501,13 @@ void Application::render()
 	Opal_TextureRegion dst = { swapchain_texture_view, 0, 0, 0 };
 	Opal_Extent3D size = { width, height, 1 };
 
+	result = opalCmdBeginCopyPass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalCmdCopyTextureToTexture(device, command_buffer, src, dst, size);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdEndCopyPass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_PRESENT);
