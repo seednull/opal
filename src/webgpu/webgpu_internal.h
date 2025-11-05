@@ -8,6 +8,17 @@
 #include "common/pool.h"
 #include "common/ring.h"
 
+typedef enum WebGPU_PassType_t
+{
+	WEBGPU_PASS_TYPE_NONE = 0,
+	WEBGPU_PASS_TYPE_GRAPHICS,
+	WEBGPU_PASS_TYPE_COMPUTE,
+	WEBGPU_PASS_TYPE_COPY,
+
+	WEBGPU_PASS_TYPE_ENUM_MAX,
+	WEBGPU_PASS_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} WebGPU_PassType;
+
 typedef struct WebGPU_Instance_t
 {
 	Opal_InstanceTable *vtbl;
@@ -39,7 +50,8 @@ typedef struct WebGPU_Device_t
 	Opal_Pool descriptor_set_layouts;
 	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
-	Opal_Pool pipelines;
+	Opal_Pool graphics_pipelines;
+	Opal_Pool compute_pipelines;
 	Opal_Pool swapchains;
 } WebGPU_Device;
 
@@ -101,6 +113,7 @@ typedef struct WebGPU_CommandBuffer_t
 	WGPURenderPassEncoder render_pass_encoder;
 	WGPUComputePassEncoder compute_pass_encoder;
 	WGPUCommandBuffer command_buffer;
+	WebGPU_PassType pass;
 	Opal_CommandAllocator command_allocator;
 } WebGPU_CommandBuffer;
 
@@ -144,11 +157,15 @@ typedef struct WebGPU_PipelineLayout_t
 	WGPUPipelineLayout layout;
 } WebGPU_PipelineLayout;
 
-typedef struct WebGPU_Pipeline_t
+typedef struct WebGPU_GraphicsPipeline_t
 {
-	WGPURenderPipeline render_pipeline;
-	WGPUComputePipeline compute_pipeline;
-} WebGPU_Pipeline;
+	WGPURenderPipeline pipeline;
+} WebGPU_GraphicsPipeline;
+
+typedef struct WebGPU_ComputePipeline_t
+{
+	WGPUComputePipeline pipeline;
+} WebGPU_ComputePipeline;
 
 typedef struct WebGPU_Swapchain_t
 {
