@@ -79,11 +79,6 @@ static Triangle triangle_data =
 
 	// indices
 	0, 1, 2,
-
-	// transform
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 1.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
 };
 
 bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device, Opal_Shader *shader)
@@ -733,7 +728,6 @@ void Application::buildBLAS()
 	blas_geometry.data.triangles.vertex_stride = vertex_stride;
 	blas_geometry.data.triangles.vertex_buffer = {triangle_buffer, offsetof(Triangle, vertices), vertex_stride * num_vertices};
 	blas_geometry.data.triangles.index_buffer = {triangle_buffer, offsetof(Triangle, indices), sizeof(uint32_t) * num_indices};
-	blas_geometry.data.triangles.transform_buffer = {triangle_buffer, offsetof(Triangle, transform), sizeof(float) * 16};
 
 	Opal_AccelerationStructureBuildDesc blas_build_desc = {};
 	blas_build_desc.type = OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
@@ -780,7 +774,7 @@ void Application::buildBLAS()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBuildAccelerationStructures(device, command_buffer, 1, &blas_build_desc);
+	result = opalCmdBuildAccelerationStructure(device, command_buffer, &blas_build_desc);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
@@ -882,7 +876,7 @@ void Application::buildTLAS()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBuildAccelerationStructures(device, command_buffer, 1, &tlas_build_desc);
+	result = opalCmdBuildAccelerationStructure(device, command_buffer, &tlas_build_desc);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
