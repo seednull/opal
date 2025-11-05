@@ -321,7 +321,7 @@ void Application::shutdown()
 	result = opalDestroyPipelineLayout(device, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyPipeline(device, pipeline);
+	result = opalDestroyGraphicsPipeline(device, pipeline);
 	assert(result == OPAL_SUCCESS);
 	
 	result = opalDestroySemaphore(device, semaphore);
@@ -417,19 +417,19 @@ void Application::render()
 	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetPipelineLayout(device, command_buffer, pipeline_layout);
+	result = opalCmdGraphicsSetPipelineLayout(device, command_buffer, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetPipeline(device, command_buffer, pipeline);
+	result = opalCmdGraphicsSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_VertexBufferView vertex_buffer = {triangle_buffer, 0, sizeof(Vertex) * 3, sizeof(Vertex)};
 	Opal_IndexBufferView index_buffer = {triangle_buffer, offsetof(TriangleData, indices), sizeof(uint32_t) * 3, OPAL_INDEX_FORMAT_UINT32};
 
-	result = opalCmdSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
+	result = opalCmdGraphicsSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetIndexBuffer(device, command_buffer, index_buffer);
+	result = opalCmdGraphicsSetIndexBuffer(device, command_buffer, index_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_Viewport viewport =
@@ -439,13 +439,13 @@ void Application::render()
 		0.0f, 1.0f,
 	};
 
-	result = opalCmdSetViewport(device, command_buffer, viewport);
+	result = opalCmdGraphicsSetViewport(device, command_buffer, viewport);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetScissor(device, command_buffer, 0, 0, width, height);
+	result = opalCmdGraphicsSetScissor(device, command_buffer, 0, 0, width, height);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdDrawIndexed(device, command_buffer, 3, 1, 0, 0, 0);
+	result = opalCmdGraphicsDrawIndexed(device, command_buffer, 3, 1, 0, 0, 0);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdEndGraphicsPass(device, command_buffer);

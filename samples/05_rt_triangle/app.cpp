@@ -303,8 +303,13 @@ void Application::shutdown()
 	result = opalDestroyPipelineLayout(device, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyPipeline(device, pipeline);
+#ifndef OPAL_PLATFORM_MACOS
+	result = opalDestroyRaytracePipeline(device, raytrace_pipeline);
 	assert(result == OPAL_SUCCESS);
+#else
+	result = opalDestroyComputePipeline(device, compute_pipeline);
+	assert(result == OPAL_SUCCESS);
+#endif
 
 	result = opalDestroySemaphore(device, semaphore);
 	assert(result == OPAL_SUCCESS);
@@ -446,34 +451,41 @@ void Application::render()
 	result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_COPY_SOURCE, OPAL_RESOURCE_STATE_UNORDERED_ACCESS);
 	assert(result == OPAL_SUCCESS);
 
-#ifdef OPAL_PLATFORM_MACOS
-	result = opalCmdBeginComputePass(device, command_buffer);
-	assert(result == OPAL_SUCCESS);
-#else
-	result = opalCmdBeginRaytracePass(device, command_buffer);
-	assert(result == OPAL_SUCCESS);
-#endif
-
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdSetPipelineLayout(device, command_buffer, pipeline_layout);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalCmdSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
-	assert(result == OPAL_SUCCESS);
-
-	result = opalCmdSetPipeline(device, command_buffer, pipeline);
-	assert(result == OPAL_SUCCESS);
-
 #ifdef OPAL_PLATFORM_MACOS
+	result = opalCmdBeginComputePass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdComputeSetPipelineLayout(device, command_buffer, pipeline_layout);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdComputeSetPipeline(device, command_buffer, compute_pipeline);
+	assert(result == OPAL_SUCCESS);
+
 	result = opalCmdComputeDispatch(device, command_buffer, width, height, 1);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdEndComputePass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 #else
-	result = opalCmdSetShaderBindingTable(device, command_buffer, sbt);
+	result = opalCmdBeginRaytracePass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdRaytraceSetPipelineLayout(device, command_buffer, pipeline_layout);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdRaytraceSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdRaytraceSetPipeline(device, command_buffer, raytrace_pipeline);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdRaytraceSetShaderBindingTable(device, command_buffer, sbt);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceDispatch(device, command_buffer, width, height, 1);
@@ -600,7 +612,7 @@ void Application::buildPipeline()
 	pipeline_desc.threadgroup_size_y = 1;
 	pipeline_desc.threadgroup_size_z = 1;
 
-	Opal_Result result = opalCreateComputePipeline(device, &pipeline_desc, &pipeline);
+	Opal_Result result = opalCreateComputePipeline(device, &pipeline_desc, &compute_pipeline);
 	assert(result == OPAL_SUCCESS);
 
 	for (uint32_t i = 0; i < 1; ++i)
@@ -656,7 +668,7 @@ void Application::buildPipeline()
 	pipeline_desc.max_ray_payload_size = sizeof(float) * 4;
 	pipeline_desc.max_hit_attribute_size = sizeof(float) * 2;
 
-	Opal_Result result = opalCreateRaytracePipeline(device, &pipeline_desc, &pipeline);
+	Opal_Result result = opalCreateRaytracePipeline(device, &pipeline_desc, &raytrace_pipeline);
 	assert(result == OPAL_SUCCESS);
 
 	for (uint32_t i = 0; i < 3; ++i)
@@ -669,7 +681,7 @@ void Application::buildPipeline()
 
 void Application::buildSBT()
 {
-	Opal_Result result = opalCreateShaderBindingTable(device, pipeline, &sbt);
+	Opal_Result result = opalCreateShaderBindingTable(device, raytrace_pipeline, &sbt);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_ShaderBindingTableBuildDesc sbt_build_desc = {};
@@ -774,7 +786,13 @@ void Application::buildBLAS()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBuildAccelerationStructure(device, command_buffer, &blas_build_desc);
+	result = opalCmdBeginAccelerationStructurePass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdAccelerationStructureBuild(device, command_buffer, &blas_build_desc);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdEndAccelerationStructurePass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
@@ -876,7 +894,13 @@ void Application::buildTLAS()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBuildAccelerationStructure(device, command_buffer, &tlas_build_desc);
+	result = opalCmdBeginAccelerationStructurePass(device, command_buffer);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdAccelerationStructureBuild(device, command_buffer, &tlas_build_desc);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalCmdEndAccelerationStructurePass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);

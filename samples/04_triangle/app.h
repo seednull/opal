@@ -31,7 +31,7 @@ private:
 	Opal_Shader vertex_shader {OPAL_NULL_HANDLE};
 	Opal_Shader fragment_shader {OPAL_NULL_HANDLE};
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
-	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
+	Opal_GraphicsPipeline pipeline {OPAL_NULL_HANDLE};
 
 	Opal_Surface surface {OPAL_NULL_HANDLE};
 	Opal_Swapchain swapchain {OPAL_NULL_HANDLE};

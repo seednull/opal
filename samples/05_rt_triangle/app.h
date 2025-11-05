@@ -51,7 +51,11 @@ private:
 	Camera *camera_ptr {nullptr};
 
 	Opal_PipelineLayout pipeline_layout {OPAL_NULL_HANDLE};
-	Opal_Pipeline pipeline {OPAL_NULL_HANDLE};
+#ifndef OPAL_PLATFORM_MACOS
+	Opal_RaytracePipeline raytrace_pipeline {OPAL_NULL_HANDLE};
+#else
+	Opal_ComputePipeline compute_pipeline {OPAL_NULL_HANDLE};
+#endif
 
 	Opal_DescriptorHeap descriptor_heap {OPAL_NULL_HANDLE};
 	Opal_DescriptorSetLayout descriptor_set_layout {OPAL_NULL_HANDLE};
