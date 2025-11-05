@@ -2453,34 +2453,20 @@ static Opal_Result webgpu_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+static Opal_Result webgpu_deviceCmdBuildAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_build_descs);
-	OPAL_UNUSED(descs);
+	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+static Opal_Result webgpu_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(mode);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result webgpu_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_src_acceleration_structures);
-	OPAL_UNUSED(src_acceleration_structures);
-	OPAL_UNUSED(dst_buffer);
+	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -2761,9 +2747,8 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdMeshletDispatch,
 	webgpu_deviceCmdComputeDispatch,
 	webgpu_deviceCmdRaytraceDispatch,
-	webgpu_deviceCmdBuildAccelerationStructures,
+	webgpu_deviceCmdBuildAccelerationStructure,
 	webgpu_deviceCmdCopyAccelerationStructure,
-	webgpu_deviceCmdCopyAccelerationStructuresPostbuildInfo,
 	webgpu_deviceCmdCopyBufferToBuffer,
 	webgpu_deviceCmdCopyBufferToTexture,
 	webgpu_deviceCmdCopyTextureToBuffer,

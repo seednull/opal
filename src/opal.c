@@ -1162,19 +1162,19 @@ Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer comma
 	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, width, height, depth);
 }
 
-Opal_Result opalCmdBuildAccelerationStructures(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+Opal_Result opalCmdBuildAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdBuildAccelerationStructures);
+	assert(ptr->vtbl->cmdBuildAccelerationStructure);
 
-	return ptr->vtbl->cmdBuildAccelerationStructures(device, command_buffer, num_build_descs, descs);
+	return ptr->vtbl->cmdBuildAccelerationStructure(device, command_buffer, desc);
 }
 
-Opal_Result opalCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+Opal_Result opalCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1183,19 +1183,7 @@ Opal_Result opalCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuf
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdCopyAccelerationStructure);
 
-	return ptr->vtbl->cmdCopyAccelerationStructure(device, command_buffer, src, dst, mode);
-}
-
-Opal_Result opalCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdCopyAccelerationStructuresPostbuildInfo);
-
-	return ptr->vtbl->cmdCopyAccelerationStructuresPostbuildInfo(device, command_buffer, num_src_acceleration_structures, src_acceleration_structures, dst_buffer);
+	return ptr->vtbl->cmdCopyAccelerationStructure(device, command_buffer, desc);
 }
 
 Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)

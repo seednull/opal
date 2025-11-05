@@ -3212,12 +3212,11 @@ static Opal_Result metal_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(num_build_descs > 0);
-	assert(descs);
+	assert(desc);
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 
@@ -3232,164 +3231,157 @@ static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, 
 	if (metal_pass_encoder == nil)
 		return OPAL_METAL_ERROR;
 
-	for (uint32_t i = 0; i < num_build_descs; ++i)
+	const Metal_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
+	assert(dst_acceleration_structure_ptr);
+
+	const Metal_Buffer *scratch_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
+	assert(scratch_buffer_ptr);
+
+	const Metal_AccelerationStructure *src_acceleration_structure_ptr = NULL;
+	if (desc->src_acceleration_structure)
 	{
-		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
+		src_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
+		assert(src_acceleration_structure_ptr);
+	}
 
-		const Metal_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
-		assert(dst_acceleration_structure_ptr);
+	MTLAccelerationStructureDescriptor *build_desc = NULL;
 
-		const Metal_Buffer *scratch_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
-		assert(scratch_buffer_ptr);
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+	{
+		uint32_t num_entries = desc->input.bottom_level.num_geometries;
+		MTLPrimitiveAccelerationStructureDescriptor *blas_desc = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
 
-		const Metal_AccelerationStructure *src_acceleration_structure_ptr = NULL;
-		if (desc->src_acceleration_structure)
+		NSMutableArray<MTLAccelerationStructureGeometryDescriptor*>* geometries = [NSMutableArray arrayWithCapacity: num_entries];
+
+		for (uint32_t i = 0; i < num_entries; ++i)
 		{
-			src_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
-			assert(src_acceleration_structure_ptr);
-		}
+			const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[i];
 
-		MTLAccelerationStructureDescriptor *build_desc = NULL;
+			bool opaque =  (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_OPAQUE) != 0;
+			bool allowDuplicateIntersections = (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_NO_DUPLICATE_ANYHIT) == 0;
 
-		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
-		{
-			uint32_t num_entries = desc->input.bottom_level.num_geometries;
-			MTLPrimitiveAccelerationStructureDescriptor *blas_desc = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
-
-			NSMutableArray<MTLAccelerationStructureGeometryDescriptor*>* geometries = [NSMutableArray arrayWithCapacity: num_entries];
-
-			for (uint32_t i = 0; i < num_entries; ++i)
+			if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
 			{
-				const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[i];
+				const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
+				MTLAccelerationStructureTriangleGeometryDescriptor *triangles = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
 
-				bool opaque =  (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_OPAQUE) != 0;
-				bool allowDuplicateIntersections = (opal_geometry->flags & OPAL_ACCELERATION_STRUCTURE_GEOMETRY_FLAGS_NO_DUPLICATE_ANYHIT) == 0;
+				const Metal_Buffer *vertex_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
+				assert(vertex_buffer_ptr);
 
-				if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
+				triangles.opaque = opaque;
+				triangles.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
+
+				triangles.vertexFormat = metal_helperToAttributeFormat(opal_triangles->vertex_format);
+				triangles.vertexBuffer = vertex_buffer_ptr->buffer;
+				triangles.vertexBufferOffset = opal_triangles->vertex_buffer.offset;
+				triangles.vertexStride = opal_triangles->vertex_stride;
+
+				if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
 				{
-					const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
-					MTLAccelerationStructureTriangleGeometryDescriptor *triangles = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+					const Metal_Buffer *index_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->index_buffer.buffer);
+					assert(index_buffer_ptr);
 
-					const Metal_Buffer *vertex_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
-					assert(vertex_buffer_ptr);
+					triangles.indexType = metal_helperToIndexType(opal_triangles->index_format);
+					triangles.indexBuffer = index_buffer_ptr->buffer;
+					triangles.indexBufferOffset = opal_triangles->index_buffer.offset;
 
-					triangles.opaque = opaque;
-					triangles.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
-
-					triangles.vertexFormat = metal_helperToAttributeFormat(opal_triangles->vertex_format);
-					triangles.vertexBuffer = vertex_buffer_ptr->buffer;
-					triangles.vertexBufferOffset = opal_triangles->vertex_buffer.offset;
-					triangles.vertexStride = opal_triangles->vertex_stride;
-	
-					if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
-					{
-						const Metal_Buffer *index_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->index_buffer.buffer);
-						assert(index_buffer_ptr);
-
-						triangles.indexType = metal_helperToIndexType(opal_triangles->index_format);
-						triangles.indexBuffer = index_buffer_ptr->buffer;
-						triangles.indexBufferOffset = opal_triangles->index_buffer.offset;
-
-						triangles.triangleCount = opal_triangles->num_indices / 3;
-					}
-					else
-						triangles.triangleCount = opal_triangles->num_vertices / 3;
-
-					if (opal_triangles->transform_buffer.buffer != OPAL_NULL_HANDLE)
-					{
-						const Metal_Buffer *transform_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->transform_buffer.buffer);
-						assert(transform_buffer_ptr);
-
-						triangles.transformationMatrixBuffer = transform_buffer_ptr->buffer;
-						triangles.transformationMatrixBufferOffset = opal_triangles->transform_buffer.offset;
-					}
-
-					[geometries addObject: triangles];
-				}
-				else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
-				{
-					const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
-					MTLAccelerationStructureBoundingBoxGeometryDescriptor *aabbs = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
-
-					Metal_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
-					assert(entries_buffer_ptr);
-
-					aabbs.opaque = opaque;
-					aabbs.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
-
-					aabbs.boundingBoxCount = opal_aabbs->num_entries;
-					aabbs.boundingBoxBuffer = entries_buffer_ptr->buffer;
-					aabbs.boundingBoxBufferOffset = opal_aabbs->entries_buffer.offset;
-					aabbs.boundingBoxStride = opal_aabbs->stride;
-
-					[geometries addObject: aabbs];
+					triangles.triangleCount = opal_triangles->num_indices / 3;
 				}
 				else
-					assert(0);
+					triangles.triangleCount = opal_triangles->num_vertices / 3;
+
+				if (opal_triangles->transform_buffer.buffer != OPAL_NULL_HANDLE)
+				{
+					const Metal_Buffer *transform_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->transform_buffer.buffer);
+					assert(transform_buffer_ptr);
+
+					triangles.transformationMatrixBuffer = transform_buffer_ptr->buffer;
+					triangles.transformationMatrixBufferOffset = opal_triangles->transform_buffer.offset;
+				}
+
+				[geometries addObject: triangles];
 			}
-
-			blas_desc.geometryDescriptors = geometries;
-			build_desc = blas_desc;
-		}
-		else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
-		{
-			const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
-
-			Metal_Buffer *instances_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)input->instance_buffer.buffer);
-			assert(instances_buffer_ptr);
-
-			MTLInstanceAccelerationStructureDescriptor *tlas_desc = [MTLInstanceAccelerationStructureDescriptor descriptor];
-			tlas_desc.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeIndirect;
-			tlas_desc.instanceDescriptorBuffer = instances_buffer_ptr->buffer;
-			tlas_desc.instanceDescriptorBufferOffset = input->instance_buffer.offset;
-			tlas_desc.instanceDescriptorStride = sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
-			tlas_desc.instanceCount = input->num_instances;
-
-			build_desc = tlas_desc;
-		}
-
-		assert(build_desc);
-
-		switch (desc->build_mode)
-		{
-			case OPAL_ACCELERATION_STRUCTURE_BUILD_MODE_BUILD:
+			else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
 			{
-				[metal_pass_encoder
-					buildAccelerationStructure: dst_acceleration_structure_ptr->acceleration_structure
-					descriptor: build_desc
-					scratchBuffer: scratch_buffer_ptr->buffer
-					scratchBufferOffset: desc->scratch_buffer.offset
-				];
-			}
-			break;
+				const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
+				MTLAccelerationStructureBoundingBoxGeometryDescriptor *aabbs = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
 
-			case OPAL_ACCELERATION_STRUCTURE_BUILD_MODE_UPDATE:
-			{
-				[metal_pass_encoder
-					refitAccelerationStructure: src_acceleration_structure_ptr->acceleration_structure
-					descriptor: build_desc
-					destination: dst_acceleration_structure_ptr->acceleration_structure
-					scratchBuffer: scratch_buffer_ptr->buffer
-					scratchBufferOffset: desc->scratch_buffer.offset
-				];
-			}
-			break;
+				Metal_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
+				assert(entries_buffer_ptr);
 
-			default: assert(0); return OPAL_METAL_ERROR;
+				aabbs.opaque = opaque;
+				aabbs.allowDuplicateIntersectionFunctionInvocation = allowDuplicateIntersections;
+
+				aabbs.boundingBoxCount = opal_aabbs->num_entries;
+				aabbs.boundingBoxBuffer = entries_buffer_ptr->buffer;
+				aabbs.boundingBoxBufferOffset = opal_aabbs->entries_buffer.offset;
+				aabbs.boundingBoxStride = opal_aabbs->stride;
+
+				[geometries addObject: aabbs];
+			}
+			else
+				assert(0);
 		}
+
+		blas_desc.geometryDescriptors = geometries;
+		build_desc = blas_desc;
+	}
+	else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+	{
+		const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
+
+		Metal_Buffer *instances_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)input->instance_buffer.buffer);
+		assert(instances_buffer_ptr);
+
+		MTLInstanceAccelerationStructureDescriptor *tlas_desc = [MTLInstanceAccelerationStructureDescriptor descriptor];
+		tlas_desc.instanceDescriptorType = MTLAccelerationStructureInstanceDescriptorTypeIndirect;
+		tlas_desc.instanceDescriptorBuffer = instances_buffer_ptr->buffer;
+		tlas_desc.instanceDescriptorBufferOffset = input->instance_buffer.offset;
+		tlas_desc.instanceDescriptorStride = sizeof(MTLIndirectAccelerationStructureInstanceDescriptor);
+		tlas_desc.instanceCount = input->num_instances;
+
+		build_desc = tlas_desc;
+	}
+
+	assert(build_desc);
+
+	switch (desc->build_mode)
+	{
+		case OPAL_ACCELERATION_STRUCTURE_BUILD_MODE_BUILD:
+		{
+			[metal_pass_encoder
+				buildAccelerationStructure: dst_acceleration_structure_ptr->acceleration_structure
+				descriptor: build_desc
+				scratchBuffer: scratch_buffer_ptr->buffer
+				scratchBufferOffset: desc->scratch_buffer.offset
+			];
+		}
+		break;
+
+		case OPAL_ACCELERATION_STRUCTURE_BUILD_MODE_UPDATE:
+		{
+			[metal_pass_encoder
+				refitAccelerationStructure: src_acceleration_structure_ptr->acceleration_structure
+				descriptor: build_desc
+				destination: dst_acceleration_structure_ptr->acceleration_structure
+				scratchBuffer: scratch_buffer_ptr->buffer
+				scratchBufferOffset: desc->scratch_buffer.offset
+			];
+		}
+		break;
+
+		default: assert(0); return OPAL_METAL_ERROR;
 	}
 
 	[metal_pass_encoder endEncoding];
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+static Opal_Result metal_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(mode);
+	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -3658,9 +3650,8 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCmdMeshletDispatch,
 	metal_deviceCmdComputeDispatch,
 	metal_deviceCmdRaytraceDispatch,
-	metal_deviceCmdBuildAccelerationStructures,
+	metal_deviceCmdBuildAccelerationStructure,
 	metal_deviceCmdCopyAccelerationStructure,
-	metal_deviceCmdCopyAccelerationStructuresPostbuildInfo,
 	metal_deviceCmdCopyBufferToBuffer,
 	metal_deviceCmdCopyBufferToTexture,
 	metal_deviceCmdCopyTextureToBuffer,

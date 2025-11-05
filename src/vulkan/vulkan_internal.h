@@ -199,10 +199,6 @@ typedef struct Vulkan_AccelerationStructure_t
 	Vulkan_Allocation allocation;
 	VkAccelerationStructureKHR acceleration_structure;
 	VkDeviceAddress device_address;
-	VkQueryPool size_pool;
-	VkQueryPool serialization_size_pool;
-	VkQueryPool compacted_size_pool;
-	uint32_t allow_compaction;
 } Vulkan_AccelerationStructure;
 
 typedef struct Vulkan_ShaderBindingTable_t

@@ -116,9 +116,6 @@ static void vulkan_destroyAccelerationStructure(Vulkan_Device *device_ptr, Vulka
 	assert(acceleration_structure_ptr);
  
 	device_ptr->vk.vkDestroyAccelerationStructureKHR(device_ptr->device, acceleration_structure_ptr->acceleration_structure, NULL);
-	device_ptr->vk.vkDestroyQueryPool(device_ptr->device, acceleration_structure_ptr->size_pool, NULL);
-	device_ptr->vk.vkDestroyQueryPool(device_ptr->device, acceleration_structure_ptr->serialization_size_pool, NULL);
-	device_ptr->vk.vkDestroyQueryPool(device_ptr->device, acceleration_structure_ptr->compacted_size_pool, NULL);
 
 #if OPAL_HAS_VMA
 	if (device_ptr->use_vma)
@@ -317,9 +314,6 @@ static Opal_Result vulkan_deviceGetAccelerationStructurePrebuildInfo(Opal_Device
 
 				if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
 					max_primitive_counts[i] = opal_triangles->num_indices / 3;
-
-				if (opal_triangles->transform_buffer.buffer != OPAL_NULL_HANDLE)
-					triangles->transformData.deviceAddress = 1; // Vulkan checks for NULL here, not for a valid address
 			}
 			else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
 			{
@@ -942,30 +936,6 @@ static Opal_Result vulkan_deviceCreateAccelerationStructure(Opal_Device this, co
 	if (vulkan_result != VK_SUCCESS)
 		success = VK_FALSE;
 
-	static VkQueryType query_types[] =
-	{
-		VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE_KHR,
-		VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR,
-		VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR,
-	};
-
-	VkQueryPool query_pools[] = {VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE};
-
-	for (uint32_t i = 0; i < 3; ++i)
-	{
-		VkQueryPoolCreateInfo query_info = {0};
-		query_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-		query_info.queryType = query_types[i];
-		query_info.queryCount = 1;
-
-		vulkan_result = device_ptr->vk.vkCreateQueryPool(vulkan_device, &query_info, NULL, &query_pools[i]);
-		if (vulkan_result != VK_SUCCESS)
-		{
-			success = VK_FALSE;
-			break;
-		}
-	}
-
 	Vulkan_AccelerationStructure result = {0};
 	result.buffer = vulkan_buffer;
 	result.allocation = allocation;
@@ -973,9 +943,6 @@ static Opal_Result vulkan_deviceCreateAccelerationStructure(Opal_Device this, co
 	result.vma_allocation = vma_allocation;
 #endif
 	result.acceleration_structure = vulkan_acceleration_structure;
-	result.size_pool = query_pools[0];
-	result.serialization_size_pool = query_pools[1];
-	result.compacted_size_pool = query_pools[2];
 
 	if (success != VK_TRUE)
 	{
@@ -4148,12 +4115,11 @@ static Opal_Result vulkan_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comma
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_build_descs, const Opal_AccelerationStructureBuildDesc *descs)
+static Opal_Result vulkan_deviceCmdBuildAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(num_build_descs > 0);
-	assert(descs);
+	assert(desc);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -4162,23 +4128,13 @@ static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this,
 
 	VkCommandBuffer vulkan_command_buffer = command_buffer_ptr->command_buffer;
 
-	uint32_t num_entries = 0;
-
-	for (uint32_t i = 0; i < num_build_descs; ++i)
-	{
-		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
-		uint32_t num_desc_entries = 1;
-		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
-			num_desc_entries = desc->input.bottom_level.num_geometries;
-
-		num_entries += num_desc_entries;
-	}
+	uint32_t num_entries = 1;
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+		num_entries = desc->input.bottom_level.num_geometries;
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t entries_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkAccelerationStructureGeometryKHR) * num_entries);
 	uint32_t build_ranges_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkAccelerationStructureBuildRangeInfoKHR) * num_entries);
-	uint32_t build_ranges_ptrs_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkAccelerationStructureBuildRangeInfoKHR*) * num_build_descs);
-	uint32_t build_infos_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkAccelerationStructureBuildGeometryInfoKHR) * num_build_descs);
 
 	VkAccelerationStructureGeometryKHR *entries = (VkAccelerationStructureGeometryKHR *)(device_ptr->bump.data + entries_offset);
 	memset(entries, 0, sizeof(VkAccelerationStructureGeometryKHR) * num_entries);
@@ -4186,246 +4142,142 @@ static Opal_Result vulkan_deviceCmdBuildAccelerationStructures(Opal_Device this,
 	VkAccelerationStructureBuildRangeInfoKHR *build_ranges = (VkAccelerationStructureBuildRangeInfoKHR *)(device_ptr->bump.data + build_ranges_offset);
 	memset(build_ranges, 0, sizeof(VkAccelerationStructureBuildRangeInfoKHR) * num_entries);
 
-	VkAccelerationStructureBuildRangeInfoKHR **build_ranges_ptrs = (VkAccelerationStructureBuildRangeInfoKHR **)(device_ptr->bump.data + build_ranges_ptrs_offset);
-	memset(build_ranges, 0, sizeof(VkAccelerationStructureBuildRangeInfoKHR *) * num_build_descs);
+	const Vulkan_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
+	assert(dst_acceleration_structure_ptr);
 
-	VkAccelerationStructureBuildGeometryInfoKHR *build_infos = (VkAccelerationStructureBuildGeometryInfoKHR *)(device_ptr->bump.data + build_infos_offset);
-	memset(build_ranges, 0, sizeof(VkAccelerationStructureBuildGeometryInfoKHR) * num_build_descs);
+	const Vulkan_Buffer *scratch_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
+	assert(scratch_buffer_ptr);
 
-	uint32_t current_entry = 0;
-	uint32_t current_build_range = 0;
+	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
+	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build_info.type = vulkan_helperToAccelerationStructureType(desc->type);
+	build_info.flags = vulkan_helperToAccelerationStructureBuildFlags(desc->build_flags);
+	build_info.mode = vulkan_helperToAccelerationStructureBuildMode(desc->build_mode);
+	build_info.dstAccelerationStructure = dst_acceleration_structure_ptr->acceleration_structure;
 
-	for (uint32_t i = 0; i < num_build_descs; ++i)
+	if (desc->src_acceleration_structure)
 	{
-		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
+		const Vulkan_AccelerationStructure *src_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
+		assert(src_acceleration_structure_ptr);
 
-		const Vulkan_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
-		assert(dst_acceleration_structure_ptr);
+		build_info.srcAccelerationStructure = src_acceleration_structure_ptr->acceleration_structure;
+	}
 
-		const Vulkan_Buffer *scratch_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)desc->scratch_buffer.buffer);
-		assert(scratch_buffer_ptr);
+	build_info.pGeometries = entries;
+	build_info.geometryCount = 1;
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+		build_info.geometryCount = desc->input.bottom_level.num_geometries;
 
-		VkAccelerationStructureBuildGeometryInfoKHR *build_info = &build_infos[i];
-		build_info->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-		build_info->type = vulkan_helperToAccelerationStructureType(desc->type);
-		build_info->flags = vulkan_helperToAccelerationStructureBuildFlags(desc->build_flags);
-		build_info->mode = vulkan_helperToAccelerationStructureBuildMode(desc->build_mode);
-		build_info->dstAccelerationStructure = dst_acceleration_structure_ptr->acceleration_structure;
+	build_info.scratchData.deviceAddress = scratch_buffer_ptr->device_address + desc->scratch_buffer.offset;
 
-		if (desc->src_acceleration_structure)
+	if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
+	{
+		for (uint32_t j = 0; j < build_info.geometryCount; ++j)
 		{
-			const Vulkan_AccelerationStructure *src_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
-			assert(src_acceleration_structure_ptr);
-
-			build_info->srcAccelerationStructure = src_acceleration_structure_ptr->acceleration_structure;
-		}
-
-		build_info->pGeometries = &entries[current_entry];
-		build_info->geometryCount = 1;
-		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
-			build_info->geometryCount = desc->input.bottom_level.num_geometries;
-
-		build_info->scratchData.deviceAddress = scratch_buffer_ptr->device_address + desc->scratch_buffer.offset;
-
-		build_ranges_ptrs[i] = &build_ranges[current_build_range];
-
-		if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL)
-		{
-			for (uint32_t j = 0; j < build_info->geometryCount; ++j)
-			{
-				const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[j];
-				VkAccelerationStructureGeometryKHR *geometry = &entries[current_entry];
-				VkAccelerationStructureBuildRangeInfoKHR *build_range = &build_ranges[current_build_range];
-
-				geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-				geometry->geometryType = vulkan_helperToAccelerationStructureGeometryType(opal_geometry->type);
-				geometry->flags = vulkan_helperToAccelerationStructureGeometryFlags(opal_geometry->flags);
-
-				if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
-				{
-					const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
-					VkAccelerationStructureGeometryTrianglesDataKHR *triangles = &geometry->geometry.triangles;
-
-					const Vulkan_Buffer *vertex_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
-					assert(vertex_buffer_ptr);
-
-					triangles->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-					triangles->vertexFormat = vulkan_helperToVertexFormat(opal_triangles->vertex_format);
-					triangles->vertexData.deviceAddress = vertex_buffer_ptr->device_address + opal_triangles->vertex_buffer.offset;
-					triangles->vertexStride = opal_triangles->vertex_stride;
-					triangles->maxVertex = opal_triangles->num_vertices - 1;
-					triangles->indexType = vulkan_helperToIndexType(opal_triangles->index_format);
-
-					build_range->primitiveCount = opal_triangles->num_vertices / 3;
-
-					if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
-					{
-						const Vulkan_Buffer *index_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->index_buffer.buffer);
-						assert(index_buffer_ptr);
-
-						triangles->indexData.deviceAddress = index_buffer_ptr->device_address + opal_triangles->index_buffer.offset;
-
-						build_range->primitiveCount = opal_triangles->num_indices / 3;
-					}
-
-					if (opal_triangles->transform_buffer.buffer != OPAL_NULL_HANDLE)
-					{
-						const Vulkan_Buffer *transform_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->transform_buffer.buffer);
-						assert(transform_buffer_ptr);
-
-						triangles->transformData.deviceAddress = transform_buffer_ptr->device_address + opal_triangles->transform_buffer.offset;
-					}
-				}
-				else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
-				{
-					const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
-					VkAccelerationStructureGeometryAabbsDataKHR *aabbs = &geometry->geometry.aabbs;
-
-					Vulkan_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
-					assert(entries_buffer_ptr);
-
-					aabbs->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
-					aabbs->stride = opal_aabbs->stride;
-					aabbs->data.deviceAddress = entries_buffer_ptr->device_address + opal_aabbs->entries_buffer.offset;
-
-					build_range->primitiveCount = opal_aabbs->num_entries;
-				}
-				else
-					assert(0);
-
-				current_entry++;
-				current_build_range++;
-			}
-		}
-		else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
-		{
-			VkAccelerationStructureGeometryKHR *geometry = &entries[current_entry];
-			VkAccelerationStructureBuildRangeInfoKHR *build_range = &build_ranges[current_build_range];
-			const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
-
-			Vulkan_Buffer *instances_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)input->instance_buffer.buffer);
-			assert(instances_buffer_ptr);
+			const Opal_AccelerationStructureGeometry *opal_geometry = &desc->input.bottom_level.geometries[j];
+			VkAccelerationStructureGeometryKHR *geometry = &entries[j];
+			VkAccelerationStructureBuildRangeInfoKHR *build_range = &build_ranges[j];
 
 			geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-			geometry->geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+			geometry->geometryType = vulkan_helperToAccelerationStructureGeometryType(opal_geometry->type);
+			geometry->flags = vulkan_helperToAccelerationStructureGeometryFlags(opal_geometry->flags);
 
-			VkAccelerationStructureGeometryInstancesDataKHR *instances = &geometry->geometry.instances;
-			instances->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-			instances->arrayOfPointers = VK_FALSE;
-			instances->data.deviceAddress = instances_buffer_ptr->device_address + input->instance_buffer.offset;
+			if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_TRIANGLES)
+			{
+				const Opal_AccelerationStructureGeometryDataTriangles *opal_triangles = &opal_geometry->data.triangles;
+				VkAccelerationStructureGeometryTrianglesDataKHR *triangles = &geometry->geometry.triangles;
 
-			build_range->primitiveCount = input->num_instances;
+				const Vulkan_Buffer *vertex_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->vertex_buffer.buffer);
+				assert(vertex_buffer_ptr);
 
-			current_entry++;
-			current_build_range++;
+				triangles->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+				triangles->vertexFormat = vulkan_helperToVertexFormat(opal_triangles->vertex_format);
+				triangles->vertexData.deviceAddress = vertex_buffer_ptr->device_address + opal_triangles->vertex_buffer.offset;
+				triangles->vertexStride = opal_triangles->vertex_stride;
+				triangles->maxVertex = opal_triangles->num_vertices - 1;
+				triangles->indexType = vulkan_helperToIndexType(opal_triangles->index_format);
+
+				build_range->primitiveCount = opal_triangles->num_vertices / 3;
+
+				if (opal_triangles->index_buffer.buffer != OPAL_NULL_HANDLE)
+				{
+					const Vulkan_Buffer *index_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_triangles->index_buffer.buffer);
+					assert(index_buffer_ptr);
+
+					triangles->indexData.deviceAddress = index_buffer_ptr->device_address + opal_triangles->index_buffer.offset;
+
+					build_range->primitiveCount = opal_triangles->num_indices / 3;
+				}
+			}
+			else if (opal_geometry->type == OPAL_ACCELERATION_STRUCTURE_GEOMETRY_TYPE_AABBS)
+			{
+				const Opal_AccelerationStructureGeometryDataAABBs *opal_aabbs = &opal_geometry->data.aabbs;
+				VkAccelerationStructureGeometryAabbsDataKHR *aabbs = &geometry->geometry.aabbs;
+
+				Vulkan_Buffer *entries_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_aabbs->entries_buffer.buffer);
+				assert(entries_buffer_ptr);
+
+				aabbs->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+				aabbs->stride = opal_aabbs->stride;
+				aabbs->data.deviceAddress = entries_buffer_ptr->device_address + opal_aabbs->entries_buffer.offset;
+
+				build_range->primitiveCount = opal_aabbs->num_entries;
+			}
+			else
+				assert(0);
 		}
-		else
-			assert(0);
 	}
-
-	device_ptr->vk.vkCmdBuildAccelerationStructuresKHR(vulkan_command_buffer, num_build_descs, build_infos, build_ranges_ptrs);
-
-	for (uint32_t i = 0; i < num_build_descs; ++i)
+	else if (desc->type == OPAL_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
 	{
-		const Opal_AccelerationStructureBuildDesc *desc = &descs[i];
+		VkAccelerationStructureGeometryKHR *geometry = &entries[0];
+		VkAccelerationStructureBuildRangeInfoKHR *build_range = &build_ranges[0];
+		const Opal_AccelerationStructureBuildInputTopLevel *input = &desc->input.top_level;
 
-		Vulkan_AccelerationStructure *dst_acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
-		assert(dst_acceleration_structure_ptr);
+		Vulkan_Buffer *instances_buffer_ptr = opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)input->instance_buffer.buffer);
+		assert(instances_buffer_ptr);
 
-		dst_acceleration_structure_ptr->allow_compaction = (desc->build_flags & OPAL_ACCELERATION_STRUCTURE_BUILD_FLAGS_ALLOW_COMPACTION) != 0;
+		geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+		geometry->geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
 
-		VkAccelerationStructureKHR acceleration_structure = dst_acceleration_structure_ptr->acceleration_structure;
+		VkAccelerationStructureGeometryInstancesDataKHR *instances = &geometry->geometry.instances;
+		instances->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+		instances->arrayOfPointers = VK_FALSE;
+		instances->data.deviceAddress = instances_buffer_ptr->device_address + input->instance_buffer.offset;
 
-		VkQueryPool size_pool = dst_acceleration_structure_ptr->size_pool;
-		VkQueryPool serialization_size_pool = dst_acceleration_structure_ptr->serialization_size_pool;
-		VkQueryPool compacted_size_pool = dst_acceleration_structure_ptr->compacted_size_pool;
-
-		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, size_pool, 0, 1);
-		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, serialization_size_pool, 0, 1);
-		device_ptr->vk.vkCmdResetQueryPool(vulkan_command_buffer, compacted_size_pool, 0, 1);
-
-		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE_KHR, size_pool, 0);
-		device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_SERIALIZATION_SIZE_KHR, serialization_size_pool, 0);
-
-		if (dst_acceleration_structure_ptr->allow_compaction)
-			device_ptr->vk.vkCmdWriteAccelerationStructuresPropertiesKHR(vulkan_command_buffer, 1, &acceleration_structure, VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, compacted_size_pool, 0);
+		build_range->primitiveCount = input->num_instances;
 	}
+	else
+		assert(0);
+
+	device_ptr->vk.vkCmdBuildAccelerationStructuresKHR(vulkan_command_buffer, 1, &build_info, &build_ranges);
 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_AccelerationStructure src, Opal_AccelerationStructure dst, Opal_AccelerationStructureCopyMode mode)
+static Opal_Result vulkan_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(src);
-	assert(dst);
+	assert(desc);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 
-	const Vulkan_AccelerationStructure *src_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src);
+	const Vulkan_AccelerationStructure *src_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->src_acceleration_structure);
 	assert(src_ptr);
 
-	const Vulkan_AccelerationStructure *dst_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)dst);
+	const Vulkan_AccelerationStructure *dst_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)desc->dst_acceleration_structure);
 	assert(dst_ptr);
 
 	VkCopyAccelerationStructureInfoKHR copy_info = {0};
 	copy_info.sType = VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR;
 	copy_info.src = src_ptr->acceleration_structure;
 	copy_info.dst = dst_ptr->acceleration_structure;
-	copy_info.mode = vulkan_helperToAccelerationStructureCopyMode(mode);
+	copy_info.mode = vulkan_helperToAccelerationStructureCopyMode(desc->copy_mode);
 
 	device_ptr->vk.vkCmdCopyAccelerationStructureKHR(command_buffer_ptr->command_buffer, &copy_info);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_src_acceleration_structures, const Opal_AccelerationStructure *src_acceleration_structures, Opal_BufferView dst_buffer)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(num_src_acceleration_structures > 0);
-	assert(src_acceleration_structures);
-
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-
-	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	VkCommandBuffer vulkan_command_buffer = command_buffer_ptr->command_buffer;
-
-	Vulkan_Buffer *dst_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst_buffer.buffer);
-	assert(dst_buffer_ptr);
-
-	VkBuffer vulkan_buffer = dst_buffer_ptr->buffer;
-
-	VkDeviceSize stride = sizeof(Opal_AccelerationStructurePostbuildInfo);
-	VkQueryResultFlagBits query_result_flags = VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT;
-
-	VkDeviceSize size_offset = offsetof(Opal_AccelerationStructurePostbuildInfo, acceleration_structure_size);
-	VkDeviceSize compacted_size_offset = offsetof(Opal_AccelerationStructurePostbuildInfo, compacted_buffer_size);
-	VkDeviceSize serialization_size_offset = offsetof(Opal_AccelerationStructurePostbuildInfo, serialization_buffer_size);
-
-	for (uint32_t i = 0; i < num_src_acceleration_structures; ++i)
-	{
-		VkDeviceSize base_offset = dst_buffer.offset + stride * i;
-
-		Vulkan_AccelerationStructure *acceleration_structure_ptr = opal_poolGetElement(&device_ptr->acceleration_structures, (Opal_PoolHandle)src_acceleration_structures[i]);
-		assert(acceleration_structure_ptr);
-
-		VkQueryPool size_pool = acceleration_structure_ptr->size_pool;
-		VkQueryPool serialization_size_pool = acceleration_structure_ptr->serialization_size_pool;
-		VkQueryPool compacted_size_pool = acceleration_structure_ptr->compacted_size_pool;
-
-		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, size_pool, 0, 1, vulkan_buffer, base_offset + size_offset, 0, query_result_flags);
-		device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, serialization_size_pool, 0, 1, vulkan_buffer, base_offset + serialization_size_offset, 0, query_result_flags);
-
-		if (acceleration_structure_ptr->allow_compaction)
-			device_ptr->vk.vkCmdCopyQueryPoolResults(vulkan_command_buffer, compacted_size_pool, 0, 1, vulkan_buffer, base_offset + compacted_size_offset, 0, query_result_flags);
-	}
 
 	return OPAL_SUCCESS;
 }
@@ -4720,9 +4572,8 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdMeshletDispatch,
 	vulkan_deviceCmdComputeDispatch,
 	vulkan_deviceCmdRaytraceDispatch,
-	vulkan_deviceCmdBuildAccelerationStructures,
+	vulkan_deviceCmdBuildAccelerationStructure,
 	vulkan_deviceCmdCopyAccelerationStructure,
-	vulkan_deviceCmdCopyAccelerationStructuresPostbuildInfo,
 	vulkan_deviceCmdCopyBufferToBuffer,
 	vulkan_deviceCmdCopyBufferToTexture,
 	vulkan_deviceCmdCopyTextureToBuffer,
