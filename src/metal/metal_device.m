@@ -3212,7 +3212,7 @@ static Opal_Result metal_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result metal_deviceCmdBuildAccelerationStructures(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
+static Opal_Result metal_deviceCmdBuildAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
