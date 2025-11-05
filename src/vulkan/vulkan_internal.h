@@ -22,6 +22,19 @@ typedef enum Vulkan_ResourceType_t
 	VULKAN_RESOURCE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Vulkan_ResourceType;
 
+typedef enum Vulkan_PassType_t
+{
+	VULKAN_PASS_TYPE_NONE = 0,
+	VULKAN_PASS_TYPE_GRAPHICS,
+	VULKAN_PASS_TYPE_COMPUTE,
+	VULKAN_PASS_TYPE_RAYTRACE,
+	VULKAN_PASS_TYPE_COPY,
+	VULKAN_PASS_TYPE_ACCELERATION_STRUCTURE,
+
+	VULKAN_PASS_TYPE_ENUM_MAX,
+	VULKAN_PASS_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Vulkan_PassType;
+
 typedef struct Vulkan_MemoryBlock_t
 {
 	VkDeviceMemory memory;
@@ -234,6 +247,7 @@ typedef struct Vulkan_CommandBuffer_t
 	VkDeviceAddress raygen_entry;
 	VkDeviceAddress miss_entry;
 	VkDeviceAddress intersection_entry;
+	Vulkan_PassType pass;
 	Opal_CommandAllocator command_allocator;
 } Vulkan_CommandBuffer;
 
