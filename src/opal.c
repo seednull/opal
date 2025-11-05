@@ -1258,30 +1258,6 @@ Opal_Result opalCmdBufferTransitionBarrier(Opal_Device device, Opal_CommandBuffe
 	return ptr->vtbl->cmdBufferTransitionBarrier(device, command_buffer, buffer, state_before, state_after);
 }
 
-Opal_Result opalCmdBufferQueueGrabBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdBufferQueueGrabBarrier);
-
-	return ptr->vtbl->cmdBufferQueueGrabBarrier(device, command_buffer, buffer, queue);
-}
-
-Opal_Result opalCmdBufferQueueReleaseBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdBufferQueueReleaseBarrier);
-
-	return ptr->vtbl->cmdBufferQueueReleaseBarrier(device, command_buffer, buffer, queue);
-}
-
 Opal_Result opalCmdTextureTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -1292,28 +1268,4 @@ Opal_Result opalCmdTextureTransitionBarrier(Opal_Device device, Opal_CommandBuff
 	assert(ptr->vtbl->cmdTextureTransitionBarrier);
 
 	return ptr->vtbl->cmdTextureTransitionBarrier(device, command_buffer, texture_view, state_before, state_after);
-}
-
-Opal_Result opalCmdTextureQueueGrabBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdTextureQueueGrabBarrier);
-
-	return ptr->vtbl->cmdTextureQueueGrabBarrier(device, command_buffer, texture_view, queue);
-}
-
-Opal_Result opalCmdTextureQueueReleaseBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdTextureQueueReleaseBarrier);
-
-	return ptr->vtbl->cmdTextureQueueReleaseBarrier(device, command_buffer, texture_view, queue);
 }

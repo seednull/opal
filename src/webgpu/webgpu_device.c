@@ -2659,26 +2659,6 @@ static Opal_Result webgpu_deviceCmdBufferTransitionBarrier(Opal_Device this, Opa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result webgpu_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_SUCCESS;
-}
-
 static Opal_Result webgpu_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
 	OPAL_UNUSED(this);
@@ -2686,26 +2666,6 @@ static Opal_Result webgpu_deviceCmdTextureTransitionBarrier(Opal_Device this, Op
 	OPAL_UNUSED(texture_view);
 	OPAL_UNUSED(state_before);
 	OPAL_UNUSED(state_after);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result webgpu_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result webgpu_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
 
 	return OPAL_SUCCESS;
 }
@@ -2809,11 +2769,7 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdCopyTextureToBuffer,
 	webgpu_deviceCmdCopyTextureToTexture,
 	webgpu_deviceCmdBufferTransitionBarrier,
-	webgpu_deviceCmdBufferQueueGrabBarrier,
-	webgpu_deviceCmdBufferQueueReleaseBarrier,
 	webgpu_deviceCmdTextureTransitionBarrier,
-	webgpu_deviceCmdTextureQueueGrabBarrier,
-	webgpu_deviceCmdTextureQueueReleaseBarrier,
 };
 
 /*

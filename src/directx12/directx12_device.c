@@ -4481,26 +4481,6 @@ static Opal_Result directx12_deviceCmdBufferTransitionBarrier(Opal_Device this, 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result directx12_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result directx12_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
 	assert(this);
@@ -4523,26 +4503,6 @@ static Opal_Result directx12_deviceCmdTextureTransitionBarrier(Opal_Device this,
 
 	ID3D12GraphicsCommandList4_ResourceBarrier(command_buffer_ptr->list, 1, &barrier);
 	return OPAL_SUCCESS;
-}
-
-static Opal_Result directx12_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result directx12_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
 }
 
 /*
@@ -4644,11 +4604,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdCopyTextureToBuffer,
 	directx12_deviceCmdCopyTextureToTexture,
 	directx12_deviceCmdBufferTransitionBarrier,
-	directx12_deviceCmdBufferQueueGrabBarrier,
-	directx12_deviceCmdBufferQueueReleaseBarrier,
 	directx12_deviceCmdTextureTransitionBarrier,
-	directx12_deviceCmdTextureQueueGrabBarrier,
-	directx12_deviceCmdTextureQueueReleaseBarrier,
 };
 
 /*

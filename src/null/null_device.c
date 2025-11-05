@@ -841,26 +841,6 @@ static Opal_Result null_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result null_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
 	OPAL_UNUSED(this);
@@ -868,26 +848,6 @@ static Opal_Result null_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal
 	OPAL_UNUSED(texture_view);
 	OPAL_UNUSED(state_before);
 	OPAL_UNUSED(state_after);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -991,11 +951,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdCopyTextureToBuffer,
 	null_deviceCmdCopyTextureToTexture,
 	null_deviceCmdBufferTransitionBarrier,
-	null_deviceCmdBufferQueueGrabBarrier,
-	null_deviceCmdBufferQueueReleaseBarrier,
 	null_deviceCmdTextureTransitionBarrier,
-	null_deviceCmdTextureQueueGrabBarrier,
-	null_deviceCmdTextureQueueReleaseBarrier,
 };
 
 /*

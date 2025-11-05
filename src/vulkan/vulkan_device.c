@@ -4596,36 +4596,6 @@ static Opal_Result vulkan_deviceCmdBufferTransitionBarrier(Opal_Device this, Opa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdBufferQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(buffer.buffer);
-	assert(queue);
-
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result vulkan_deviceCmdBufferQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_Queue queue)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(buffer.buffer);
-	assert(queue);
-
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
 static Opal_Result vulkan_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
 	assert(this);
@@ -4657,36 +4627,6 @@ static Opal_Result vulkan_deviceCmdTextureTransitionBarrier(Opal_Device this, Op
 
 	device_ptr->vk.vkCmdPipelineBarrier(command_buffer_ptr->command_buffer, wait_stage, block_stage, 0, 0, NULL, 0, NULL, 1, &image_barrier);
 	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceCmdTextureQueueGrabBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(texture_view);
-	assert(queue);
-
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result vulkan_deviceCmdTextureQueueReleaseBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_Queue queue)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(texture_view);
-	assert(queue);
-
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(queue);
-
-	return OPAL_NOT_SUPPORTED;
 }
 
 /*
@@ -4788,11 +4728,7 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdCopyTextureToBuffer,
 	vulkan_deviceCmdCopyTextureToTexture,
 	vulkan_deviceCmdBufferTransitionBarrier,
-	vulkan_deviceCmdBufferQueueGrabBarrier,
-	vulkan_deviceCmdBufferQueueReleaseBarrier,
 	vulkan_deviceCmdTextureTransitionBarrier,
-	vulkan_deviceCmdTextureQueueGrabBarrier,
-	vulkan_deviceCmdTextureQueueReleaseBarrier,
 };
 
 /*
