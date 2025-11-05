@@ -204,8 +204,6 @@ Opal_Result opalGetAccelerationStructurePrebuildInfo(Opal_Device device, const O
 	return ptr->vtbl->getAccelerationStructurePrebuildInfo(device, desc, info);
 }
 
-/*
- */
 Opal_Result opalGetSupportedSurfaceFormats(Opal_Device device, Opal_Surface surface, uint32_t *num_formats, Opal_SurfaceFormat *formats)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -328,7 +326,7 @@ Opal_Result opalCreateAccelerationStructure(Opal_Device device, const Opal_Accel
 	return ptr->vtbl->createAccelerationStructure(device, desc, acceleration_structure);
 }
 
-Opal_Result opalCreateShaderBindingTable(Opal_Device device, Opal_Pipeline pipeline, Opal_ShaderBindingTable *shader_binding_table)
+Opal_Result opalCreateShaderBindingTable(Opal_Device device, Opal_RaytracePipeline pipeline, Opal_ShaderBindingTable *shader_binding_table)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -412,7 +410,7 @@ Opal_Result opalCreatePipelineLayout(Opal_Device device, uint32_t num_descriptor
 	return ptr->vtbl->createPipelineLayout(device, num_descriptor_set_layouts, descriptor_set_layouts, pipeline_layout);
 }
 
-Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
+Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -424,7 +422,7 @@ Opal_Result opalCreateGraphicsPipeline(Opal_Device device, const Opal_GraphicsPi
 	return ptr->vtbl->createGraphicsPipeline(device, desc, pipeline);
 }
 
-Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline)
+Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -436,7 +434,7 @@ Opal_Result opalCreateMeshletPipeline(Opal_Device device, const Opal_MeshletPipe
 	return ptr->vtbl->createMeshletPipeline(device, desc, pipeline);
 }
 
-Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline)
+Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -448,7 +446,7 @@ Opal_Result opalCreateComputePipeline(Opal_Device device, const Opal_ComputePipe
 	return ptr->vtbl->createComputePipeline(device, desc, pipeline);
 }
 
-Opal_Result opalCreateRaytracePipeline(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
+Opal_Result opalCreateRaytracePipeline(Opal_Device device, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -630,16 +628,40 @@ Opal_Result opalDestroyPipelineLayout(Opal_Device device, Opal_PipelineLayout pi
 	return ptr->vtbl->destroyPipelineLayout(device, pipeline_layout);
 }
 
-Opal_Result opalDestroyPipeline(Opal_Device device, Opal_Pipeline pipeline)
+Opal_Result opalDestroyGraphicsPipeline(Opal_Device device, Opal_GraphicsPipeline pipeline)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
 
 	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
 	assert(ptr->vtbl);
-	assert(ptr->vtbl->destroyPipeline);
+	assert(ptr->vtbl->destroyGraphicsPipeline);
 
-	return ptr->vtbl->destroyPipeline(device, pipeline);
+	return ptr->vtbl->destroyGraphicsPipeline(device, pipeline);
+}
+
+Opal_Result opalDestroyComputePipeline(Opal_Device device, Opal_ComputePipeline pipeline)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyComputePipeline);
+
+	return ptr->vtbl->destroyComputePipeline(device, pipeline);
+}
+
+Opal_Result opalDestroyRaytracePipeline(Opal_Device device, Opal_RaytracePipeline pipeline)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyRaytracePipeline);
+
+	return ptr->vtbl->destroyRaytracePipeline(device, pipeline);
 }
 
 Opal_Result opalDestroySwapchain(Opal_Device device, Opal_Swapchain swapchain)
@@ -898,6 +920,18 @@ Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapchain)
 
 /*
  */
+Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdSetDescriptorHeap);
+
+	return ptr->vtbl->cmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
+}
+
 Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -908,6 +942,126 @@ Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer comm
 	assert(ptr->vtbl->cmdBeginGraphicsPass);
 
 	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, num_color_attachments, color_attachments, depth_stencil_attachment);
+}
+
+Opal_Result opalCmdGraphicsSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetPipelineLayout);
+
+	return ptr->vtbl->cmdGraphicsSetPipelineLayout(device, command_buffer, pipeline_layout);
+}
+
+Opal_Result opalCmdGraphicsSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetPipeline);
+
+	return ptr->vtbl->cmdGraphicsSetPipeline(device, command_buffer, pipeline);
+}
+
+Opal_Result opalCmdGraphicsSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetDescriptorSet);
+
+	return ptr->vtbl->cmdGraphicsSetDescriptorSet(device, command_buffer, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
+}
+
+Opal_Result opalCmdGraphicsSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetVertexBuffers);
+
+	return ptr->vtbl->cmdGraphicsSetVertexBuffers(device, command_buffer, num_vertex_buffers, vertex_buffers);
+}
+
+Opal_Result opalCmdGraphicsSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetIndexBuffer);
+
+	return ptr->vtbl->cmdGraphicsSetIndexBuffer(device, command_buffer, index_buffer);
+}
+
+Opal_Result opalCmdGraphicsSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetViewport);
+
+	return ptr->vtbl->cmdGraphicsSetViewport(device, command_buffer, viewport);
+}
+
+Opal_Result opalCmdGraphicsSetScissor(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsSetScissor);
+
+	return ptr->vtbl->cmdGraphicsSetScissor(device, command_buffer, x, y, width, height);
+}
+
+Opal_Result opalCmdGraphicsDraw(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsDraw);
+
+	return ptr->vtbl->cmdGraphicsDraw(device, command_buffer, num_vertices, num_instances, base_vertex, base_instance);
+}
+
+Opal_Result opalCmdGraphicsDrawIndexed(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsDrawIndexed);
+
+	return ptr->vtbl->cmdGraphicsDrawIndexed(device, command_buffer, num_indices, num_instances, base_index, vertex_offset, base_instance);
+}
+
+Opal_Result opalCmdGraphicsMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdGraphicsMeshletDispatch);
+
+	return ptr->vtbl->cmdGraphicsMeshletDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 }
 
 Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer)
@@ -934,6 +1088,54 @@ Opal_Result opalCmdBeginComputePass(Opal_Device device, Opal_CommandBuffer comma
 	return ptr->vtbl->cmdBeginComputePass(device, command_buffer);
 }
 
+Opal_Result opalCmdComputeSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdComputeSetPipelineLayout);
+
+	return ptr->vtbl->cmdComputeSetPipelineLayout(device, command_buffer, pipeline_layout);
+}
+
+Opal_Result opalCmdComputeSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdComputeSetPipeline);
+
+	return ptr->vtbl->cmdComputeSetPipeline(device, command_buffer, pipeline);
+}
+
+Opal_Result opalCmdComputeSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdComputeSetDescriptorSet);
+
+	return ptr->vtbl->cmdComputeSetDescriptorSet(device, command_buffer, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
+}
+
+Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdComputeDispatch);
+
+	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
+}
+
 Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_CommandBuffer command_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -958,6 +1160,66 @@ Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_CommandBuffer comm
 	return ptr->vtbl->cmdBeginRaytracePass(device, command_buffer);
 }
 
+Opal_Result opalCmdRaytraceSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdRaytraceSetPipelineLayout);
+
+	return ptr->vtbl->cmdRaytraceSetPipelineLayout(device, command_buffer, pipeline_layout);
+}
+
+Opal_Result opalCmdRaytraceSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ComputePipeline pipeline)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdRaytraceSetPipeline);
+
+	return ptr->vtbl->cmdRaytraceSetPipeline(device, command_buffer, pipeline);
+}
+
+Opal_Result opalCmdRaytraceSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdRaytraceSetDescriptorSet);
+
+	return ptr->vtbl->cmdRaytraceSetDescriptorSet(device, command_buffer, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
+}
+
+Opal_Result opalCmdRaytraceSetShaderBindingTable(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTable shader_binding_table)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdRaytraceSetShaderBindingTable);
+
+	return ptr->vtbl->cmdRaytraceSetShaderBindingTable(device, command_buffer, shader_binding_table);
+}
+
+Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdRaytraceDispatch);
+
+	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, width, height, depth);
+}
+
 Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -980,210 +1242,6 @@ Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_
 	assert(ptr->vtbl->cmdBeginCopyPass);
 
 	return ptr->vtbl->cmdBeginCopyPass(device, command_buffer);
-}
-
-Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdEndCopyPass);
-
-	return ptr->vtbl->cmdEndCopyPass(device, command_buffer);
-}
-
-Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetDescriptorHeap);
-
-	return ptr->vtbl->cmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
-}
-
-Opal_Result opalCmdSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetPipelineLayout);
-
-	return ptr->vtbl->cmdSetPipelineLayout(device, command_buffer, pipeline_layout);
-}
-
-Opal_Result opalCmdSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetPipeline);
-
-	return ptr->vtbl->cmdSetPipeline(device, command_buffer, pipeline);
-}
-
-Opal_Result opalCmdSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetDescriptorSet);
-
-	return ptr->vtbl->cmdSetDescriptorSet(device, command_buffer, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
-}
-
-Opal_Result opalCmdSetShaderBindingTable(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTable shader_binding_table)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetShaderBindingTable);
-
-	return ptr->vtbl->cmdSetShaderBindingTable(device, command_buffer, shader_binding_table);
-}
-
-Opal_Result opalCmdSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetVertexBuffers);
-
-	return ptr->vtbl->cmdSetVertexBuffers(device, command_buffer, num_vertex_buffers, vertex_buffers);
-}
-
-Opal_Result opalCmdSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetIndexBuffer);
-
-	return ptr->vtbl->cmdSetIndexBuffer(device, command_buffer, index_buffer);
-}
-
-Opal_Result opalCmdSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetViewport);
-
-	return ptr->vtbl->cmdSetViewport(device, command_buffer, viewport);
-}
-
-Opal_Result opalCmdSetScissor(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdSetScissor);
-
-	return ptr->vtbl->cmdSetScissor(device, command_buffer, x, y, width, height);
-}
-
-Opal_Result opalCmdDraw(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdDraw);
-
-	return ptr->vtbl->cmdDraw(device, command_buffer, num_vertices, num_instances, base_vertex, base_instance);
-}
-
-Opal_Result opalCmdDrawIndexed(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdDrawIndexed);
-
-	return ptr->vtbl->cmdDrawIndexed(device, command_buffer, num_indices, num_instances, base_index, vertex_offset, base_instance);
-}
-
-Opal_Result opalCmdMeshletDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdMeshletDispatch);
-
-	return ptr->vtbl->cmdMeshletDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
-}
-
-Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdComputeDispatch);
-
-	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
-}
-
-Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdRaytraceDispatch);
-
-	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, width, height, depth);
-}
-
-Opal_Result opalCmdBuildAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdBuildAccelerationStructure);
-
-	return ptr->vtbl->cmdBuildAccelerationStructure(device, command_buffer, desc);
-}
-
-Opal_Result opalCmdCopyAccelerationStructure(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdCopyAccelerationStructure);
-
-	return ptr->vtbl->cmdCopyAccelerationStructure(device, command_buffer, desc);
 }
 
 Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
@@ -1232,6 +1290,66 @@ Opal_Result opalCmdCopyTextureToTexture(Opal_Device device, Opal_CommandBuffer c
 	assert(ptr->vtbl->cmdCopyTextureToTexture);
 
 	return ptr->vtbl->cmdCopyTextureToTexture(device, command_buffer, src, dst, size);
+}
+
+Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdEndCopyPass);
+
+	return ptr->vtbl->cmdEndCopyPass(device, command_buffer);
+}
+
+Opal_Result opalCmdBeginAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdBeginAccelerationStructurePass);
+
+	return ptr->vtbl->cmdBeginAccelerationStructurePass(device, command_buffer);
+}
+
+Opal_Result opalCmdAccelerationStructureBuild(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdAccelerationStructureBuild);
+
+	return ptr->vtbl->cmdAccelerationStructureBuild(device, command_buffer, desc);
+}
+
+Opal_Result opalCmdAccelerationStructureCopy(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdAccelerationStructureCopy);
+
+	return ptr->vtbl->cmdAccelerationStructureCopy(device, command_buffer, desc);
+}
+
+Opal_Result opalCmdEndAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdEndAccelerationStructurePass);
+
+	return ptr->vtbl->cmdEndAccelerationStructurePass(device, command_buffer);
 }
 
 Opal_Result opalCmdBufferTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)

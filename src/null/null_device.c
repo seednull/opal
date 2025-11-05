@@ -6,11 +6,6 @@
 
 /*
  */
-static Opal_Result null_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
-static Opal_Result null_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
-
-/*
- */
 static Opal_Result null_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 {
 	assert(this);
@@ -133,7 +128,7 @@ static Opal_Result null_deviceCreateAccelerationStructure(Opal_Device this, cons
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateShaderBindingTable(Opal_Device this, Opal_Pipeline pipeline, Opal_ShaderBindingTable *shader_binding_table)
+static Opal_Result null_deviceCreateShaderBindingTable(Opal_Device this, Opal_RaytracePipeline pipeline, Opal_ShaderBindingTable *shader_binding_table)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(pipeline);
@@ -150,7 +145,6 @@ static Opal_Result null_deviceCreateCommandAllocator(Opal_Device this, Opal_Queu
 
 	return OPAL_NOT_SUPPORTED;
 }
-
 
 static Opal_Result null_deviceCreateCommandBuffer(Opal_Device this, Opal_CommandAllocator command_allocator, Opal_CommandBuffer *command_buffer)
 {
@@ -199,7 +193,7 @@ static Opal_Result null_deviceCreatePipelineLayout(Opal_Device this, uint32_t nu
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_Pipeline *pipeline)
+static Opal_Result null_deviceCreateGraphicsPipeline(Opal_Device this, const Opal_GraphicsPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -208,7 +202,7 @@ static Opal_Result null_deviceCreateGraphicsPipeline(Opal_Device this, const Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_Pipeline *pipeline)
+static Opal_Result null_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -217,7 +211,7 @@ static Opal_Result null_deviceCreateMeshletPipeline(Opal_Device this, const Opal
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_Pipeline *pipeline)
+static Opal_Result null_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -226,7 +220,7 @@ static Opal_Result null_deviceCreateComputePipeline(Opal_Device this, const Opal
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_Pipeline *pipeline)
+static Opal_Result null_deviceCreateRaytracePipeline(Opal_Device this, const Opal_RaytracePipelineDesc *desc, Opal_RaytracePipeline *pipeline)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(desc);
@@ -348,7 +342,23 @@ static Opal_Result null_deviceDestroyPipelineLayout(Opal_Device this, Opal_Pipel
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceDestroyPipeline(Opal_Device this, Opal_Pipeline pipeline)
+static Opal_Result null_deviceDestroyGraphicsPipeline(Opal_Device this, Opal_GraphicsPipeline pipeline)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(pipeline);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroyComputePipeline(Opal_Device this, Opal_ComputePipeline pipeline)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(pipeline);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroyRaytracePipeline(Opal_Device this, Opal_RaytracePipeline pipeline)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(pipeline);
@@ -539,6 +549,15 @@ static Opal_Result null_devicePresent(Opal_Device this, Opal_Swapchain swapchain
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(descriptor_heap);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
 {
 	OPAL_UNUSED(this);
@@ -546,6 +565,112 @@ static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comman
 	OPAL_UNUSED(num_color_attachments);
 	OPAL_UNUSED(color_attachments);
 	OPAL_UNUSED(depth_stencil_attachment);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(pipeline_layout);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(pipeline);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(index);
+	OPAL_UNUSED(descriptor_set);
+	OPAL_UNUSED(num_dynamic_offsets);
+	OPAL_UNUSED(dynamic_offsets);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(num_vertex_buffers);
+	OPAL_UNUSED(vertex_buffers);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(index_buffer);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetViewport(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(viewport);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetScissor(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(x);
+	OPAL_UNUSED(y);
+	OPAL_UNUSED(width);
+	OPAL_UNUSED(height);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsDraw(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(num_vertices);
+	OPAL_UNUSED(num_instances);
+	OPAL_UNUSED(base_vertex);
+	OPAL_UNUSED(base_instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsDrawIndexed(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(num_indices);
+	OPAL_UNUSED(num_instances);
+	OPAL_UNUSED(base_index);
+	OPAL_UNUSED(vertex_offset);
+	OPAL_UNUSED(base_instance);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -566,6 +691,47 @@ static Opal_Result null_deviceCmdBeginComputePass(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdComputeSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(pipeline_layout);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdComputeSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(pipeline);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(index);
+	OPAL_UNUSED(descriptor_set);
+	OPAL_UNUSED(num_dynamic_offsets);
+	OPAL_UNUSED(dynamic_offsets);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(num_threadgroups_x);
+	OPAL_UNUSED(num_threadgroups_y);
+	OPAL_UNUSED(num_threadgroups_z);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	OPAL_UNUSED(this);
@@ -582,40 +748,7 @@ static Opal_Result null_deviceCmdBeginRaytracePass(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(descriptor_heap);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
+static Opal_Result null_deviceCmdRaytraceSetPipelineLayout(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -624,7 +757,7 @@ static Opal_Result null_deviceCmdSetPipelineLayout(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Pipeline pipeline)
+static Opal_Result null_deviceCmdRaytraceSetPipeline(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -633,7 +766,7 @@ static Opal_Result null_deviceCmdSetPipeline(Opal_Device this, Opal_CommandBuffe
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result null_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -645,98 +778,11 @@ static Opal_Result null_deviceCmdSetDescriptorSet(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdSetShaderBindingTable(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTable shader_binding_table)
+static Opal_Result null_deviceCmdRaytraceSetShaderBindingTable(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_ShaderBindingTable shader_binding_table)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(shader_binding_table);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_vertex_buffers);
-	OPAL_UNUSED(vertex_buffers);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdSetIndexBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(index_buffer);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdSetViewport(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_Viewport viewport)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(viewport);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdSetScissor(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(x);
-	OPAL_UNUSED(y);
-	OPAL_UNUSED(width);
-	OPAL_UNUSED(height);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdDraw(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertices, uint32_t num_instances, uint32_t base_vertex, uint32_t base_instance)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_vertices);
-	OPAL_UNUSED(num_instances);
-	OPAL_UNUSED(base_vertex);
-	OPAL_UNUSED(base_instance);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdDrawIndexed(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_indices, uint32_t num_instances, uint32_t base_index, int32_t vertex_offset, uint32_t base_instance)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_indices);
-	OPAL_UNUSED(num_instances);
-	OPAL_UNUSED(base_index);
-	OPAL_UNUSED(vertex_offset);
-	OPAL_UNUSED(base_instance);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdMeshletDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_threadgroups_x);
-	OPAL_UNUSED(num_threadgroups_y);
-	OPAL_UNUSED(num_threadgroups_z);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_threadgroups_x);
-	OPAL_UNUSED(num_threadgroups_y);
-	OPAL_UNUSED(num_threadgroups_z);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -752,20 +798,18 @@ static Opal_Result null_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBuildAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
+static Opal_Result null_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdCopyAccelerationStructure(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
+static Opal_Result null_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -816,6 +860,48 @@ static Opal_Result null_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdBeginAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdAccelerationStructureBuild(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(desc);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdAccelerationStructureCopy(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(desc);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdEndAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
 {
 	OPAL_UNUSED(this);
@@ -845,7 +931,6 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceGetInfo,
 	null_deviceGetQueue,
 	null_deviceGetAccelerationStructurePrebuildInfo,
-
 	null_deviceGetSupportedSurfaceFormats,
 	null_deviceGetSupportedPresentModes,
 	null_deviceGetPreferredSurfaceFormat,
@@ -883,7 +968,9 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceDestroyDescriptorHeap,
 	null_deviceDestroyDescriptorSetLayout,
 	null_deviceDestroyPipelineLayout,
-	null_deviceDestroyPipeline,
+	null_deviceDestroyGraphicsPipeline,
+	null_deviceDestroyComputePipeline,
+	null_deviceDestroyRaytracePipeline,
 	null_deviceDestroySwapchain,
 	null_deviceDestroy,
 
@@ -907,34 +994,48 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceAcquire,
 	null_devicePresent,
 
-	null_deviceCmdBeginGraphicsPass,
-	null_deviceCmdEndGraphicsPass,
-	null_deviceCmdBeginComputePass,
-	null_deviceCmdEndComputePass,
-	null_deviceCmdBeginRaytracePass,
-	null_deviceCmdEndRaytracePass,
-	null_deviceCmdBeginCopyPass,
-	null_deviceCmdEndCopyPass,
 	null_deviceCmdSetDescriptorHeap,
-	null_deviceCmdSetPipelineLayout,
-	null_deviceCmdSetPipeline,
-	null_deviceCmdSetDescriptorSet,
-	null_deviceCmdSetShaderBindingTable,
-	null_deviceCmdSetVertexBuffers,
-	null_deviceCmdSetIndexBuffer,
-	null_deviceCmdSetViewport,
-	null_deviceCmdSetScissor,
-	null_deviceCmdDraw,
-	null_deviceCmdDrawIndexed,
-	null_deviceCmdMeshletDispatch,
+
+	null_deviceCmdBeginGraphicsPass,
+	null_deviceCmdGraphicsSetPipelineLayout,
+	null_deviceCmdGraphicsSetPipeline,
+	null_deviceCmdGraphicsSetDescriptorSet,
+	null_deviceCmdGraphicsSetVertexBuffers,
+	null_deviceCmdGraphicsSetIndexBuffer,
+	null_deviceCmdGraphicsSetViewport,
+	null_deviceCmdGraphicsSetScissor,
+	null_deviceCmdGraphicsDraw,
+	null_deviceCmdGraphicsDrawIndexed,
+	null_deviceCmdGraphicsMeshletDispatch,
+	null_deviceCmdEndGraphicsPass,
+
+	null_deviceCmdBeginComputePass,
+	null_deviceCmdComputeSetPipelineLayout,
+	null_deviceCmdComputeSetPipeline,
+	null_deviceCmdComputeSetDescriptorSet,
 	null_deviceCmdComputeDispatch,
+	null_deviceCmdEndComputePass,
+
+	null_deviceCmdBeginRaytracePass,
+	null_deviceCmdRaytraceSetPipelineLayout,
+	null_deviceCmdRaytraceSetPipeline,
+	null_deviceCmdRaytraceSetDescriptorSet,
+	null_deviceCmdRaytraceSetShaderBindingTable,
 	null_deviceCmdRaytraceDispatch,
-	null_deviceCmdBuildAccelerationStructure,
-	null_deviceCmdCopyAccelerationStructure,
+	null_deviceCmdEndRaytracePass,
+
+	null_deviceCmdBeginCopyPass,
 	null_deviceCmdCopyBufferToBuffer,
 	null_deviceCmdCopyBufferToTexture,
 	null_deviceCmdCopyTextureToBuffer,
 	null_deviceCmdCopyTextureToTexture,
+	null_deviceCmdEndCopyPass,
+
+	null_deviceCmdBeginAccelerationStructurePass,
+	null_deviceCmdAccelerationStructureBuild,
+	null_deviceCmdAccelerationStructureCopy,
+	null_deviceCmdEndAccelerationStructurePass,
+
 	null_deviceCmdBufferTransitionBarrier,
 	null_deviceCmdTextureTransitionBarrier,
 };

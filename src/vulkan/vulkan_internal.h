@@ -125,7 +125,9 @@ typedef struct Vulkan_Device_t
 	Opal_Pool descriptor_set_layouts;
 	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
-	Opal_Pool pipelines;
+	Opal_Pool graphics_pipelines;
+	Opal_Pool compute_pipelines;
+	Opal_Pool raytrace_pipelines;
 	Opal_Pool swapchains;
 
 #ifdef OPAL_HAS_VMA
@@ -213,7 +215,7 @@ typedef struct Vulkan_ShaderBindingTable_t
 	uint32_t num_raygen_handles;
 	uint32_t num_miss_handles;
 	uint32_t num_intersection_handles;
-	Opal_Pipeline pipeline;
+	Opal_RaytracePipeline pipeline;
 #ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
 #endif
@@ -229,7 +231,6 @@ typedef struct Vulkan_CommandBuffer_t
 {
 	VkCommandBuffer command_buffer;
 	Opal_PipelineLayout pipeline_layout;
-	VkPipelineBindPoint pipeline_bind_point;
 	VkDeviceAddress raygen_entry;
 	VkDeviceAddress miss_entry;
 	VkDeviceAddress intersection_entry;
@@ -283,15 +284,24 @@ typedef struct Vulkan_PipelineLayout_t
 	uint32_t num_dynamic_descriptors;
 } Vulkan_PipelineLayout;
 
-typedef struct Vulkan_Pipeline_t
+typedef struct Vulkan_GraphicsPipeline_t
 {
 	VkPipeline pipeline;
-	VkPipelineBindPoint bind_point;
+} Vulkan_GraphicsPipeline;
+
+typedef struct Vulkan_ComputePipeline_t
+{
+	VkPipeline pipeline;
+} Vulkan_ComputePipeline;
+
+typedef struct Vulkan_RaytracePipeline_t
+{
+	VkPipeline pipeline;
 	uint32_t num_raygen_handles;
 	uint32_t num_miss_handles;
 	uint32_t num_intersection_handles;
 	void *shader_handles;
-} Vulkan_Pipeline;
+} Vulkan_RaytracePipeline;
 
 typedef struct Vulkan_Surface_t
 {

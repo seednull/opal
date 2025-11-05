@@ -30,6 +30,9 @@ typedef enum DirectX12_PassType_t
 	DIRECTX12_PASS_TYPE_NONE = 0,
 	DIRECTX12_PASS_TYPE_GRAPHICS,
 	DIRECTX12_PASS_TYPE_COMPUTE,
+	DIRECTX12_PASS_TYPE_RAYTRACE,
+	DIRECTX12_PASS_TYPE_COPY,
+	DIRECTX12_PASS_TYPE_ACCELERATION_STRUCTURE,
 
 	DIRECTX12_PASS_TYPE_ENUM_MAX,
 	DIRECTX12_PASS_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
@@ -129,7 +132,9 @@ typedef struct DirectX12_Device_t
 	Opal_Pool descriptor_set_layouts;
 	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
-	Opal_Pool pipelines;
+	Opal_Pool graphics_pipelines;
+	Opal_Pool compute_pipelines;
+	Opal_Pool raytrace_pipelines;
 	Opal_Pool swapchains;
 
 	DirectX12_Allocator allocator;
@@ -207,7 +212,7 @@ typedef struct DirectX12_ShaderBindingTable_t
 	uint32_t num_raygen_handles;
 	uint32_t num_intersection_handles;
 	uint32_t num_miss_handles;
-	Opal_Pipeline pipeline;
+	Opal_RaytracePipeline pipeline;
 	DirectX12_Allocation allocation;
 } DirectX12_ShaderBindingTable;
 
@@ -284,17 +289,25 @@ typedef struct DirectX12_PipelineLayout_t
 	uint32_t inline_offset;
 } DirectX12_PipelineLayout;
 
-typedef struct DirectX12_Pipeline_t
+typedef struct DirectX12_GraphicsPipeline_t
 {
 	ID3D12PipelineState *pipeline_state;
-	ID3D12StateObject *state_object;
-	ID3D12RootSignature *root_signature;
 	D3D12_PRIMITIVE_TOPOLOGY primitive_topology;
+} DirectX12_GraphicsPipeline;
+
+typedef struct DirectX12_ComputePipeline_t
+{
+	ID3D12PipelineState *pipeline_state;
+} DirectX12_ComputePipeline;
+
+typedef struct DirectX12_RaytracePipeline_t
+{
+	ID3D12StateObject *state_object;
 	uint32_t num_raygen_handles;
 	uint32_t num_intersection_handles;
 	uint32_t num_miss_handles;
 	void *shader_handles;
-} DirectX12_Pipeline;
+} DirectX12_RaytracePipeline;
 
 typedef struct DirectX12_Surface_t
 {
