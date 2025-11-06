@@ -3104,13 +3104,19 @@ static Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buf
 
 static Opal_Result directx12_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(offset);
-	OPAL_UNUSED(data);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(buffer);
+	assert(data);
+	assert(size > 0);
 
-	return OPAL_NOT_SUPPORTED;
+	uint8_t *ptr = NULL;
+	Opal_Result result = directx12_deviceMapBuffer(this, buffer, &ptr);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	memcpy(ptr + offset, data, size);
+
+	return directx12_deviceUnmapBuffer(this, buffer);
 }
 
 static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries)
