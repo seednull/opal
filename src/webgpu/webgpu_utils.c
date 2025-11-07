@@ -757,7 +757,7 @@ WGPUIndexFormat webgpu_helperToIndexFormat(Opal_IndexFormat format)
 
 /*
  */
-Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
+Opal_Result webgpu_helperFillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info)
 {
 	assert(adapter);
 	assert(info);

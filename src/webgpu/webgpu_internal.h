@@ -175,6 +175,10 @@ typedef struct WebGPU_Swapchain_t
 	uint64_t wait_value;
 } WebGPU_Swapchain;
 
+Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *instance_ptr, WGPUAdapter adapter, WGPUDevice device, WGPUQueue queue);
+
+Opal_Result webgpu_helperFillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info);
+
 WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opal_AllocationMemoryType memory_type);
 
 WGPUTextureUsageFlags webgpu_helperToTextureUsage(Opal_TextureUsageFlags flags);
@@ -215,6 +219,3 @@ WGPULoadOp webgpu_helperToLoadOp(Opal_LoadOp op);
 WGPUStoreOp webgpu_helperToStoreOp(Opal_StoreOp op);
 
 WGPUIndexFormat webgpu_helperToIndexFormat(Opal_IndexFormat format);
-
-Opal_Result webgpu_fillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *info);
-Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *instance_ptr, WGPUAdapter adapter, WGPUDevice device, WGPUQueue queue);

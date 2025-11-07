@@ -192,7 +192,7 @@ static Opal_Result webgpu_deviceGetInfo(Opal_Device this, Opal_DeviceInfo *info)
 	assert(info);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
-	return webgpu_fillDeviceInfo(device_ptr->adapter, info);
+	return webgpu_helperFillDeviceInfo(device_ptr->adapter, info);
 }
 
 static Opal_Result webgpu_deviceGetQueue(Opal_Device this, Opal_DeviceEngineType engine_type, uint32_t index, Opal_Queue *queue)
