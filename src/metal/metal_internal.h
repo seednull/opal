@@ -96,7 +96,8 @@ typedef struct Metal_Device_t
 	Opal_Pool descriptor_set_layouts;
 	Opal_Pool descriptor_sets;
 	Opal_Pool pipeline_layouts;
-	Opal_Pool pipelines;
+	Opal_Pool graphics_pipelines;
+	Opal_Pool compute_pipelines;
 	Opal_Pool swapchains;
 
 	Metal_Allocator allocator;
@@ -166,6 +167,8 @@ typedef struct Metal_CommandBuffer_t
 	MTLSize threadgroup_size;
 
 	id<MTLBlitCommandEncoder> copy_pass_encoder;
+	id<MTLAccelerationStructureCommandEncoder> acceleration_structure_pass_encoder;
+
 	Opal_Queue queue;
 	Opal_CommandAllocator command_allocator;
 } Metal_CommandBuffer;
@@ -219,18 +222,21 @@ typedef struct Metal_PipelineLayout_t
 	uint32_t vertex_binding_offset;
 } Metal_PipelineLayout;
 
-typedef struct Metal_Pipeline_t
+typedef struct Metal_GraphicsPipeline_t
 {
-	id<MTLComputePipelineState> compute_pipeline;
-	MTLSize threadgroup_size;
-
-	id<MTLRenderPipelineState> render_pipeline;
+	id<MTLRenderPipelineState> pipeline;
 	id<MTLDepthStencilState> depth_stencil_state;
 	MTLPrimitiveType primitive_type;
 	MTLCullMode cull_mode;
 	MTLWinding winding;
 	MTLIndexType index_format;
-} Metal_Pipeline;
+} Metal_GraphicsPipeline;
+
+typedef struct Metal_ComputePipeline_t
+{
+	id<MTLComputePipelineState> pipeline;
+	MTLSize threadgroup_size;
+} Metal_ComputePipeline;
 
 typedef struct Metal_Swapchain_t
 {
@@ -246,6 +252,8 @@ typedef struct Metal_Surface_t
 {
 	CAMetalLayer *layer;
 } Metal_Surface;
+
+Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *instance_ptr, id<MTLDevice> metal_device);
 
 Opal_Result metal_helperFillDeviceEnginesInfo(Metal_DeviceEnginesInfo *info);
 Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceInfo *info);
@@ -286,9 +294,6 @@ MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op);
 MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op);
 
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space);
-
-Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *instance_ptr, id<MTLDevice> metal_device);
-Opal_Result metal_deviceAllocateMemory(Metal_Device *device_ptr, const Metal_AllocationDesc *desc, Metal_Allocation *allocation);
 
 Opal_Result metal_allocatorInitialize(Metal_Device *device, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps);
 Opal_Result metal_allocatorShutdown(Metal_Device *device);
