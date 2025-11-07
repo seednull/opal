@@ -677,7 +677,6 @@ void Application::buildPipeline()
 		assert(result == OPAL_SUCCESS);
 	}
 }
-#endif
 
 void Application::buildSBT()
 {
@@ -702,6 +701,7 @@ void Application::buildSBT()
 	result = opalBuildShaderBindingTable(device, sbt, &sbt_build_desc);
 	assert(result == OPAL_SUCCESS);
 }
+#endif
 
 void Application::buildBLAS()
 {
