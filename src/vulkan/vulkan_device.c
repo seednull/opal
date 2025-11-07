@@ -4147,6 +4147,7 @@ static Opal_Result vulkan_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Comman
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == VULKAN_PASS_TYPE_GRAPHICS);
 
+	device_ptr->vk.vkCmdEndRenderingKHR(command_buffer_ptr->command_buffer);
 	command_buffer_ptr->pass = VULKAN_PASS_TYPE_NONE;
 	return OPAL_SUCCESS;
 }
