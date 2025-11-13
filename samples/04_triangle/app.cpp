@@ -139,7 +139,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc = {};
 	swapchain_desc.surface = surface;
-	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED);
+	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
 
 	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
 	assert(result == OPAL_SUCCESS);
@@ -153,10 +153,11 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	// buffers
 	Opal_BufferDesc triangle_buffer_desc =
 	{
-		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_VERTEX | OPAL_BUFFER_USAGE_INDEX | OPAL_BUFFER_USAGE_TRANSFER_DST),
 		sizeof(TriangleData),
 		OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL,
 		OPAL_ALLOCATION_HINT_AUTO,
+		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_VERTEX | OPAL_BUFFER_USAGE_INDEX | OPAL_BUFFER_USAGE_COPY_DST),
+		OPAL_BUFFER_STATE_GENERIC_READ,
 	};
 
 	result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
@@ -165,10 +166,11 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	// copy
 	Opal_BufferDesc staging_buffer_desc =
 	{
-		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_TRANSFER_SRC),
 		sizeof(TriangleData),
 		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 		OPAL_ALLOCATION_HINT_AUTO,
+		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_COPY_SRC),
+		OPAL_BUFFER_STATE_GENERIC_READ,
 	};
 
 	Opal_Buffer staging_buffer = OPAL_NULL_HANDLE;
@@ -202,14 +204,14 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalCmdBeginCopyPass(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_GENERIC_READ, OPAL_RESOURCE_STATE_COPY_DEST);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_GENERIC_READ, OPAL_RESOURCE_STATE_COPY_DEST);
+	// assert(result == OPAL_SUCCESS);
 
 	result = opalCmdCopyBufferToBuffer(device, staging_command_buffer, staging_buffer, 0, triangle_buffer, 0, sizeof(TriangleData));
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_GENERIC_READ);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_GENERIC_READ);
+	// assert(result == OPAL_SUCCESS);
 
 	result = opalCmdEndCopyPass(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
@@ -370,7 +372,7 @@ void Application::resize(uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc = {};
 	swapchain_desc.surface = surface;
-	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT | OPAL_TEXTURE_USAGE_SHADER_SAMPLED);
+	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
 
 	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
 	assert(result == OPAL_SUCCESS);
@@ -411,10 +413,14 @@ void Application::render()
 		{0.4f, 0.4f, 0.4f, 1.0f}
 	};
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
-	assert(result == OPAL_SUCCESS);
+	Opal_FramebufferDesc framebuffer = {};
+	framebuffer.color_attachments = &attachments;
+	framebuffer.num_color_attachments = 1;
 
-	result = opalCmdBeginGraphicsPass(device, command_buffer, 1, &attachments, NULL);
+	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
+	// assert(result == OPAL_SUCCESS);
+
+	result = opalCmdBeginGraphicsPass(device, command_buffer, &framebuffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdGraphicsSetPipelineLayout(device, command_buffer, pipeline_layout);
@@ -451,8 +457,8 @@ void Application::render()
 	result = opalCmdEndGraphicsPass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
+	// assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);

@@ -9,10 +9,11 @@ void testBuffers(Opal_Device device)
 
 	Opal_BufferDesc desc =
 	{
-		OPAL_BUFFER_USAGE_TRANSFER_SRC,
 		16,
 		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 		OPAL_ALLOCATION_HINT_AUTO,
+		OPAL_BUFFER_USAGE_COPY_SRC,
+		OPAL_BUFFER_STATE_GENERIC_READ,
 	};
 
 	Opal_Result result = opalCreateBuffer(device, &desc, &buffers[0]);

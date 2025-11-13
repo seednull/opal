@@ -157,7 +157,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc = {};
 	swapchain_desc.surface = surface;
-	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_TRANSFER_DST);
+	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_COPY_DST);
 
 	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
 	assert(result == OPAL_SUCCESS);
@@ -187,10 +187,11 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	constexpr uint64_t camera_buffer_size = 256;
 	Opal_BufferDesc buffer_desc =
 	{
-		OPAL_BUFFER_USAGE_UNIFORM,
 		camera_buffer_size,
 		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 		OPAL_ALLOCATION_HINT_AUTO,
+		OPAL_BUFFER_USAGE_UNIFORM,
+		OPAL_BUFFER_STATE_GENERIC_READ,
 	};
 
 	result = opalCreateBuffer(device, &buffer_desc, &camera_buffer);
@@ -217,7 +218,8 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		frame_texture_desc.mip_count = 1;
 		frame_texture_desc.layer_count = 1;
 		frame_texture_desc.samples = OPAL_SAMPLES_1;
-		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_TRANSFER_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
+		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_COPY_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
+		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_COPY_SRC;
 		frame_texture_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 
 		result = opalCreateTexture(device, &frame_texture_desc, &frame_textures[i]);
@@ -379,7 +381,7 @@ void Application::resize(uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc = {};
 	swapchain_desc.surface = surface;
-	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_TRANSFER_DST);
+	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_COPY_DST);
 
 	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
 	assert(result == OPAL_SUCCESS);
@@ -401,7 +403,8 @@ void Application::resize(uint32_t w, uint32_t h)
 		frame_texture_desc.mip_count = 1;
 		frame_texture_desc.layer_count = 1;
 		frame_texture_desc.samples = OPAL_SAMPLES_1;
-		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_TRANSFER_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
+		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_COPY_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
+		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_COPY_SRC;
 		frame_texture_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 
 		result = opalCreateTexture(device, &frame_texture_desc, &frame_textures[i]);
@@ -448,8 +451,8 @@ void Application::render()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_COPY_SOURCE, OPAL_RESOURCE_STATE_UNORDERED_ACCESS);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_COPY_SOURCE, OPAL_RESOURCE_STATE_UNORDERED_ACCESS);
+	// assert(result == OPAL_SUCCESS);
 
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 	assert(result == OPAL_SUCCESS);
@@ -498,11 +501,11 @@ void Application::render()
 	result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_UNORDERED_ACCESS, OPAL_RESOURCE_STATE_COPY_SOURCE);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_UNORDERED_ACCESS, OPAL_RESOURCE_STATE_COPY_SOURCE);
+	// assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_COPY_DEST);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_COPY_DEST);
+	// assert(result == OPAL_SUCCESS);
 
 	Opal_TextureRegion src = { frame_texture_view, 0, 0, 0 };
 	Opal_TextureRegion dst = { swapchain_texture_view, 0, 0, 0 };
@@ -517,8 +520,8 @@ void Application::render()
 	result = opalCmdEndCopyPass(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_PRESENT);
-	assert(result == OPAL_SUCCESS);
+	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_PRESENT);
+	// assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
@@ -755,10 +758,11 @@ void Application::buildBLAS()
 
 	// create acceleration structure
 	buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_STORAGE);
 	buffer_desc.size = blas_build_info.build_scratch_size;
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
 	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
+	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_UNORDERED_ACCESS);
+	buffer_desc.initial_state = OPAL_BUFFER_STATE_UNORDERED_ACCESS;
 
 	Opal_Buffer scratch_buffer = OPAL_NULL_HANDLE;
 	result = opalCreateBuffer(device, &buffer_desc, &scratch_buffer);
@@ -831,10 +835,11 @@ void Application::buildTLAS()
 	tlas_instance.mask = 0xFF;
 
 	Opal_BufferDesc buffer_desc = {};
-	buffer_desc.usage = OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT;
 	buffer_desc.size = device_info.features.acceleration_structure_instance_size;
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD;
 	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
+	buffer_desc.usage = OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT;
+	buffer_desc.initial_state = OPAL_BUFFER_STATE_GENERIC_READ;
 
 	Opal_Buffer instance_buffer = OPAL_NULL_HANDLE;
 	Opal_Result result = opalCreateBuffer(device, &buffer_desc, &instance_buffer);
@@ -863,10 +868,11 @@ void Application::buildTLAS()
 
 	// create acceleration structure
 	buffer_desc = {};
-	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_STORAGE);
 	buffer_desc.size = tlas_build_info.build_scratch_size;
 	buffer_desc.memory_type = OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL;
 	buffer_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
+	buffer_desc.usage = (Opal_BufferUsageFlags)(OPAL_BUFFER_USAGE_UNORDERED_ACCESS);
+	buffer_desc.initial_state = OPAL_BUFFER_STATE_UNORDERED_ACCESS;
 
 	Opal_Buffer scratch_buffer = OPAL_NULL_HANDLE;
 	result = opalCreateBuffer(device, &buffer_desc, &scratch_buffer);

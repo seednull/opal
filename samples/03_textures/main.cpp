@@ -16,8 +16,9 @@ void testTextures(Opal_Device device)
 		1,
 		1,
 		OPAL_SAMPLES_1,
-		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT),
 		OPAL_ALLOCATION_HINT_AUTO,
+		(Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT),
+		OPAL_TEXTURE_STATE_SHADER_SAMPLED,
 	};
 
 	Opal_Result result = opalCreateTexture(device, &desc, &textures[0]);
