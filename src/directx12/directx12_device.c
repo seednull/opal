@@ -618,11 +618,9 @@ static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_Buf
 	buffer_info.Format = DXGI_FORMAT_UNKNOWN;
 	buffer_info.SampleDesc.Count = 1;
 	buffer_info.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	buffer_info.Flags = directx12_helperToBufferFlags(desc->memory_type, desc->usage);
 
-	if (desc->memory_type == OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL && desc->usage & OPAL_BUFFER_USAGE_STORAGE)
-		buffer_info.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-	D3D12_RESOURCE_STATES initial_state = directx12_helperToInitialBufferResourceState(desc->memory_type, desc->usage);
+	D3D12_RESOURCE_STATES initial_state = directx12_helperToBufferState(desc->memory_type, desc->usage, desc->initial_state);
 	Opal_Result opal_result = directx12_createBuffer(device_ptr, &buffer_info, initial_state, desc->memory_type, desc->hint, &d3d12_buffer, &allocation);
 	if (opal_result != OPAL_SUCCESS)
 		return opal_result;
@@ -660,7 +658,7 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	texture_info.Format = directx12_helperToDXGITextureFormat(desc->format);
 	texture_info.SampleDesc.Count = directx12_helperToSampleCount(desc->samples);
 	texture_info.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	texture_info.Flags = directx12_helperToTextureFlags(desc->usage, desc->format);
+	texture_info.Flags = directx12_helperToTextureFlags(desc->format, desc->usage);
 
 	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = {0};
 	ID3D12Device_GetResourceAllocationInfo(d3d12_device, &allocation_info, 0, 1, &texture_info);
@@ -679,7 +677,7 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 
 	assert(allocation.offset % allocation_info.Alignment == 0);
 
-	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	D3D12_RESOURCE_STATES initial_state = directx12_helperToTextureState(desc->format, desc->usage, desc->initial_state);
 	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &texture_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_texture);
 	if (!SUCCEEDED(hr))
 	{
@@ -3620,10 +3618,11 @@ static Opal_Result directx12_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_C
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
+static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
+	assert(desc);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	ID3D12Device *d3d12_device = device_ptr->device;
@@ -3639,15 +3638,15 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	UINT num_resolve_parameters = 0;
 	memset(command_buffer_ptr->resolve_parameters, 0, sizeof(D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS) * 9);
 
-	if (num_color_attachments > 0)
+	if (desc->num_color_attachments > 0)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_start = {0};
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(device_ptr->framebuffer_descriptor_heap.rtv_heap, &rtv_start);
 		UINT stride = ID3D12Device_GetDescriptorHandleIncrementSize(d3d12_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-		for (uint32_t i = 0; i < num_color_attachments; ++i)
+		for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
 		{
-			const Opal_FramebufferAttachment *opal_attachment = &color_attachments[i];
+			const Opal_FramebufferAttachment *opal_attachment = &desc->color_attachments[i];
 			const DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 			assert(texture_view_ptr);
 
@@ -3691,29 +3690,31 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depth_stencil_target = {0};
 	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC *depth_stencil_ptr = NULL;
 
-	if (depth_stencil_attachment)
+	if (desc->depth_stencil_attachment)
 	{
-		const DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)depth_stencil_attachment->texture_view);
+		const Opal_FramebufferAttachment *opal_attachment = desc->depth_stencil_attachment;
+
+		const DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
 
-		const DirectX12_TextureView *resolve_texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)depth_stencil_attachment->resolve_texture_view);
+		const DirectX12_TextureView *resolve_texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
 
 		// descriptor
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(device_ptr->framebuffer_descriptor_heap.dsv_heap, &depth_stencil_target.cpuDescriptor);
 		ID3D12Device_CreateDepthStencilView(d3d12_device, texture_view_ptr->texture, &texture_view_ptr->dsv_desc, depth_stencil_target.cpuDescriptor);
 
 		// beginning access
-		depth_stencil_target.DepthBeginningAccess.Type = directx12_helperToBeginningAccessType(depth_stencil_attachment->load_op);
+		depth_stencil_target.DepthBeginningAccess.Type = directx12_helperToBeginningAccessType(opal_attachment->load_op);
 		depth_stencil_target.DepthBeginningAccess.Clear.ClearValue.Format = texture_view_ptr->rtv_desc.Format;
-		depth_stencil_target.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth = depth_stencil_attachment->clear_value.depth_stencil.depth;
+		depth_stencil_target.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth = opal_attachment->clear_value.depth_stencil.depth;
 
-		depth_stencil_target.StencilBeginningAccess.Type = directx12_helperToBeginningAccessType(depth_stencil_attachment->load_op);
+		depth_stencil_target.StencilBeginningAccess.Type = directx12_helperToBeginningAccessType(opal_attachment->load_op);
 		depth_stencil_target.StencilBeginningAccess.Clear.ClearValue.Format = texture_view_ptr->rtv_desc.Format;
-		depth_stencil_target.StencilBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = (UINT8)depth_stencil_attachment->clear_value.depth_stencil.stencil;
+		depth_stencil_target.StencilBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = (UINT8)opal_attachment->clear_value.depth_stencil.stencil;
 
 		// ending access
-		depth_stencil_target.DepthEndingAccess.Type = directx12_helperToEndingAccessType(depth_stencil_attachment->store_op);
-		depth_stencil_target.StencilEndingAccess.Type = directx12_helperToEndingAccessType(depth_stencil_attachment->store_op);
+		depth_stencil_target.DepthEndingAccess.Type = directx12_helperToEndingAccessType(opal_attachment->store_op);
+		depth_stencil_target.StencilEndingAccess.Type = directx12_helperToEndingAccessType(opal_attachment->store_op);
 
 		if (resolve_texture_view_ptr)
 		{
@@ -3727,7 +3728,7 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 			depth_stencil_target.DepthEndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
 			depth_stencil_target.DepthEndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
 			depth_stencil_target.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-			depth_stencil_target.DepthEndingAccess.Resolve.PreserveResolveSource = (depth_stencil_attachment->store_op == OPAL_STORE_OP_STORE);
+			depth_stencil_target.DepthEndingAccess.Resolve.PreserveResolveSource = (opal_attachment->store_op == OPAL_STORE_OP_STORE);
 
 			depth_stencil_target.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
 			depth_stencil_target.StencilEndingAccess.Resolve.pSrcResource = texture_view_ptr->texture;
@@ -3736,14 +3737,14 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 			depth_stencil_target.StencilEndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
 			depth_stencil_target.StencilEndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
 			depth_stencil_target.StencilEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-			depth_stencil_target.StencilEndingAccess.Resolve.PreserveResolveSource = (depth_stencil_attachment->store_op == OPAL_STORE_OP_STORE);
+			depth_stencil_target.StencilEndingAccess.Resolve.PreserveResolveSource = (opal_attachment->store_op == OPAL_STORE_OP_STORE);
 		}
 
 		depth_stencil_ptr = &depth_stencil_target;
 	}
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_GRAPHICS;
-	ID3D12GraphicsCommandList4_BeginRenderPass(d3d12_command_buffer, num_color_attachments, color_ptrs, depth_stencil_ptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+	ID3D12GraphicsCommandList4_BeginRenderPass(d3d12_command_buffer, desc->num_color_attachments, color_ptrs, depth_stencil_ptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 	return OPAL_SUCCESS;
 }
 
@@ -4849,55 +4850,6 @@ static Opal_Result directx12_deviceCmdEndAccelerationStructurePass(Opal_Device t
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	assert(this);
-	assert(command_buffer);
-	assert(buffer.buffer);
-
-	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
-
-	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer.buffer);
-	assert(buffer_ptr);
-
-	D3D12_RESOURCE_BARRIER barrier = {0};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Transition.pResource = buffer_ptr->buffer;
-	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier.Transition.StateBefore = directx12_helperToResourceState(state_before);
-	barrier.Transition.StateAfter = directx12_helperToResourceState(state_after);
-
-	ID3D12GraphicsCommandList4_ResourceBarrier(command_buffer_ptr->list, 1, &barrier);
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result directx12_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	assert(this);
-	assert(command_buffer);
- 
-	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
-
-	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)texture_view);
-	assert(texture_view_ptr);
-
-	D3D12_RESOURCE_BARRIER barrier = {0};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Transition.pResource = texture_view_ptr->texture;
-	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier.Transition.StateBefore = directx12_helperToResourceState(state_before);
-	barrier.Transition.StateAfter = directx12_helperToResourceState(state_after);
-
-	ID3D12GraphicsCommandList4_ResourceBarrier(command_buffer_ptr->list, 1, &barrier);
-	return OPAL_SUCCESS;
-}
-
 /*
  */
 static Opal_DeviceTable device_vtbl =
@@ -5009,9 +4961,6 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdAccelerationStructureBuild,
 	directx12_deviceCmdAccelerationStructureCopy,
 	directx12_deviceCmdEndAccelerationStructurePass,
-
-	directx12_deviceCmdBufferTransitionBarrier,
-	directx12_deviceCmdTextureTransitionBarrier,
 };
 
 /*

@@ -194,36 +194,6 @@ typedef enum Opal_AllocationHint_t
 	OPAL_ALLOCATION_HINT_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_AllocationHint;
 
-// TODO: think about either removing this and using Opal_BufferUsageFlags / Opal_ImageUsageFlags directly in barriers
-//       or keep only Opal_ResourceState and use it in opalCreateBuffer / opalCreateImage
-typedef enum Opal_ResourceState_t
-{
-	OPAL_RESOURCE_STATE_COMMON = 0x00000000,
-	OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER = 0x00000001,
-	OPAL_RESOURCE_STATE_INDEX_BUFFER = 0x00000002,
-	OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT = 0x00000004,
-	OPAL_RESOURCE_STATE_UNORDERED_ACCESS = 0x00000008,
-	OPAL_RESOURCE_STATE_DEPTH_STENCIL_WRITE = 0x00000010,
-	OPAL_RESOURCE_STATE_DEPTH_STENCIL_READ = 0x00000020,
-	OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE = 0x00000040,
-	OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE = 0x00000080,
-	OPAL_RESOURCE_STATE_COPY_DEST = 0x00000100,
-	OPAL_RESOURCE_STATE_COPY_SOURCE = 0x00000200,
-	OPAL_RESOURCE_STATE_RESOLVE_DEST = 0x00000400,
-	OPAL_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 0x00000800,
-	OPAL_RESOURCE_STATE_PRESENT = 0x00001000,
-
-	OPAL_RESOURCE_STATE_GENERIC_READ = (
-		OPAL_RESOURCE_STATE_VERTEX_AND_UNIFORM_BUFFER
-		| OPAL_RESOURCE_STATE_INDEX_BUFFER
-		| OPAL_RESOURCE_STATE_NON_FRAGMENT_SHADER_RESOURCE
-		| OPAL_RESOURCE_STATE_FRAGMENT_SHADER_RESOURCE
-		| OPAL_RESOURCE_STATE_COPY_SOURCE
-	),
-
-	OPAL_RESOURCE_STATE_ENUM_FORCE32 = 0x7FFFFFFF,
-} Opal_ResourceState;
-
 typedef enum Opal_AccelerationStructureType_t
 {
 	OPAL_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL = 0,
@@ -292,27 +262,53 @@ typedef enum Opal_AccelerationStructureCopyMode_t
 	OPAL_ACCELERATION_STRUCTURE_COPY_MODE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_AccelerationStructureCopyMode;
 
+typedef enum Opal_BufferState_t
+{
+	OPAL_BUFFER_STATE_GENERIC_READ = 0,
+	OPAL_BUFFER_STATE_UNORDERED_ACCESS,
+	OPAL_BUFFER_STATE_COPY_DST,
+
+	OPAL_BUFFER_STATE_ENUM_MAX,
+	OPAL_BUFFER_STATE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_BufferState;
+
 typedef enum Opal_BufferUsageFlags_t
 {
-	OPAL_BUFFER_USAGE_TRANSFER_SRC = 0x00000001,
-	OPAL_BUFFER_USAGE_TRANSFER_DST = 0x00000002,
-	OPAL_BUFFER_USAGE_VERTEX = 0x00000004,
-	OPAL_BUFFER_USAGE_INDEX = 0x00000008,
-	OPAL_BUFFER_USAGE_UNIFORM = 0x00000010,
-	OPAL_BUFFER_USAGE_STORAGE = 0x00000020,
-	OPAL_BUFFER_USAGE_INDIRECT = 0x00000040,
-	OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT = 0x00000080,
+	OPAL_BUFFER_USAGE_VERTEX = 0x00000001,
+	OPAL_BUFFER_USAGE_INDEX = 0x00000002,
+	OPAL_BUFFER_USAGE_UNIFORM = 0x00000004,
+	OPAL_BUFFER_USAGE_UNORDERED_ACCESS = 0x00000008,
+	OPAL_BUFFER_USAGE_INDIRECT = 0x00000010,
+	OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT = 0x00000020,
+	OPAL_BUFFER_USAGE_COPY_SRC = 0x00000040,
+	OPAL_BUFFER_USAGE_COPY_DST = 0x00000080,
 
 	OPAL_BUFFER_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_BufferUsageFlags;
 
+typedef enum Opal_TextureState_t
+{
+	OPAL_TEXTURE_STATE_UNDEFINED = 0,
+	OPAL_TEXTURE_STATE_FRAMEBUFFER_ATTACHMENT,
+	OPAL_TEXTURE_STATE_UNORDERED_ACCESS,
+	OPAL_TEXTURE_STATE_SHADER_SAMPLED,
+	OPAL_TEXTURE_STATE_COPY_SRC,
+	OPAL_TEXTURE_STATE_COPY_DST,
+	OPAL_TEXTURE_STATE_RESOLVE_DST,
+	OPAL_TEXTURE_STATE_PRESENT,
+
+	OPAL_TEXTURE_STATE_ENUM_MAX,
+	OPAL_TEXTURE_STATE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_TextureState;
+
 typedef enum Opal_TextureUsageFlags_t
 {
-	OPAL_TEXTURE_USAGE_TRANSFER_SRC = 0x00000001,
-	OPAL_TEXTURE_USAGE_TRANSFER_DST = 0x00000002,
-	OPAL_TEXTURE_USAGE_SHADER_SAMPLED = 0x00000004,
-	OPAL_TEXTURE_USAGE_UNORDERED_ACCESS = 0x00000008,
-	OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT = 0x00000010,
+	OPAL_TEXTURE_USAGE_UNORDERED_ACCESS = 0x00000001,
+	OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT = 0x00000002,
+	OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED = 0x00000004,
+	OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED = 0x00000008,
+	OPAL_TEXTURE_USAGE_COPY_SRC = 0x00000010,
+	OPAL_TEXTURE_USAGE_COPY_DST = 0x00000020,
 
 	OPAL_TEXTURE_USAGE_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_TextureUsageFlags;
@@ -857,10 +853,11 @@ typedef struct Opal_SemaphoreDesc_t
 
 typedef struct Opal_BufferDesc_t
 {
-	Opal_BufferUsageFlags usage;
 	uint64_t size;
 	Opal_AllocationMemoryType memory_type;
 	Opal_AllocationHint hint;
+	Opal_BufferUsageFlags usage;
+	Opal_BufferState initial_state;
 } Opal_BufferDesc;
 
 typedef struct Opal_TextureDesc_t
@@ -873,8 +870,9 @@ typedef struct Opal_TextureDesc_t
 	uint32_t mip_count;
 	uint32_t layer_count;
 	Opal_Samples samples;
-	Opal_TextureUsageFlags usage;
 	Opal_AllocationHint hint;
+	Opal_TextureUsageFlags usage;
+	Opal_TextureState initial_state;
 } Opal_TextureDesc;
 
 typedef struct Opal_TextureViewDesc_t
@@ -948,6 +946,13 @@ typedef struct Opal_FramebufferAttachment_t
 	Opal_StoreOp store_op;
 	Opal_ClearValue clear_value;
 } Opal_FramebufferAttachment;
+
+typedef struct Opal_FramebufferDesc_t
+{
+	const Opal_FramebufferAttachment *color_attachments;
+	const Opal_FramebufferAttachment *depth_stencil_attachment;
+	uint32_t num_color_attachments;
+} Opal_FramebufferDesc;
 
 typedef struct Opal_BufferTextureRegion_t
 {
@@ -1375,7 +1380,7 @@ typedef Opal_Result (*PFN_opalPresent)(Opal_Device device, Opal_Swapchain swapch
 
 typedef Opal_Result (*PFN_opalCmdSetDescriptorHeap)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap);
 
-typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment);
+typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetPipelineLayout)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetPipeline)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetDescriptorSet)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
@@ -1414,9 +1419,6 @@ typedef Opal_Result (*PFN_opalCmdBeginAccelerationStructurePass)(Opal_Device dev
 typedef Opal_Result (*PFN_opalCmdAccelerationStructureBuild)(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc);
 typedef Opal_Result (*PFN_opalCmdAccelerationStructureCopy)(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc);
 typedef Opal_Result (*PFN_opalCmdEndAccelerationStructurePass)(Opal_Device device, Opal_CommandBuffer command_buffer);
-
-typedef Opal_Result (*PFN_opalCmdBufferTransitionBarrier)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after);
-typedef Opal_Result (*PFN_opalCmdTextureTransitionBarrier)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after);
 
 typedef struct Opal_InstanceTable_t
 {
@@ -1539,9 +1541,6 @@ typedef struct Opal_DeviceTable_t
 	PFN_opalCmdAccelerationStructureBuild cmdAccelerationStructureBuild;
 	PFN_opalCmdAccelerationStructureCopy cmdAccelerationStructureCopy;
 	PFN_opalCmdEndAccelerationStructurePass cmdEndAccelerationStructurePass;
-
-	PFN_opalCmdBufferTransitionBarrier cmdBufferTransitionBarrier;
-	PFN_opalCmdTextureTransitionBarrier cmdTextureTransitionBarrier;
 } Opal_DeviceTable;
 
 // API
@@ -1627,7 +1626,7 @@ OPAL_APIENTRY Opal_Result opalPresent(Opal_Device device, Opal_Swapchain swapcha
 
 OPAL_APIENTRY Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_DescriptorHeap descriptor_heap);
 
-OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment);
+OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
@@ -1666,9 +1665,6 @@ OPAL_APIENTRY Opal_Result opalCmdBeginAccelerationStructurePass(Opal_Device devi
 OPAL_APIENTRY Opal_Result opalCmdAccelerationStructureBuild(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc);
 OPAL_APIENTRY Opal_Result opalCmdAccelerationStructureCopy(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureCopyDesc *desc);
 OPAL_APIENTRY Opal_Result opalCmdEndAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer);
-
-OPAL_APIENTRY Opal_Result opalCmdBufferTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after);
-OPAL_APIENTRY Opal_Result opalCmdTextureTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after);
 #endif
 
 #ifdef __cplusplus

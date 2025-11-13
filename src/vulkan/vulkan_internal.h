@@ -344,7 +344,7 @@ Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperti
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
 VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type);
-VkImageLayout vulkan_helperToImageLayout(VkDescriptorType type);
+VkImageLayout vulkan_helperToImageLayout(Opal_TextureFormat format, Opal_TextureUsageFlags usage, Opal_TextureState state);
 
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
 Opal_PresentMode vulkan_helperFromPresentMode(VkPresentModeKHR mode);
@@ -388,13 +388,6 @@ VkBlendFactor vulkan_helperToBlendFactor(Opal_BlendFactor factor);
 VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op);
 VkAttachmentLoadOp vulkan_helperToLoadOp(Opal_LoadOp op);
 VkAttachmentStoreOp vulkan_helperToStoreOp(Opal_StoreOp op);
-
-VkPipelineStageFlags vulkan_helperToPipelineWaitStage(Opal_ResourceState state);
-VkPipelineStageFlags vulkan_helperToPipelineBlockStage(Opal_ResourceState state);
-
-VkAccessFlags vulkan_helperToFlushAccessMask(Opal_ResourceState state);
-VkAccessFlags vulkan_helperToInvalidateAccessMask(Opal_ResourceState state);
-VkImageLayout vulkan_helperToImageLayoutTransition(Opal_ResourceState state, VkImageAspectFlags aspect);
 
 const char *vulkan_platformGetSurfaceExtension();
 Opal_Result vulkan_platformCreateSurface(VkInstance instance, void *handle, VkSurfaceKHR *surface);

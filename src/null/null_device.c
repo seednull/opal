@@ -558,13 +558,11 @@ static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
+static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(num_color_attachments);
-	OPAL_UNUSED(color_attachments);
-	OPAL_UNUSED(depth_stencil_attachment);
+	OPAL_UNUSED(desc);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -902,28 +900,6 @@ static Opal_Result null_deviceCmdEndAccelerationStructurePass(Opal_Device this, 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(state_before);
-	OPAL_UNUSED(state_after);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
-static Opal_Result null_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(state_before);
-	OPAL_UNUSED(state_after);
-
-	return OPAL_NOT_SUPPORTED;
-}
-
 /*
  */
 static Opal_DeviceTable device_vtbl =
@@ -1035,9 +1011,6 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdAccelerationStructureBuild,
 	null_deviceCmdAccelerationStructureCopy,
 	null_deviceCmdEndAccelerationStructurePass,
-
-	null_deviceCmdBufferTransitionBarrier,
-	null_deviceCmdTextureTransitionBarrier,
 };
 
 /*

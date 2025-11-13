@@ -2696,10 +2696,11 @@ static Opal_Result metal_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comma
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
+static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
+	assert(desc);
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 
@@ -2714,9 +2715,9 @@ static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comma
 	if (!info)
 		return OPAL_METAL_ERROR;
 
-	for (uint32_t i = 0; i < num_color_attachments; ++i)
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
 	{
-		const Opal_FramebufferAttachment *opal_attachment = &color_attachments[i];
+		const Opal_FramebufferAttachment *opal_attachment = &desc->color_attachments[i];
 
 		Metal_TextureView *texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
@@ -2740,9 +2741,9 @@ static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comma
 		info.colorAttachments[i].clearColor = MTLClearColorMake(clear_color.f[0], clear_color.f[1], clear_color.f[2], clear_color.f[3]);
 	}
 
-	if (depth_stencil_attachment)
+	if (desc->depth_stencil_attachment)
 	{
-		const Opal_FramebufferAttachment *opal_attachment = depth_stencil_attachment;
+		const Opal_FramebufferAttachment *opal_attachment = desc->depth_stencil_attachment;
 
 		Metal_TextureView *texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
@@ -3820,28 +3821,6 @@ static Opal_Result metal_deviceCmdEndAccelerationStructurePass(Opal_Device this,
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(state_before);
-	OPAL_UNUSED(state_after);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result metal_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(state_before);
-	OPAL_UNUSED(state_after);
-
-	return OPAL_SUCCESS;
-}
-
 /*
  */
 static Opal_DeviceTable device_vtbl =
@@ -3953,9 +3932,6 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCmdAccelerationStructureBuild,
 	metal_deviceCmdAccelerationStructureCopy,
 	metal_deviceCmdEndAccelerationStructurePass,
-
-	metal_deviceCmdBufferTransitionBarrier,
-	metal_deviceCmdTextureTransitionBarrier,
 };
 
 /*

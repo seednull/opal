@@ -932,7 +932,7 @@ Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer comm
 	return ptr->vtbl->cmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 }
 
-Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
+Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -941,7 +941,7 @@ Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer comm
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginGraphicsPass);
 
-	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, num_color_attachments, color_attachments, depth_stencil_attachment);
+	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, desc);
 }
 
 Opal_Result opalCmdGraphicsSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
@@ -1350,28 +1350,4 @@ Opal_Result opalCmdEndAccelerationStructurePass(Opal_Device device, Opal_Command
 	assert(ptr->vtbl->cmdEndAccelerationStructurePass);
 
 	return ptr->vtbl->cmdEndAccelerationStructurePass(device, command_buffer);
-}
-
-Opal_Result opalCmdBufferTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdBufferTransitionBarrier);
-
-	return ptr->vtbl->cmdBufferTransitionBarrier(device, command_buffer, buffer, state_before, state_after);
-}
-
-Opal_Result opalCmdTextureTransitionBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	if (device == OPAL_NULL_HANDLE)
-		return OPAL_INVALID_DEVICE;
-
-	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
-	assert(ptr->vtbl);
-	assert(ptr->vtbl->cmdTextureTransitionBarrier);
-
-	return ptr->vtbl->cmdTextureTransitionBarrier(device, command_buffer, texture_view, state_before, state_after);
 }

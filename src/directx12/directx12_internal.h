@@ -334,9 +334,11 @@ Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device 
 Opal_Result directx12_helperFillDeviceEnginesInfo(DirectX12_DeviceEnginesInfo *info);
 Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_Instance *instance_ptr, IDXGIAdapter1 *adapter, ID3D12Device *device);
 
-D3D12_RESOURCE_STATES directx12_helperToResourceState(Opal_ResourceState state);
-D3D12_RESOURCE_STATES directx12_helperToInitialBufferResourceState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags flags);
-D3D12_RESOURCE_FLAGS directx12_helperToTextureFlags(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
+D3D12_RESOURCE_STATES directx12_helperToBufferState(Opal_AllocationMemoryType type, Opal_BufferUsageFlags usage, Opal_BufferState state);
+D3D12_RESOURCE_FLAGS directx12_helperToBufferFlags(Opal_AllocationMemoryType type, Opal_BufferUsageFlags usage);
+D3D12_RESOURCE_STATES directx12_helperToTextureState(Opal_TextureFormat format, Opal_TextureUsageFlags usage, Opal_TextureState state);
+D3D12_RESOURCE_FLAGS directx12_helperToTextureFlags(Opal_TextureFormat format, Opal_TextureUsageFlags usage);
+
 D3D12_RESOURCE_DIMENSION directx12_helperToTextureDimension(Opal_TextureType type);
 DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFlags flags, Opal_Samples samples);
 D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip);

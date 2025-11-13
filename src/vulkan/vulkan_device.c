@@ -928,7 +928,7 @@ static Opal_Result vulkan_deviceCreateTexture(Opal_Device this, const Opal_Textu
 	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	image_info.usage = vulkan_helperToImageUsage(desc->usage, desc->format);
 	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	image_info.initialLayout = vulkan_helperToImageLayout(desc->format, desc->usage, desc->initial_state);
 
 	Vulkan_Allocation allocation = {0};
 
@@ -3836,10 +3836,11 @@ static Opal_Result vulkan_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comm
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
+static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
+	assert(desc);
  
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -3855,17 +3856,17 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 	opal_bumpReset(&device_ptr->bump);
 
-	uint32_t color_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo) * num_color_attachments);
+	uint32_t color_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo) * desc->num_color_attachments);
 	uint32_t depth_stencil_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkRenderingAttachmentInfo));
 
-	if (num_color_attachments > 0)
+	if (desc->num_color_attachments > 0)
 	{
 		vulkan_color_attachments = (VkRenderingAttachmentInfo *)(device_ptr->bump.data + color_offset);
-		memset(vulkan_color_attachments, 0, sizeof(VkRenderingAttachmentInfo) * num_color_attachments);
+		memset(vulkan_color_attachments, 0, sizeof(VkRenderingAttachmentInfo) * desc->num_color_attachments);
 
-		for (uint32_t i = 0; i < num_color_attachments; ++i)
+		for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
 		{
-			const Opal_FramebufferAttachment *opal_attachment = &color_attachments[i];
+			const Opal_FramebufferAttachment *opal_attachment = &desc->color_attachments[i];
 			VkRenderingAttachmentInfo *attachment = &vulkan_color_attachments[i];
 
 			Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)opal_attachment->texture_view);
@@ -3895,16 +3896,18 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 		}
 	}
 
-	if (depth_stencil_attachment)
+	if (desc->depth_stencil_attachment)
 	{
+		const Opal_FramebufferAttachment *opal_attachment = desc->depth_stencil_attachment;
+
 		vulkan_depth_stencil_attachment = (VkRenderingAttachmentInfo *)(device_ptr->bump.data + depth_stencil_offset);
 		memset(vulkan_depth_stencil_attachment, 0, sizeof(VkRenderingAttachmentInfo));
 
 		vulkan_depth_stencil_attachment->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)depth_stencil_attachment->texture_view);
+		Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(image_view_ptr);
 
-		Vulkan_ImageView *resolve_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)depth_stencil_attachment->resolve_texture_view);
+		Vulkan_ImageView *resolve_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
 
 		width = max(width, image_view_ptr->width);
 		height = max(height, image_view_ptr->height);
@@ -3920,11 +3923,11 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 			vulkan_depth_stencil_attachment->resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		}
 
-		vulkan_depth_stencil_attachment->loadOp = vulkan_helperToLoadOp(depth_stencil_attachment->load_op);
-		vulkan_depth_stencil_attachment->storeOp = vulkan_helperToStoreOp(depth_stencil_attachment->store_op);
+		vulkan_depth_stencil_attachment->loadOp = vulkan_helperToLoadOp(opal_attachment->load_op);
+		vulkan_depth_stencil_attachment->storeOp = vulkan_helperToStoreOp(opal_attachment->store_op);
 
 		assert(sizeof(VkClearValue) == sizeof(Opal_ClearValue));
-		memcpy(&vulkan_depth_stencil_attachment->clearValue, &depth_stencil_attachment->clear_value, sizeof(VkClearValue));
+		memcpy(&vulkan_depth_stencil_attachment->clearValue, &opal_attachment->clear_value, sizeof(VkClearValue));
 	}
 
 	VkRenderingInfo rendering_info = {0};
@@ -3932,7 +3935,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 	rendering_info.renderArea.extent.width = width;
 	rendering_info.renderArea.extent.height = height;
 	rendering_info.layerCount = 1;
-	rendering_info.colorAttachmentCount = num_color_attachments;
+	rendering_info.colorAttachmentCount = desc->num_color_attachments;
 	rendering_info.pColorAttachments = vulkan_color_attachments;
 	rendering_info.pDepthAttachment = vulkan_depth_stencil_attachment;
 	rendering_info.pStencilAttachment = vulkan_depth_stencil_attachment;
@@ -4772,67 +4775,6 @@ static Opal_Result vulkan_deviceCmdEndAccelerationStructurePass(Opal_Device this
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	assert(this);
-	assert(command_buffer);
- 
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-
-	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	Vulkan_Buffer *buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer.buffer);
-	assert(buffer_ptr);
-
-	VkPipelineStageFlags wait_stage = vulkan_helperToPipelineWaitStage(state_before);
-	VkPipelineStageFlags block_stage = vulkan_helperToPipelineBlockStage(state_after);
-
-	VkBufferMemoryBarrier buffer_barrier = {0};
-	buffer_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-	buffer_barrier.srcAccessMask = vulkan_helperToFlushAccessMask(state_before);
-	buffer_barrier.dstAccessMask = vulkan_helperToInvalidateAccessMask(state_after);
-	buffer_barrier.buffer = buffer_ptr->buffer;
-	buffer_barrier.offset = buffer.offset;
-	buffer_barrier.size = buffer.size;
-
-	device_ptr->vk.vkCmdPipelineBarrier(command_buffer_ptr->command_buffer, wait_stage, block_stage, 0, 0, NULL, 1, &buffer_barrier, 0, NULL);
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result vulkan_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	assert(this);
-	assert(command_buffer);
- 
-	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-
-	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
-	assert(command_buffer_ptr);
-
-	Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)texture_view);
-	assert(image_view_ptr);
-
-	VkPipelineStageFlags wait_stage = vulkan_helperToPipelineWaitStage(state_before);
-	VkPipelineStageFlags block_stage = vulkan_helperToPipelineBlockStage(state_after);
-
-	VkImageMemoryBarrier image_barrier = {0};
-	image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	image_barrier.srcAccessMask = vulkan_helperToFlushAccessMask(state_before);
-	image_barrier.dstAccessMask = vulkan_helperToInvalidateAccessMask(state_after);
-	image_barrier.oldLayout = vulkan_helperToImageLayoutTransition(state_before, image_view_ptr->aspect_mask);
-	image_barrier.newLayout = vulkan_helperToImageLayoutTransition(state_after, image_view_ptr->aspect_mask);
-	image_barrier.image = image_view_ptr->image;
-	image_barrier.subresourceRange.aspectMask = image_view_ptr->aspect_mask;
-	image_barrier.subresourceRange.baseMipLevel = image_view_ptr->base_mip;
-	image_barrier.subresourceRange.levelCount = image_view_ptr->num_mips;
-	image_barrier.subresourceRange.baseArrayLayer = image_view_ptr->base_layer;
-	image_barrier.subresourceRange.layerCount = image_view_ptr->num_layers;
-
-	device_ptr->vk.vkCmdPipelineBarrier(command_buffer_ptr->command_buffer, wait_stage, block_stage, 0, 0, NULL, 0, NULL, 1, &image_barrier);
-	return OPAL_SUCCESS;
-}
-
 /*
  */
 static Opal_DeviceTable device_vtbl =
@@ -4944,9 +4886,6 @@ static Opal_DeviceTable device_vtbl =
 	vulkan_deviceCmdAccelerationStructureBuild,
 	vulkan_deviceCmdAccelerationStructureCopy,
 	vulkan_deviceCmdEndAccelerationStructurePass,
-
-	vulkan_deviceCmdBufferTransitionBarrier,
-	vulkan_deviceCmdTextureTransitionBarrier,
 };
 
 /*

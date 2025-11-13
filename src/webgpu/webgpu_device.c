@@ -2065,10 +2065,11 @@ static Opal_Result webgpu_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comm
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_color_attachments, const Opal_FramebufferAttachment *color_attachments, const Opal_FramebufferAttachment *depth_stencil_attachment)
+static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
 {
 	assert(this);
 	assert(command_buffer);
+	assert(desc);
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
@@ -2083,14 +2084,14 @@ static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 	WGPURenderPassColorAttachment *webgpu_colors = NULL;
 
 	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(WGPURenderPassColorAttachment) * num_color_attachments);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(WGPURenderPassColorAttachment) * desc->num_color_attachments);
 
-	if (num_color_attachments > 0)
+	if (desc->num_color_attachments > 0)
 		webgpu_colors = (WGPURenderPassColorAttachment *)device_ptr->bump.data;
 
-	for (uint32_t i = 0; i < num_color_attachments; ++i)
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
 	{
-		const Opal_FramebufferAttachment *opal_attachment = &color_attachments[i];
+		const Opal_FramebufferAttachment *opal_attachment = &desc->color_attachments[i];
 
 		WebGPU_TextureView *texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
@@ -2112,9 +2113,9 @@ static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 	WGPURenderPassDepthStencilAttachment webgpu_depthstencil = {0};
 
-	if (depth_stencil_attachment)
+	if (desc->depth_stencil_attachment)
 	{
-		const Opal_FramebufferAttachment *opal_attachment = depth_stencil_attachment;
+		const Opal_FramebufferAttachment *opal_attachment = desc->depth_stencil_attachment;
 
 		WebGPU_TextureView *texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
@@ -2129,10 +2130,10 @@ static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 	}
 
 	WGPURenderPassDescriptor pass_info = {0};
-	pass_info.colorAttachmentCount = num_color_attachments;
+	pass_info.colorAttachmentCount = desc->num_color_attachments;
 	pass_info.colorAttachments = webgpu_colors;
 
-	if (depth_stencil_attachment)
+	if (desc->depth_stencil_attachment)
 		pass_info.depthStencilAttachment = &webgpu_depthstencil;
 
 	WGPURenderPassEncoder pass_encoder = wgpuCommandEncoderBeginRenderPass(webgpu_encoder, &pass_info);
@@ -2787,28 +2788,6 @@ static Opal_Result webgpu_deviceCmdEndAccelerationStructurePass(Opal_Device this
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result webgpu_deviceCmdBufferTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_BufferView buffer, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(state_before);
-	OPAL_UNUSED(state_after);
-
-	return OPAL_SUCCESS;
-}
-
-static Opal_Result webgpu_deviceCmdTextureTransitionBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureView texture_view, Opal_ResourceState state_before, Opal_ResourceState state_after)
-{
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(texture_view);
-	OPAL_UNUSED(state_before);
-	OPAL_UNUSED(state_after);
-
-	return OPAL_SUCCESS;
-}
-
 /*
  */
 static Opal_DeviceTable device_vtbl =
@@ -2920,9 +2899,6 @@ static Opal_DeviceTable device_vtbl =
 	webgpu_deviceCmdAccelerationStructureBuild,
 	webgpu_deviceCmdAccelerationStructureCopy,
 	webgpu_deviceCmdEndAccelerationStructurePass,
-
-	webgpu_deviceCmdBufferTransitionBarrier,
-	webgpu_deviceCmdTextureTransitionBarrier,
 };
 
 /*

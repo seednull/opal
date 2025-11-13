@@ -11,10 +11,10 @@ WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opa
 
 	WGPUBufferUsageFlags result = 0;
 
-	if (flags & OPAL_BUFFER_USAGE_TRANSFER_SRC)
+	if (flags & OPAL_BUFFER_USAGE_COPY_SRC)
 		result |= WGPUBufferUsage_CopySrc;
 
-	if (flags & OPAL_BUFFER_USAGE_TRANSFER_DST)
+	if (flags & OPAL_BUFFER_USAGE_COPY_DST)
 		result |= WGPUBufferUsage_CopyDst;
 
 	if (flags & OPAL_BUFFER_USAGE_VERTEX)
@@ -26,16 +26,16 @@ WGPUBufferUsageFlags webgpu_helperToBufferUsage(Opal_BufferUsageFlags flags, Opa
 	if (flags & OPAL_BUFFER_USAGE_UNIFORM)
 		result |= WGPUBufferUsage_Uniform;
 
-	if (flags & OPAL_BUFFER_USAGE_STORAGE)
+	if (flags & OPAL_BUFFER_USAGE_UNORDERED_ACCESS)
 		result |= WGPUBufferUsage_Storage;
 
 	if (flags & OPAL_BUFFER_USAGE_INDIRECT)
 		result |= WGPUBufferUsage_Indirect;
 
-	if (flags == OPAL_BUFFER_USAGE_TRANSFER_SRC && (memory_type == OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD || memory_type == OPAL_ALLOCATION_MEMORY_TYPE_STREAM))
+	if (flags == OPAL_BUFFER_USAGE_COPY_SRC && (memory_type == OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD || memory_type == OPAL_ALLOCATION_MEMORY_TYPE_STREAM))
 		result |= WGPUBufferUsage_MapWrite;
 
-	if (flags == OPAL_BUFFER_USAGE_TRANSFER_DST && (memory_type == OPAL_ALLOCATION_MEMORY_TYPE_READBACK))
+	if (flags == OPAL_BUFFER_USAGE_COPY_DST && (memory_type == OPAL_ALLOCATION_MEMORY_TYPE_READBACK))
 		result |= WGPUBufferUsage_MapRead;
 
 	return result;
@@ -45,13 +45,16 @@ WGPUTextureUsageFlags webgpu_helperToTextureUsage(Opal_TextureUsageFlags flags)
 {
 	WGPUTextureUsageFlags result = 0;
 
-	if (flags & OPAL_TEXTURE_USAGE_TRANSFER_SRC)
+	if (flags & OPAL_TEXTURE_USAGE_COPY_SRC)
 		result |= WGPUTextureUsage_CopySrc;
 
-	if (flags & OPAL_TEXTURE_USAGE_TRANSFER_DST)
+	if (flags & OPAL_TEXTURE_USAGE_COPY_DST)
 		result |= WGPUTextureUsage_CopyDst;
 
-	if (flags & OPAL_TEXTURE_USAGE_SHADER_SAMPLED)
+	if (flags & OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED)
+		result |= WGPUTextureUsage_TextureBinding;
+
+	if (flags & OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED)
 		result |= WGPUTextureUsage_TextureBinding;
 
 	if (flags & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
