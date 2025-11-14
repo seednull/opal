@@ -22,7 +22,7 @@ VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc)
 
 VkImageType vulkan_helperToImageType(Opal_TextureType type)
 {
-	static VkImageType vk_image_types[] = 
+	static VkImageType vk_image_types[] =
 	{
 		VK_IMAGE_TYPE_1D,
 		VK_IMAGE_TYPE_2D,

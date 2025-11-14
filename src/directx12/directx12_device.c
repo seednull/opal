@@ -596,6 +596,14 @@ static Opal_Result directx12_deviceCreateSemaphore(Opal_Device this, const Opal_
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result directx12_deviceCreateFence(Opal_Device this, Opal_Fence *fence)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(fence);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	assert(this);
@@ -985,7 +993,7 @@ static Opal_Result directx12_deviceCreateCommandBuffer(Opal_Device this, Opal_Co
 	assert(this);
 	assert(command_allocator);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	ID3D12Device *d3d12_device = device_ptr->device;
 
@@ -2238,6 +2246,14 @@ static Opal_Result directx12_deviceDestroySemaphore(Opal_Device this, Opal_Semap
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result directx12_deviceDestroyFence(Opal_Device this, Opal_Fence fence)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(fence);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
 {
 	assert(this);
@@ -2370,7 +2386,7 @@ static Opal_Result directx12_deviceDestroyCommandBuffer(Opal_Device this, Opal_C
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -2964,7 +2980,7 @@ static Opal_Result directx12_deviceResetCommandAllocator(Opal_Device this, Opal_
 {
 	assert(this);
 	assert(command_allocator);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandAllocator *command_allocator_ptr = (DirectX12_CommandAllocator *)opal_poolGetElement(&device_ptr->command_allocators, (Opal_PoolHandle)command_allocator);
@@ -3377,7 +3393,7 @@ static Opal_Result directx12_deviceBeginCommandBuffer(Opal_Device this, Opal_Com
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -3402,7 +3418,7 @@ static Opal_Result directx12_deviceEndCommandBuffer(Opal_Device this, Opal_Comma
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -3618,11 +3634,13 @@ static Opal_Result directx12_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_C
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
+static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *framebuffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
-	assert(desc);
+	assert(framebuffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	ID3D12Device *d3d12_device = device_ptr->device;
@@ -3638,15 +3656,15 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	UINT num_resolve_parameters = 0;
 	memset(command_buffer_ptr->resolve_parameters, 0, sizeof(D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS) * 9);
 
-	if (desc->num_color_attachments > 0)
+	if (framebuffer->num_color_attachments > 0)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_start = {0};
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(device_ptr->framebuffer_descriptor_heap.rtv_heap, &rtv_start);
 		UINT stride = ID3D12Device_GetDescriptorHandleIncrementSize(d3d12_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-		for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+		for (uint32_t i = 0; i < framebuffer->num_color_attachments; ++i)
 		{
-			const Opal_FramebufferAttachment *opal_attachment = &desc->color_attachments[i];
+			const Opal_FramebufferAttachment *opal_attachment = &framebuffer->color_attachments[i];
 			const DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 			assert(texture_view_ptr);
 
@@ -3690,9 +3708,9 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depth_stencil_target = {0};
 	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC *depth_stencil_ptr = NULL;
 
-	if (desc->depth_stencil_attachment)
+	if (framebuffer->depth_stencil_attachment)
 	{
-		const Opal_FramebufferAttachment *opal_attachment = desc->depth_stencil_attachment;
+		const Opal_FramebufferAttachment *opal_attachment = framebuffer->depth_stencil_attachment;
 
 		const DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
@@ -3744,7 +3762,7 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	}
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_GRAPHICS;
-	ID3D12GraphicsCommandList4_BeginRenderPass(d3d12_command_buffer, desc->num_color_attachments, color_ptrs, depth_stencil_ptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+	ID3D12GraphicsCommandList4_BeginRenderPass(d3d12_command_buffer, framebuffer->num_color_attachments, color_ptrs, depth_stencil_ptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 	return OPAL_SUCCESS;
 }
 
@@ -3902,7 +3920,7 @@ static Opal_Result directx12_deviceCmdGraphicsSetVertexBuffers(Opal_Device this,
 	assert(command_buffer);
 	assert(num_vertex_buffers > 0);
 	assert(vertex_buffers);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -3956,7 +3974,7 @@ static Opal_Result directx12_deviceCmdGraphicsSetViewport(Opal_Device this, Opal
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -3979,7 +3997,7 @@ static Opal_Result directx12_deviceCmdGraphicsSetScissor(Opal_Device this, Opal_
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4000,7 +4018,7 @@ static Opal_Result directx12_deviceCmdGraphicsDraw(Opal_Device this, Opal_Comman
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4015,7 +4033,7 @@ static Opal_Result directx12_deviceCmdGraphicsDrawIndexed(Opal_Device this, Opal
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4037,10 +4055,12 @@ static Opal_Result directx12_deviceCmdGraphicsMeshletDispatch(Opal_Device this, 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result directx12_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4052,10 +4072,12 @@ static Opal_Result directx12_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4214,11 +4236,21 @@ static Opal_Result directx12_deviceCmdComputeSetDescriptorSet(Opal_Device this, 
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result directx12_deviceCmdComputeMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
+
+	// TODO: implement
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4229,10 +4261,12 @@ static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4243,10 +4277,12 @@ static Opal_Result directx12_deviceCmdEndComputePass(Opal_Device this, Opal_Comm
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4410,7 +4446,7 @@ static Opal_Result directx12_deviceCmdRaytraceSetShaderBindingTable(Opal_Device 
 	assert(this);
 	assert(command_buffer);
 	assert(shader_binding_table);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4429,11 +4465,21 @@ static Opal_Result directx12_deviceCmdRaytraceSetShaderBindingTable(Opal_Device 
 	return OPAL_SUCCESS;
 }
 
+static Opal_Result directx12_deviceCmdRaytraceMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
+
+	// TODO: implement
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4480,10 +4526,12 @@ static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Co
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4494,10 +4542,12 @@ static Opal_Result directx12_deviceCmdEndRaytracePass(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4512,7 +4562,7 @@ static Opal_Result directx12_deviceCmdCopyBufferToBuffer(Opal_Device this, Opal_
 {
 	assert(this);
 	assert(command_buffer);
- 
+
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4675,10 +4725,12 @@ static Opal_Result directx12_deviceCmdCopyTextureToTexture(Opal_Device this, Opa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4689,10 +4741,12 @@ static Opal_Result directx12_deviceCmdEndCopyPass(Opal_Device this, Opal_Command
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdBeginAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdBeginAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4836,10 +4890,12 @@ static Opal_Result directx12_deviceCmdAccelerationStructureCopy(Opal_Device this
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdEndAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result directx12_deviceCmdEndAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	assert(this);
 	assert(command_buffer);
+
+	OPAL_UNUSED(barriers); // TODO: implement
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4863,6 +4919,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceGetPreferredSurfacePresentMode,
 
 	directx12_deviceCreateSemaphore,
+	directx12_deviceCreateFence,
 	directx12_deviceCreateBuffer,
 	directx12_deviceCreateTexture,
 	directx12_deviceCreateTextureView,
@@ -4882,6 +4939,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCreateSwapchain,
 
 	directx12_deviceDestroySemaphore,
+	directx12_deviceDestroyFence,
 	directx12_deviceDestroyBuffer,
 	directx12_deviceDestroyTexture,
 	directx12_deviceDestroyTextureView,
@@ -4939,6 +4997,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdComputeSetPipelineLayout,
 	directx12_deviceCmdComputeSetPipeline,
 	directx12_deviceCmdComputeSetDescriptorSet,
+	directx12_deviceCmdComputeMemoryBarrier,
 	directx12_deviceCmdComputeDispatch,
 	directx12_deviceCmdEndComputePass,
 
@@ -4947,6 +5006,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdRaytraceSetPipeline,
 	directx12_deviceCmdRaytraceSetDescriptorSet,
 	directx12_deviceCmdRaytraceSetShaderBindingTable,
+	directx12_deviceCmdRaytraceMemoryBarrier,
 	directx12_deviceCmdRaytraceDispatch,
 	directx12_deviceCmdEndRaytracePass,
 
@@ -5021,7 +5081,7 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	// queues
 	const DirectX12_DeviceEnginesInfo *engines_info = &device_ptr->device_engines_info;
 
-	static D3D12_COMMAND_LIST_TYPE queue_types[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX] = 
+	static D3D12_COMMAND_LIST_TYPE queue_types[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX] =
 	{
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		D3D12_COMMAND_LIST_TYPE_COMPUTE,

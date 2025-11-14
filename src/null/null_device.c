@@ -83,6 +83,14 @@ static Opal_Result null_deviceCreateSemaphore(Opal_Device this, const Opal_Semap
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCreateFence(Opal_Device this, Opal_Fence *fence)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(fence);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	OPAL_UNUSED(this);
@@ -242,6 +250,14 @@ static Opal_Result null_deviceDestroySemaphore(Opal_Device this, Opal_Semaphore 
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(semaphore);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceDestroyFence(Opal_Device this, Opal_Fence fence)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(fence);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -558,11 +574,12 @@ static Opal_Result null_deviceCmdSetDescriptorHeap(Opal_Device this, Opal_Comman
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
+static Opal_Result null_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *framebuffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(desc);
+	OPAL_UNUSED(framebuffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -673,18 +690,20 @@ static Opal_Result null_deviceCmdGraphicsMeshletDispatch(Opal_Device this, Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdEndGraphicsPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdBeginComputePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -719,6 +738,15 @@ static Opal_Result null_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdComputeMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	OPAL_UNUSED(this);
@@ -730,18 +758,20 @@ static Opal_Result null_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandB
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdEndComputePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdBeginRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -785,6 +815,15 @@ static Opal_Result null_deviceCmdRaytraceSetShaderBindingTable(Opal_Device this,
 	return OPAL_NOT_SUPPORTED;
 }
 
+static Opal_Result null_deviceCmdRaytraceMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
 static Opal_Result null_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
 {
 	OPAL_UNUSED(this);
@@ -796,18 +835,20 @@ static Opal_Result null_deviceCmdRaytraceDispatch(Opal_Device this, Opal_Command
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdEndRaytracePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -858,18 +899,20 @@ static Opal_Result null_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdBeginAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdBeginAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -892,10 +935,11 @@ static Opal_Result null_deviceCmdAccelerationStructureCopy(Opal_Device this, Opa
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdEndAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer)
+static Opal_Result null_deviceCmdEndAccelerationStructurePass(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(barriers);
 
 	return OPAL_NOT_SUPPORTED;
 }
@@ -913,6 +957,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceGetPreferredSurfacePresentMode,
 
 	null_deviceCreateSemaphore,
+	null_deviceCreateFence,
 	null_deviceCreateBuffer,
 	null_deviceCreateTexture,
 	null_deviceCreateTextureView,
@@ -932,6 +977,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCreateSwapchain,
 
 	null_deviceDestroySemaphore,
+	null_deviceDestroyFence,
 	null_deviceDestroyBuffer,
 	null_deviceDestroyTexture,
 	null_deviceDestroyTextureView,
@@ -989,6 +1035,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdComputeSetPipelineLayout,
 	null_deviceCmdComputeSetPipeline,
 	null_deviceCmdComputeSetDescriptorSet,
+	null_deviceCmdComputeMemoryBarrier,
 	null_deviceCmdComputeDispatch,
 	null_deviceCmdEndComputePass,
 
@@ -997,6 +1044,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdRaytraceSetPipeline,
 	null_deviceCmdRaytraceSetDescriptorSet,
 	null_deviceCmdRaytraceSetShaderBindingTable,
+	null_deviceCmdRaytraceMemoryBarrier,
 	null_deviceCmdRaytraceDispatch,
 	null_deviceCmdEndRaytracePass,
 

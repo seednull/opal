@@ -2218,7 +2218,7 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 {
 	assert(this);
 	assert(descriptor_set);
- 
+
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	id<MTLDevice> metal_device = device_ptr->device;
 

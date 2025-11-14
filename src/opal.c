@@ -266,6 +266,18 @@ Opal_Result opalCreateSemaphore(Opal_Device device, const Opal_SemaphoreDesc *de
 	return ptr->vtbl->createSemaphore(device, desc, semaphore);
 }
 
+Opal_Result opalCreateFence(Opal_Device device, Opal_Fence *fence)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->createFence);
+
+	return ptr->vtbl->createFence(device, fence);
+}
+
 Opal_Result opalCreateBuffer(Opal_Device device, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -482,6 +494,18 @@ Opal_Result opalDestroySemaphore(Opal_Device device, Opal_Semaphore semaphore)
 	assert(ptr->vtbl->destroySemaphore);
 
 	return ptr->vtbl->destroySemaphore(device, semaphore);
+}
+
+Opal_Result opalDestroyFence(Opal_Device device, Opal_Fence fence)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->destroyFence);
+
+	return ptr->vtbl->destroyFence(device, fence);
 }
 
 Opal_Result opalDestroyBuffer(Opal_Device device, Opal_Buffer buffer)
@@ -932,7 +956,7 @@ Opal_Result opalCmdSetDescriptorHeap(Opal_Device device, Opal_CommandBuffer comm
 	return ptr->vtbl->cmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 }
 
-Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc)
+Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_FramebufferDesc *desc, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -941,7 +965,7 @@ Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_CommandBuffer comm
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginGraphicsPass);
 
-	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, desc);
+	return ptr->vtbl->cmdBeginGraphicsPass(device, command_buffer, desc, barriers);
 }
 
 Opal_Result opalCmdGraphicsSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
@@ -1064,7 +1088,7 @@ Opal_Result opalCmdGraphicsMeshletDispatch(Opal_Device device, Opal_CommandBuffe
 	return ptr->vtbl->cmdGraphicsMeshletDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 }
 
-Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1073,10 +1097,10 @@ Opal_Result opalCmdEndGraphicsPass(Opal_Device device, Opal_CommandBuffer comman
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdEndGraphicsPass);
 
-	return ptr->vtbl->cmdEndGraphicsPass(device, command_buffer);
+	return ptr->vtbl->cmdEndGraphicsPass(device, command_buffer, barriers);
 }
 
-Opal_Result opalCmdBeginComputePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdBeginComputePass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1085,7 +1109,7 @@ Opal_Result opalCmdBeginComputePass(Opal_Device device, Opal_CommandBuffer comma
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginComputePass);
 
-	return ptr->vtbl->cmdBeginComputePass(device, command_buffer);
+	return ptr->vtbl->cmdBeginComputePass(device, command_buffer, barriers);
 }
 
 Opal_Result opalCmdComputeSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
@@ -1124,6 +1148,18 @@ Opal_Result opalCmdComputeSetDescriptorSet(Opal_Device device, Opal_CommandBuffe
 	return ptr->vtbl->cmdComputeSetDescriptorSet(device, command_buffer, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
 }
 
+Opal_Result opalCmdComputeMemoryBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdComputeMemoryBarrier);
+
+	return ptr->vtbl->cmdComputeMemoryBarrier(device, command_buffer, barriers);
+}
+
 Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -1136,7 +1172,7 @@ Opal_Result opalCmdComputeDispatch(Opal_Device device, Opal_CommandBuffer comman
 	return ptr->vtbl->cmdComputeDispatch(device, command_buffer, num_threadgroups_x, num_threadgroups_y, num_threadgroups_z);
 }
 
-Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1145,10 +1181,10 @@ Opal_Result opalCmdEndComputePass(Opal_Device device, Opal_CommandBuffer command
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdEndComputePass);
 
-	return ptr->vtbl->cmdEndComputePass(device, command_buffer);
+	return ptr->vtbl->cmdEndComputePass(device, command_buffer, barriers);
 }
 
-Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1157,7 +1193,7 @@ Opal_Result opalCmdBeginRaytracePass(Opal_Device device, Opal_CommandBuffer comm
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginRaytracePass);
 
-	return ptr->vtbl->cmdBeginRaytracePass(device, command_buffer);
+	return ptr->vtbl->cmdBeginRaytracePass(device, command_buffer, barriers);
 }
 
 Opal_Result opalCmdRaytraceSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout)
@@ -1208,6 +1244,18 @@ Opal_Result opalCmdRaytraceSetShaderBindingTable(Opal_Device device, Opal_Comman
 	return ptr->vtbl->cmdRaytraceSetShaderBindingTable(device, command_buffer, shader_binding_table);
 }
 
+Opal_Result opalCmdRaytraceMemoryBarrier(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
+{
+	if (device == OPAL_NULL_HANDLE)
+		return OPAL_INVALID_DEVICE;
+
+	Opal_DeviceInternal *ptr = (Opal_DeviceInternal *)(device);
+	assert(ptr->vtbl);
+	assert(ptr->vtbl->cmdRaytraceMemoryBarrier);
+
+	return ptr->vtbl->cmdRaytraceMemoryBarrier(device, command_buffer, barriers);
+}
+
 Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
 {
 	if (device == OPAL_NULL_HANDLE)
@@ -1220,7 +1268,7 @@ Opal_Result opalCmdRaytraceDispatch(Opal_Device device, Opal_CommandBuffer comma
 	return ptr->vtbl->cmdRaytraceDispatch(device, command_buffer, width, height, depth);
 }
 
-Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1229,10 +1277,10 @@ Opal_Result opalCmdEndRaytracePass(Opal_Device device, Opal_CommandBuffer comman
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdEndRaytracePass);
 
-	return ptr->vtbl->cmdEndRaytracePass(device, command_buffer);
+	return ptr->vtbl->cmdEndRaytracePass(device, command_buffer, barriers);
 }
 
-Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1241,7 +1289,7 @@ Opal_Result opalCmdBeginCopyPass(Opal_Device device, Opal_CommandBuffer command_
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginCopyPass);
 
-	return ptr->vtbl->cmdBeginCopyPass(device, command_buffer);
+	return ptr->vtbl->cmdBeginCopyPass(device, command_buffer, barriers);
 }
 
 Opal_Result opalCmdCopyBufferToBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Buffer src_buffer, uint64_t src_offset, Opal_Buffer dst_buffer, uint64_t dst_offset, uint64_t size)
@@ -1292,7 +1340,7 @@ Opal_Result opalCmdCopyTextureToTexture(Opal_Device device, Opal_CommandBuffer c
 	return ptr->vtbl->cmdCopyTextureToTexture(device, command_buffer, src, dst, size);
 }
 
-Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1301,10 +1349,10 @@ Opal_Result opalCmdEndCopyPass(Opal_Device device, Opal_CommandBuffer command_bu
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdEndCopyPass);
 
-	return ptr->vtbl->cmdEndCopyPass(device, command_buffer);
+	return ptr->vtbl->cmdEndCopyPass(device, command_buffer, barriers);
 }
 
-Opal_Result opalCmdBeginAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdBeginAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1313,7 +1361,7 @@ Opal_Result opalCmdBeginAccelerationStructurePass(Opal_Device device, Opal_Comma
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdBeginAccelerationStructurePass);
 
-	return ptr->vtbl->cmdBeginAccelerationStructurePass(device, command_buffer);
+	return ptr->vtbl->cmdBeginAccelerationStructurePass(device, command_buffer, barriers);
 }
 
 Opal_Result opalCmdAccelerationStructureBuild(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_AccelerationStructureBuildDesc *desc)
@@ -1340,7 +1388,7 @@ Opal_Result opalCmdAccelerationStructureCopy(Opal_Device device, Opal_CommandBuf
 	return ptr->vtbl->cmdAccelerationStructureCopy(device, command_buffer, desc);
 }
 
-Opal_Result opalCmdEndAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer)
+Opal_Result opalCmdEndAccelerationStructurePass(Opal_Device device, Opal_CommandBuffer command_buffer, const Opal_PassBarriersDesc *barriers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1349,5 +1397,5 @@ Opal_Result opalCmdEndAccelerationStructurePass(Opal_Device device, Opal_Command
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdEndAccelerationStructurePass);
 
-	return ptr->vtbl->cmdEndAccelerationStructurePass(device, command_buffer);
+	return ptr->vtbl->cmdEndAccelerationStructurePass(device, command_buffer, barriers);
 }

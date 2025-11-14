@@ -239,7 +239,7 @@ static Opal_Result vulkan_instanceDestroySurface(Opal_Instance this, Opal_Surfac
 {
 	assert(this);
 	assert(surface);
- 
+
 	Opal_PoolHandle handle = (Opal_PoolHandle)surface;
 	assert(handle != OPAL_POOL_HANDLE_NULL);
 
