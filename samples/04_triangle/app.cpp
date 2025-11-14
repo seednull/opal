@@ -157,7 +157,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL,
 		OPAL_ALLOCATION_HINT_AUTO,
 		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_VERTEX | OPAL_BUFFER_USAGE_INDEX | OPAL_BUFFER_USAGE_COPY_DST),
-		OPAL_BUFFER_STATE_GENERIC_READ,
+		OPAL_BUFFER_STATE_COPY_DST,
 	};
 
 	result = opalCreateBuffer(device, &triangle_buffer_desc, &triangle_buffer);
@@ -198,22 +198,26 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	result = opalBeginCommandBuffer(device, staging_command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_BufferView staging_buffer_view = { staging_buffer, 0, sizeof(TriangleData) };
-	Opal_BufferView triangle_buffer_view = { triangle_buffer, 0, sizeof(TriangleData) };
-
-	result = opalCmdBeginCopyPass(device, staging_command_buffer);
+	result = opalCmdBeginCopyPass(device, staging_command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
-
-	// result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_GENERIC_READ, OPAL_RESOURCE_STATE_COPY_DEST);
-	// assert(result == OPAL_SUCCESS);
 
 	result = opalCmdCopyBufferToBuffer(device, staging_command_buffer, staging_buffer, 0, triangle_buffer, 0, sizeof(TriangleData));
 	assert(result == OPAL_SUCCESS);
 
-	// result = opalCmdBufferTransitionBarrier(device, staging_command_buffer, triangle_buffer_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_GENERIC_READ);
-	// assert(result == OPAL_SUCCESS);
+	Opal_BufferTransitionDesc copy_end_transitions[] =
+	{
+		{ triangle_buffer, OPAL_BUFFER_STATE_COPY_DST, OPAL_BUFFER_STATE_GENERIC_READ },
+	};
 
-	result = opalCmdEndCopyPass(device, staging_command_buffer);
+	Opal_BarrierDesc copy_end_barrier = {};
+	copy_end_barrier.wait_stages = OPAL_BARRIER_STAGE_COPY;
+	copy_end_barrier.block_stages = OPAL_BARRIER_STAGE_NONE;
+	copy_end_barrier.num_buffer_transitions = 1;
+	copy_end_barrier.buffer_transitions = copy_end_transitions;
+
+	Opal_PassBarriersDesc copy_end = { 1, &copy_end_barrier };
+
+	result = opalCmdEndCopyPass(device, staging_command_buffer, &copy_end);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, staging_command_buffer);
@@ -299,7 +303,6 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 		result = opalCreateCommandBuffer(device, command_allocators[i], &command_buffers[i]);
 		assert(result == OPAL_SUCCESS);
-
 	}
 
 	current_frame = 0;
@@ -404,23 +407,28 @@ void Application::render()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_FramebufferAttachment attachments =
+	Opal_TextureTransitionDesc graphics_begin_transitions[] =
 	{
-		swapchain_texture_view,
-		OPAL_NULL_HANDLE,
-		OPAL_LOAD_OP_CLEAR,
-		OPAL_STORE_OP_STORE,
-		{0.4f, 0.4f, 0.4f, 1.0f}
+		{ swapchain_texture_view, OPAL_TEXTURE_STATE_UNDEFINED, OPAL_TEXTURE_STATE_FRAMEBUFFER_ATTACHMENT },
 	};
 
-	Opal_FramebufferDesc framebuffer = {};
-	framebuffer.color_attachments = &attachments;
-	framebuffer.num_color_attachments = 1;
+	Opal_BarrierDesc graphics_begin_barrier = {};
+	graphics_begin_barrier.wait_stages = OPAL_BARRIER_STAGE_NONE;
+	graphics_begin_barrier.block_stages = OPAL_BARRIER_STAGE_GRAPHICS_FRAGMENT;
+	graphics_begin_barrier.num_texture_transitions = 1;
+	graphics_begin_barrier.texture_transitions = graphics_begin_transitions;
 
-	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT);
-	// assert(result == OPAL_SUCCESS);
+	Opal_PassBarriersDesc graphics_begin = { 1, &graphics_begin_barrier };
 
-	result = opalCmdBeginGraphicsPass(device, command_buffer, &framebuffer);
+	Opal_ClearColor clear_color = {0.4f, 0.4f, 0.4f, 1.0f};
+	Opal_FramebufferAttachment attachments[] =
+	{
+		{ swapchain_texture_view, OPAL_NULL_HANDLE, OPAL_LOAD_OP_CLEAR, OPAL_STORE_OP_STORE, clear_color },
+	};
+
+	Opal_FramebufferDesc framebuffer = { 1, attachments, NULL };
+
+	result = opalCmdBeginGraphicsPass(device, command_buffer, &framebuffer, &graphics_begin);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdGraphicsSetPipelineLayout(device, command_buffer, pipeline_layout);
@@ -429,8 +437,8 @@ void Application::render()
 	result = opalCmdGraphicsSetPipeline(device, command_buffer, pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	Opal_VertexBufferView vertex_buffer = {triangle_buffer, 0, sizeof(Vertex) * 3, sizeof(Vertex)};
-	Opal_IndexBufferView index_buffer = {triangle_buffer, offsetof(TriangleData, indices), sizeof(uint32_t) * 3, OPAL_INDEX_FORMAT_UINT32};
+	Opal_VertexBufferView vertex_buffer = { triangle_buffer, 0, sizeof(Vertex) * 3, sizeof(Vertex) };
+	Opal_IndexBufferView index_buffer = { triangle_buffer, offsetof(TriangleData, indices), sizeof(uint32_t) * 3, OPAL_INDEX_FORMAT_UINT32 };
 
 	result = opalCmdGraphicsSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
@@ -454,11 +462,21 @@ void Application::render()
 	result = opalCmdGraphicsDrawIndexed(device, command_buffer, 3, 1, 0, 0, 0);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndGraphicsPass(device, command_buffer);
-	assert(result == OPAL_SUCCESS);
+	Opal_TextureTransitionDesc graphics_end_transitions[] =
+	{
+		{ swapchain_texture_view, OPAL_TEXTURE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_TEXTURE_STATE_PRESENT },
+	};
 
-	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_FRAMEBUFFER_ATTACHMENT, OPAL_RESOURCE_STATE_PRESENT);
-	// assert(result == OPAL_SUCCESS);
+	Opal_BarrierDesc graphics_end_barrier = {};
+	graphics_end_barrier.wait_stages = OPAL_BARRIER_STAGE_GRAPHICS_FRAGMENT;
+	graphics_end_barrier.block_stages = OPAL_BARRIER_STAGE_NONE;
+	graphics_end_barrier.num_texture_transitions = 1;
+	graphics_end_barrier.texture_transitions = graphics_end_transitions;
+
+	Opal_PassBarriersDesc graphics_end = { 1, &graphics_end_barrier };
+
+	result = opalCmdEndGraphicsPass(device, command_buffer, &graphics_end);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);

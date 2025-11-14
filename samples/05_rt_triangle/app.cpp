@@ -219,7 +219,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		frame_texture_desc.layer_count = 1;
 		frame_texture_desc.samples = OPAL_SAMPLES_1;
 		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_COPY_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
-		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_COPY_SRC;
+		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_UNORDERED_ACCESS;
 		frame_texture_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 
 		result = opalCreateTexture(device, &frame_texture_desc, &frame_textures[i]);
@@ -404,7 +404,7 @@ void Application::resize(uint32_t w, uint32_t h)
 		frame_texture_desc.layer_count = 1;
 		frame_texture_desc.samples = OPAL_SAMPLES_1;
 		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_COPY_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
-		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_COPY_SRC;
+		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_UNORDERED_ACCESS;
 		frame_texture_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 
 		result = opalCreateTexture(device, &frame_texture_desc, &frame_textures[i]);
@@ -451,14 +451,11 @@ void Application::render()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	// result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_COPY_SOURCE, OPAL_RESOURCE_STATE_UNORDERED_ACCESS);
-	// assert(result == OPAL_SUCCESS);
-
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 	assert(result == OPAL_SUCCESS);
 
 #ifdef OPAL_PLATFORM_MACOS
-	result = opalCmdBeginComputePass(device, command_buffer);
+	result = opalCmdBeginComputePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdComputeSetPipelineLayout(device, command_buffer, pipeline_layout);
@@ -473,10 +470,10 @@ void Application::render()
 	result = opalCmdComputeDispatch(device, command_buffer, width, height, 1);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndComputePass(device, command_buffer);
+	result = opalCmdEndComputePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 #else
-	result = opalCmdBeginRaytracePass(device, command_buffer);
+	result = opalCmdBeginRaytracePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceSetPipelineLayout(device, command_buffer, pipeline_layout);
@@ -494,34 +491,53 @@ void Application::render()
 	result = opalCmdRaytraceDispatch(device, command_buffer, width, height, 1);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndRaytracePass(device, command_buffer);
+	result = opalCmdEndRaytracePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 #endif
 
 	result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	// result = opalCmdTextureTransitionBarrier(device, command_buffer, frame_texture_view, OPAL_RESOURCE_STATE_UNORDERED_ACCESS, OPAL_RESOURCE_STATE_COPY_SOURCE);
-	// assert(result == OPAL_SUCCESS);
+	Opal_TextureTransitionDesc copy_begin_transitions[] =
+	{
+		frame_texture_view, OPAL_TEXTURE_STATE_UNORDERED_ACCESS, OPAL_TEXTURE_STATE_COPY_SRC,
+		swapchain_texture_view, OPAL_TEXTURE_STATE_UNDEFINED, OPAL_TEXTURE_STATE_COPY_DST,
+	};
 
-	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COMMON, OPAL_RESOURCE_STATE_COPY_DEST);
-	// assert(result == OPAL_SUCCESS);
+	Opal_BarrierDesc copy_begin_barrier = {};
+	copy_begin_barrier.wait_stages = OPAL_BARRIER_STAGE_ALL_COMPUTE;
+	copy_begin_barrier.block_stages = OPAL_BARRIER_STAGE_COPY;
+	copy_begin_barrier.num_texture_transitions = 2;
+	copy_begin_barrier.texture_transitions = copy_begin_transitions;
+
+	Opal_PassBarriersDesc copy_begin = { 1, &copy_begin_barrier };
 
 	Opal_TextureRegion src = { frame_texture_view, 0, 0, 0 };
 	Opal_TextureRegion dst = { swapchain_texture_view, 0, 0, 0 };
 	Opal_Extent3D size = { width, height, 1 };
 
-	result = opalCmdBeginCopyPass(device, command_buffer);
+	result = opalCmdBeginCopyPass(device, command_buffer, &copy_begin);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdCopyTextureToTexture(device, command_buffer, src, dst, size);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndCopyPass(device, command_buffer);
-	assert(result == OPAL_SUCCESS);
+	Opal_TextureTransitionDesc copy_end_transitions[] =
+	{
+		frame_texture_view, OPAL_TEXTURE_STATE_COPY_SRC, OPAL_TEXTURE_STATE_UNORDERED_ACCESS,
+		swapchain_texture_view, OPAL_TEXTURE_STATE_COPY_DST, OPAL_TEXTURE_STATE_PRESENT,
+	};
 
-	// result = opalCmdTextureTransitionBarrier(device, command_buffer, swapchain_texture_view, OPAL_RESOURCE_STATE_COPY_DEST, OPAL_RESOURCE_STATE_PRESENT);
-	// assert(result == OPAL_SUCCESS);
+	Opal_BarrierDesc copy_end_barrier = {};
+	copy_end_barrier.wait_stages = OPAL_BARRIER_STAGE_COPY;
+	copy_end_barrier.block_stages = OPAL_BARRIER_STAGE_NONE;
+	copy_end_barrier.num_texture_transitions = 2;
+	copy_end_barrier.texture_transitions = copy_end_transitions;
+
+	Opal_PassBarriersDesc copy_end = { 1, &copy_end_barrier };
+
+	result = opalCmdEndCopyPass(device, command_buffer, &copy_end);
+	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
@@ -790,13 +806,13 @@ void Application::buildBLAS()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBeginAccelerationStructurePass(device, command_buffer);
+	result = opalCmdBeginAccelerationStructurePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdAccelerationStructureBuild(device, command_buffer, &blas_build_desc);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndAccelerationStructurePass(device, command_buffer);
+	result = opalCmdEndAccelerationStructurePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
@@ -900,13 +916,13 @@ void Application::buildTLAS()
 	result = opalBeginCommandBuffer(device, command_buffer);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdBeginAccelerationStructurePass(device, command_buffer);
+	result = opalCmdBeginAccelerationStructurePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdAccelerationStructureBuild(device, command_buffer, &tlas_build_desc);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdEndAccelerationStructurePass(device, command_buffer);
+	result = opalCmdEndAccelerationStructurePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalEndCommandBuffer(device, command_buffer);
