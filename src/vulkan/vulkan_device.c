@@ -164,8 +164,8 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 {
 	assert(device_ptr);
 	assert(command_buffer_ptr);
-	assert(barriers);
 	assert(command_buffer_ptr->pass == VULKAN_PASS_TYPE_NONE);
+	assert(barriers);
 
 	for (uint32_t i = 0; i < barriers->num_barriers; ++i)
 	{
@@ -290,6 +290,11 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 
 static void vulkan_cmdStageBarrier(Vulkan_Device *device_ptr, Vulkan_CommandBuffer *command_buffer_ptr, const Opal_MemoryBarrierDesc *barriers, VkPipelineStageFlagBits stage)
 {
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass != VULKAN_PASS_TYPE_NONE);
+	assert(barriers);
+
 	VkPipelineStageFlagBits src_stages = stage;
 	VkPipelineStageFlagBits dst_stages = stage;
 
