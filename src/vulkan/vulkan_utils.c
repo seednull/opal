@@ -47,55 +47,6 @@ VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type)
 	return vk_image_view_types[type];
 }
 
-VkImageLayout vulkan_helperToImageLayout(Opal_TextureFormat format, Opal_TextureUsageFlags usage, Opal_TextureState state)
-{
-	OPAL_UNUSED(usage);
-
-	switch (state)
-	{
-		case OPAL_TEXTURE_STATE_UNDEFINED: return VK_IMAGE_LAYOUT_UNDEFINED;
-		case OPAL_TEXTURE_STATE_PRESENT: return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		case OPAL_TEXTURE_STATE_SHADER_SAMPLED:
-		{
-			assert(usage & (OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED));
-			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		}
-		case OPAL_TEXTURE_STATE_UNORDERED_ACCESS:
-		{
-			assert(usage & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
-			return VK_IMAGE_LAYOUT_GENERAL;
-		}
-		case OPAL_TEXTURE_STATE_RESOLVE_DST:
-		case OPAL_TEXTURE_STATE_FRAMEBUFFER_ATTACHMENT:
-		{
-			assert(usage & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
-
-			if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
-				return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
-				return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-			assert(0);
-			return VK_IMAGE_LAYOUT_UNDEFINED;
-		}
-		case OPAL_TEXTURE_STATE_COPY_SRC:
-		{
-			assert(usage & OPAL_TEXTURE_USAGE_COPY_SRC);
-			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		}
-		case OPAL_TEXTURE_STATE_COPY_DST:
-		{
-			assert(usage & OPAL_TEXTURE_USAGE_COPY_DST);
-			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		}
-	}
-
-	assert(0);
-	return VK_IMAGE_LAYOUT_UNDEFINED;
-}
-
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode)
 {
 	static VkPresentModeKHR vk_present_modes[] =
@@ -434,37 +385,6 @@ VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples)
 	return vk_sample_count_bits[samples];
 }
 
-VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format)
-{
-	VkImageUsageFlags result = 0;
-
-	if (flags & OPAL_TEXTURE_USAGE_COPY_SRC)
-		result |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
-	if (flags & OPAL_TEXTURE_USAGE_COPY_DST)
-		result |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-	if (flags & OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED)
-		result |= VK_IMAGE_USAGE_SAMPLED_BIT;
-
-	if (flags & OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED)
-		result |= VK_IMAGE_USAGE_SAMPLED_BIT;
-
-	if (flags & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
-		result |= VK_IMAGE_USAGE_STORAGE_BIT;
-
-	if (flags & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT)
-	{
-		if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
-			result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		
-		if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
-			result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	}
-
-	return result;
-}
-
 VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_TextureFormat format)
 {
 	VkImageAspectFlags result = 0;
@@ -477,39 +397,6 @@ VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_TextureFormat format)
 
 	if (format == OPAL_TEXTURE_FORMAT_D16_UNORM_S8_UINT || format == OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT || format == OPAL_TEXTURE_FORMAT_D32_SFLOAT_S8_UINT)
 		result |= VK_IMAGE_ASPECT_STENCIL_BIT;
-
-	return result;
-}
-
-/*
- */
-VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags)
-{
-	VkBufferUsageFlags result = 0;
-
-	if (flags & OPAL_BUFFER_USAGE_COPY_SRC)
-		result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_COPY_DST)
-		result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_VERTEX)
-		result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_INDEX)
-		result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_UNIFORM)
-		result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_UNORDERED_ACCESS)
-		result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_INDIRECT)
-		result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-
-	if (flags & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT)
-		result |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 
 	return result;
 }
@@ -873,6 +760,285 @@ VkAttachmentStoreOp vulkan_helperToStoreOp(Opal_StoreOp op)
 	};
 
 	return vk_store_ops[op];
+}
+
+VkPipelineStageFlags vulkan_helperToPipelineWaitStages(Opal_BarrierStageFlags stages)
+{
+	if (stages == OPAL_BARRIER_STAGE_NONE)
+		return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+	VkPipelineStageFlags result = 0;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_VERTEX)
+		result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_MESH)
+		result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_TASK)
+		result |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_FRAGMENT)
+		result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	if (stages & OPAL_BARRIER_STAGE_COMPUTE)
+		result |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+	if (stages & OPAL_BARRIER_STAGE_RAYTRACE)
+		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & OPAL_BARRIER_STAGE_ACCELERATION_STRUCTURE)
+		result |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+	if (stages & OPAL_BARRIER_STAGE_COPY)
+		result |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	return result;
+}
+
+VkPipelineStageFlags vulkan_helperToPipelineBlockStages(Opal_BarrierStageFlags stages)
+{
+	if (stages == OPAL_BARRIER_STAGE_NONE)
+		return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+	VkPipelineStageFlags result = 0;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_VERTEX)
+		result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_MESH)
+		result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_TASK)
+		result |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_FRAGMENT)
+		result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	if (stages & OPAL_BARRIER_STAGE_COMPUTE)
+		result |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+	if (stages & OPAL_BARRIER_STAGE_RAYTRACE)
+		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+
+	if (stages & OPAL_BARRIER_STAGE_ACCELERATION_STRUCTURE)
+		result |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+	if (stages & OPAL_BARRIER_STAGE_COPY)
+		result |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	return result;
+}
+
+VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags usage)
+{
+	VkBufferUsageFlags result = 0;
+
+	if (usage & OPAL_BUFFER_USAGE_COPY_SRC)
+		result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_COPY_DST)
+		result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_VERTEX)
+		result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_INDEX)
+		result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_UNIFORM)
+		result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_UNORDERED_ACCESS)
+		result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_INDIRECT)
+		result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+
+	if (usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT)
+		result |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+
+	return result;
+}
+
+VkAccessFlags vulkan_helperToBufferAccessMask(Opal_BufferUsageFlags usage, Opal_BufferState state)
+{
+	switch (state)
+	{
+		case OPAL_BUFFER_STATE_GENERIC_READ:
+		{
+			VkAccessFlags result = VK_ACCESS_NONE;
+
+			if (usage & OPAL_BUFFER_USAGE_VERTEX)
+				result |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+
+			if (usage & OPAL_BUFFER_USAGE_INDEX)
+				result |= VK_ACCESS_INDEX_READ_BIT;
+
+			if (usage & OPAL_BUFFER_USAGE_UNIFORM)
+				result |= VK_ACCESS_UNIFORM_READ_BIT;
+
+			if (usage & OPAL_BUFFER_USAGE_UNORDERED_ACCESS)
+				result |= VK_ACCESS_SHADER_READ_BIT;
+
+			if (usage & OPAL_BUFFER_USAGE_INDIRECT)
+				result |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+
+			if (usage & OPAL_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT)
+				result |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+
+			if (usage & OPAL_BUFFER_USAGE_COPY_SRC)
+				result |= VK_ACCESS_TRANSFER_READ_BIT;
+
+			return result;
+		}
+
+		case OPAL_BUFFER_STATE_UNORDERED_ACCESS:
+		{
+			assert(usage & OPAL_BUFFER_USAGE_UNORDERED_ACCESS);
+			return VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		}
+
+		case OPAL_BUFFER_STATE_COPY_DST:
+		{
+			assert(usage & OPAL_BUFFER_USAGE_COPY_DST);
+			return VK_ACCESS_TRANSFER_WRITE_BIT;
+		}
+	}
+
+	assert(0);
+	return VK_ACCESS_NONE;
+}
+
+VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags usage, Opal_TextureFormat format)
+{
+	VkImageUsageFlags result = 0;
+
+	if (usage & OPAL_TEXTURE_USAGE_COPY_SRC)
+		result |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+	if (usage & OPAL_TEXTURE_USAGE_COPY_DST)
+		result |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+	if (usage & OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED)
+		result |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+	if (usage & OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED)
+		result |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+	if (usage & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
+		result |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+	if (usage & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT)
+	{
+		if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
+			result |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		
+		if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
+			result |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+
+	return result;
+}
+
+VkAccessFlags vulkan_helperToImageAccessMask(Opal_TextureUsageFlags usage, Opal_TextureState state)
+{
+	switch (state)
+	{
+		case OPAL_TEXTURE_STATE_UNDEFINED: return VK_ACCESS_NONE;
+		case OPAL_TEXTURE_STATE_PRESENT: return VK_ACCESS_NONE;
+
+		case OPAL_TEXTURE_STATE_FRAMEBUFFER_ATTACHMENT:
+		case OPAL_TEXTURE_STATE_RESOLVE_DST:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
+			return VK_ACCESS_SHADER_WRITE_BIT;
+		}
+
+		case OPAL_TEXTURE_STATE_UNORDERED_ACCESS:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
+			return VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		}
+
+		case OPAL_TEXTURE_STATE_SHADER_SAMPLED:
+		{
+			VkAccessFlags result = VK_ACCESS_NONE;
+
+			if (usage & OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED)
+				result |= VK_ACCESS_SHADER_READ_BIT;
+
+			if (usage & OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED)
+				result |= VK_ACCESS_SHADER_READ_BIT;
+
+			assert(result != VK_ACCESS_NONE);
+			return result;
+		}
+
+		case OPAL_TEXTURE_STATE_COPY_SRC:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_COPY_SRC);
+			return VK_ACCESS_TRANSFER_READ_BIT;
+		}
+
+		case OPAL_TEXTURE_STATE_COPY_DST:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_COPY_DST);
+			return VK_ACCESS_TRANSFER_WRITE_BIT;
+		}
+	}
+
+	assert(0);
+	return VK_ACCESS_NONE;
+}
+
+VkImageLayout vulkan_helperToImageLayout(Opal_TextureUsageFlags usage, Opal_TextureState state, Opal_TextureFormat format)
+{
+	OPAL_UNUSED(usage);
+
+	switch (state)
+	{
+		case OPAL_TEXTURE_STATE_UNDEFINED: return VK_IMAGE_LAYOUT_UNDEFINED;
+		case OPAL_TEXTURE_STATE_PRESENT: return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		case OPAL_TEXTURE_STATE_SHADER_SAMPLED:
+		{
+			assert(usage & (OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED));
+			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		case OPAL_TEXTURE_STATE_UNORDERED_ACCESS:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
+			return VK_IMAGE_LAYOUT_GENERAL;
+		}
+		case OPAL_TEXTURE_STATE_RESOLVE_DST:
+		case OPAL_TEXTURE_STATE_FRAMEBUFFER_ATTACHMENT:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
+
+			if (format >= OPAL_TEXTURE_FORMAT_COLOR_BEGIN && format <= OPAL_TEXTURE_FORMAT_COLOR_END)
+				return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
+				return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			assert(0);
+			return VK_IMAGE_LAYOUT_UNDEFINED;
+		}
+		case OPAL_TEXTURE_STATE_COPY_SRC:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_COPY_SRC);
+			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		}
+		case OPAL_TEXTURE_STATE_COPY_DST:
+		{
+			assert(usage & OPAL_TEXTURE_USAGE_COPY_DST);
+			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		}
+	}
+
+	assert(0);
+	return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 Opal_Result vulkan_helperFillDeviceEnginesInfo(VkPhysicalDevice physical_device, Vulkan_DeviceEnginesInfo *info)

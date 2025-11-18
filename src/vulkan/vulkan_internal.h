@@ -125,6 +125,7 @@ typedef struct Vulkan_Device_t
 	Opal_Bump bump;
 	Opal_Pool queues;
 	Opal_Pool semaphores;
+	Opal_Pool fences;
 	Opal_Pool buffers;
 	Opal_Pool images;
 	Opal_Pool image_views;
@@ -161,6 +162,11 @@ typedef struct Vulkan_Semaphore_t
 	VkSemaphore semaphore;
 } Vulkan_Semaphore;
 
+typedef struct Vulkan_Fence_t
+{
+	VkEvent event;
+} Vulkan_Fence;
+
 typedef struct Vulkan_Buffer_t
 {
 	VkBuffer buffer;
@@ -170,20 +176,22 @@ typedef struct Vulkan_Buffer_t
 #endif
 	Vulkan_Allocation allocation;
 	VkDeviceAddress device_address;
+	Opal_BufferUsageFlags usage;
 } Vulkan_Buffer;
 
 typedef struct Vulkan_Image_t
 {
 	VkImage image;
-	Opal_TextureFormat format;
 	uint32_t width;
 	uint32_t height;
 	uint32_t depth;
-	VkImageAspectFlagBits aspect_mask;
 #ifdef OPAL_HAS_VMA
 	VmaAllocation vma_allocation;
 #endif
 	Vulkan_Allocation allocation;
+	VkImageAspectFlagBits aspect_mask;
+	Opal_TextureUsageFlags usage;
+	Opal_TextureFormat format;
 } Vulkan_Image;
 
 typedef struct Vulkan_ImageView_t
@@ -198,6 +206,8 @@ typedef struct Vulkan_ImageView_t
 	uint32_t base_layer;
 	uint32_t num_layers;
 	VkImageAspectFlagBits aspect_mask;
+	Opal_TextureUsageFlags usage;
+	Opal_TextureFormat format;
 } Vulkan_ImageView;
 
 typedef struct Vulkan_Sampler_t
@@ -344,7 +354,6 @@ Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperti
 VkImageCreateFlags vulkan_helperToImageCreateFlags(const Opal_TextureDesc *desc);
 VkImageType vulkan_helperToImageType(Opal_TextureType type);
 VkImageViewType vulkan_helperToImageViewType(Opal_TextureViewType type);
-VkImageLayout vulkan_helperToImageLayout(Opal_TextureFormat format, Opal_TextureUsageFlags usage, Opal_TextureState state);
 
 VkPresentModeKHR vulkan_helperToPresentMode(Opal_PresentMode mode);
 Opal_PresentMode vulkan_helperFromPresentMode(VkPresentModeKHR mode);
@@ -357,9 +366,7 @@ VkFormat vulkan_helperToVertexFormat(Opal_VertexFormat format);
 VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format);
 
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
-VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags flags, Opal_TextureFormat format);
 VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_TextureFormat format);
-VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags flags);
 
 VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode);
 VkSamplerMipmapMode vulkan_helperToSamplerMipmapMode(Opal_SamplerFilterMode mode);
@@ -388,6 +395,16 @@ VkBlendFactor vulkan_helperToBlendFactor(Opal_BlendFactor factor);
 VkBlendOp vulkan_helperToBlendOp(Opal_BlendOp op);
 VkAttachmentLoadOp vulkan_helperToLoadOp(Opal_LoadOp op);
 VkAttachmentStoreOp vulkan_helperToStoreOp(Opal_StoreOp op);
+
+VkPipelineStageFlags vulkan_helperToPipelineWaitStages(Opal_BarrierStageFlags stages);
+VkPipelineStageFlags vulkan_helperToPipelineBlockStages(Opal_BarrierStageFlags stages);
+
+VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags usage);
+VkAccessFlags vulkan_helperToBufferAccessMask(Opal_BufferUsageFlags usage, Opal_BufferState state);
+
+VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags usage, Opal_TextureFormat format);
+VkAccessFlags vulkan_helperToImageAccessMask(Opal_TextureUsageFlags usage, Opal_TextureState state);
+VkImageLayout vulkan_helperToImageLayout(Opal_TextureUsageFlags usage, Opal_TextureState state, Opal_TextureFormat format);
 
 const char *vulkan_platformGetSurfaceExtension();
 Opal_Result vulkan_platformCreateSurface(VkInstance instance, void *handle, VkSurfaceKHR *surface);
