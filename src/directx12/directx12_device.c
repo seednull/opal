@@ -3664,6 +3664,9 @@ static Opal_Result directx12_deviceWaitSemaphore(Opal_Device this, Opal_Semaphor
 	DirectX12_Semaphore *semaphore_ptr = (DirectX12_Semaphore *)opal_poolGetElement(&device_ptr->semaphores, (Opal_PoolHandle)semaphore);
 	assert(semaphore_ptr);
 
+	if (value == 0)
+		return OPAL_SUCCESS;
+
 	ID3D12Fence_SetEventOnCompletion(semaphore_ptr->fence, value, semaphore_ptr->event);
 	HRESULT hr = WaitForSingleObjectEx(semaphore_ptr->event, (DWORD)timeout_milliseconds, FALSE);
 	if (hr == WAIT_TIMEOUT)
