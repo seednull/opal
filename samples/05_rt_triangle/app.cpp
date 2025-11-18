@@ -219,7 +219,6 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 		frame_texture_desc.layer_count = 1;
 		frame_texture_desc.samples = OPAL_SAMPLES_1;
 		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_COPY_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
-		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_UNORDERED_ACCESS;
 		frame_texture_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 
 		result = opalCreateTexture(device, &frame_texture_desc, &frame_textures[i]);
@@ -404,7 +403,6 @@ void Application::resize(uint32_t w, uint32_t h)
 		frame_texture_desc.layer_count = 1;
 		frame_texture_desc.samples = OPAL_SAMPLES_1;
 		frame_texture_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_COPY_SRC | OPAL_TEXTURE_USAGE_UNORDERED_ACCESS);
-		frame_texture_desc.initial_state = OPAL_TEXTURE_STATE_UNORDERED_ACCESS;
 		frame_texture_desc.hint = OPAL_ALLOCATION_HINT_AUTO;
 
 		result = opalCreateTexture(device, &frame_texture_desc, &frame_textures[i]);
@@ -454,14 +452,27 @@ void Application::render()
 	result = opalCmdSetDescriptorHeap(device, command_buffer, descriptor_heap);
 	assert(result == OPAL_SUCCESS);
 
+	Opal_TextureTransitionDesc compute_begin_transitions[] =
+	{
+		frame_texture_view, OPAL_TEXTURE_STATE_UNDEFINED, OPAL_TEXTURE_STATE_UNORDERED_ACCESS,
+	};
+
+	Opal_BarrierDesc compute_begin_barrier = {};
+	compute_begin_barrier.wait_stages = OPAL_BARRIER_STAGE_NONE;
+	compute_begin_barrier.block_stages = OPAL_BARRIER_STAGE_ALL_COMPUTE;
+	compute_begin_barrier.num_texture_transitions = 1;
+	compute_begin_barrier.texture_transitions = compute_begin_transitions;
+
+	Opal_PassBarriersDesc compute_begin = { 1, &compute_begin_barrier };
+
 #ifdef OPAL_PLATFORM_MACOS
-	result = opalCmdBeginComputePass(device, command_buffer, NULL);
+	result = opalCmdBeginComputePass(device, command_buffer, &compute_begin);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdComputeSetPipelineLayout(device, command_buffer, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
+	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdComputeSetPipeline(device, command_buffer, compute_pipeline);
@@ -473,13 +484,13 @@ void Application::render()
 	result = opalCmdEndComputePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 #else
-	result = opalCmdBeginRaytracePass(device, command_buffer, NULL);
+	result = opalCmdBeginRaytracePass(device, command_buffer, &compute_begin);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceSetPipelineLayout(device, command_buffer, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdRaytraceSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, nullptr);
+	result = opalCmdRaytraceSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, NULL);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceSetPipeline(device, command_buffer, raytrace_pipeline);
