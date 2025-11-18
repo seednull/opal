@@ -900,7 +900,7 @@ typedef struct Opal_MemoryBarrierDesc_t
 	uint32_t num_buffers;
 	const Opal_Buffer *buffers;
 	uint32_t num_textures;
-	const Opal_Texture *textures;
+	const Opal_TextureView *textures;
 } Opal_MemoryBarrierDesc;
 
 typedef struct Opal_BarrierDesc_t
@@ -942,7 +942,6 @@ typedef struct Opal_TextureDesc_t
 	Opal_Samples samples;
 	Opal_AllocationHint hint;
 	Opal_TextureUsageFlags usage;
-	Opal_TextureState initial_state;
 } Opal_TextureDesc;
 
 typedef struct Opal_TextureViewDesc_t

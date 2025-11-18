@@ -685,7 +685,7 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 
 	assert(allocation.offset % allocation_info.Alignment == 0);
 
-	D3D12_RESOURCE_STATES initial_state = directx12_helperToTextureState(desc->format, desc->usage, desc->initial_state);
+	D3D12_RESOURCE_STATES initial_state = directx12_helperToTextureState(desc->format, desc->usage, OPAL_TEXTURE_STATE_UNDEFINED);
 	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &texture_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_texture);
 	if (!SUCCEEDED(hr))
 	{
