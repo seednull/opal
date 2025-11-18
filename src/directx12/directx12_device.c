@@ -88,6 +88,146 @@ static Opal_Result directx12_createBuffer(DirectX12_Device *device_ptr, const D3
 	return OPAL_SUCCESS;
 }
 
+static void directx12_cmdResourceBarrier(DirectX12_Device *device_ptr, DirectX12_CommandBuffer *command_buffer_ptr, const Opal_PassBarriersDesc *barriers)
+{
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_NONE);
+	assert(barriers);
+
+	uint32_t num_barriers = 0;
+	for (uint32_t i = 0; i < barriers->num_barriers; ++i)
+	{
+		const Opal_BarrierDesc *opal_barrier = &barriers->barriers[i];
+
+		num_barriers += opal_barrier->num_buffer_transitions;
+
+		for (uint32_t j = 0; j < opal_barrier->num_texture_transitions; ++j)
+		{
+			const Opal_TextureTransitionDesc *opal_transition = &opal_barrier->texture_transitions[j];
+
+			DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_transition->texture_view);
+			assert(texture_view_ptr);
+
+			num_barriers += texture_view_ptr->num_subresources;
+		}
+	}
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_RESOURCE_BARRIER) * num_barriers);
+
+	D3D12_RESOURCE_BARRIER *d3d12_barriers = (D3D12_RESOURCE_BARRIER *)(device_ptr->bump.data);
+	memset(d3d12_barriers, 0, sizeof(D3D12_RESOURCE_BARRIER) * num_barriers);
+
+	num_barriers = 0;
+	for (uint32_t i = 0; i < barriers->num_barriers; ++i)
+	{
+		const Opal_BarrierDesc *opal_barrier = &barriers->barriers[i];
+
+		D3D12_RESOURCE_BARRIER_FLAGS flags = 0;
+		if (opal_barrier->fence != OPAL_NULL_HANDLE)
+		{
+			assert(opal_poolGetElement(&device_ptr->fences, (Opal_PoolHandle)opal_barrier->fence) != NULL);
+
+			switch (opal_barrier->fence_op)
+			{
+				case OPAL_FENCE_OP_SET: flags = D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY; break;
+				case OPAL_FENCE_OP_WAIT: flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY; break;
+			}
+		}
+
+		for (uint32_t j = 0; j < opal_barrier->num_buffer_transitions; ++j)
+		{
+			const Opal_BufferTransitionDesc *opal_transition = &opal_barrier->buffer_transitions[j];
+
+			DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)opal_transition->buffer);
+			assert(buffer_ptr);
+
+			D3D12_RESOURCE_STATES state_before = directx12_helperToBufferState(buffer_ptr->memory_type, buffer_ptr->usage, opal_transition->state_before);
+			D3D12_RESOURCE_STATES state_after = directx12_helperToBufferState(buffer_ptr->memory_type, buffer_ptr->usage, opal_transition->state_after);
+
+			if (state_before == state_after)
+				continue;
+
+			D3D12_RESOURCE_BARRIER *d3d12_barrier = &d3d12_barriers[num_barriers++];
+			d3d12_barrier->Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			d3d12_barrier->Transition.StateBefore = state_before;
+			d3d12_barrier->Transition.StateAfter = state_after;
+			d3d12_barrier->Transition.pResource = buffer_ptr->buffer;
+			d3d12_barrier->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			d3d12_barrier->Flags = flags;
+		}
+
+		for (uint32_t j = 0; j < opal_barrier->num_texture_transitions; ++j)
+		{
+			const Opal_TextureTransitionDesc *opal_transition = &opal_barrier->texture_transitions[j];
+
+			DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_transition->texture_view);
+			assert(texture_view_ptr);
+
+			for (uint32_t k = 0; k < texture_view_ptr->num_subresources; ++k)
+			{
+				D3D12_RESOURCE_STATES state_before = directx12_helperToTextureState(texture_view_ptr->opal_format, texture_view_ptr->usage, opal_transition->state_before);
+				D3D12_RESOURCE_STATES state_after = directx12_helperToTextureState(texture_view_ptr->opal_format, texture_view_ptr->usage, opal_transition->state_after);
+
+				if (state_before == state_after)
+					continue;
+
+				D3D12_RESOURCE_BARRIER *d3d12_barrier = &d3d12_barriers[num_barriers++];
+				d3d12_barrier->Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				d3d12_barrier->Transition.StateBefore = state_before;
+				d3d12_barrier->Transition.StateAfter = state_after;
+				d3d12_barrier->Transition.pResource = texture_view_ptr->texture;
+				d3d12_barrier->Transition.Subresource = texture_view_ptr->subresource_index + k;
+				d3d12_barrier->Flags = flags;
+			}
+		}
+	}
+
+	if (num_barriers > 0)
+		ID3D12GraphicsCommandList4_ResourceBarrier(command_buffer_ptr->list, num_barriers, d3d12_barriers);
+}
+
+static void directx12_cmdMemoryBarrier(DirectX12_Device *device_ptr, DirectX12_CommandBuffer *command_buffer_ptr, const Opal_MemoryBarrierDesc *barriers)
+{
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass != DIRECTX12_PASS_TYPE_NONE);
+	assert(barriers);
+
+	uint32_t num_barriers = barriers->num_buffers + barriers->num_textures;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_RESOURCE_BARRIER) * num_barriers);
+
+	D3D12_RESOURCE_BARRIER *d3d12_barriers = (D3D12_RESOURCE_BARRIER *)(device_ptr->bump.data);
+	memset(d3d12_barriers, 0, sizeof(D3D12_RESOURCE_BARRIER) * num_barriers);
+
+	num_barriers = 0;
+	for (uint32_t i = 0; i < barriers->num_buffers; ++i)
+	{
+		DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)barriers->buffers[i]);
+		assert(buffer_ptr);
+
+		D3D12_RESOURCE_BARRIER *d3d12_barrier = &d3d12_barriers[num_barriers++];
+		d3d12_barrier->Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		d3d12_barrier->UAV.pResource = buffer_ptr->buffer;
+	}
+
+	for (uint32_t i = 0; i < barriers->num_textures; ++i)
+	{
+		DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)barriers->textures[i]);
+		assert(texture_view_ptr);
+
+		D3D12_RESOURCE_BARRIER *d3d12_barrier = &d3d12_barriers[num_barriers++];
+		d3d12_barrier->Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		d3d12_barrier->UAV.pResource = texture_view_ptr->texture;
+	}
+
+	if (num_barriers > 0)
+		ID3D12GraphicsCommandList4_ResourceBarrier(command_buffer_ptr->list, num_barriers, d3d12_barriers);
+}
+
 static int directx12_compareInlineDescriptors(const void *d0, const void *d1)
 {
 	UINT b0 = ((const DirectX12_DescriptorInfo *)d0)->binding;
@@ -150,6 +290,14 @@ static void directx12_destroySemaphore(DirectX12_Device *device_ptr, DirectX12_S
 
 	CloseHandle(semaphore_ptr->event);
 	ID3D12Fence_Release(semaphore_ptr->fence);
+}
+
+static void directx12_destroyFence(DirectX12_Device *device_ptr, DirectX12_Fence *fence_ptr)
+{
+	OPAL_UNUSED(device_ptr);
+	OPAL_UNUSED(fence_ptr);
+
+	// do nothing
 }
 
 static void directx12_destroyBuffer(DirectX12_Device *device_ptr, DirectX12_Buffer *buffer_ptr)
@@ -598,10 +746,15 @@ static Opal_Result directx12_deviceCreateSemaphore(Opal_Device this, const Opal_
 
 static Opal_Result directx12_deviceCreateFence(Opal_Device this, Opal_Fence *fence)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(fence);
+	assert(this);
+	assert(fence);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
+	DirectX12_Fence result = {0};
+
+	*fence = (Opal_Semaphore)opal_poolAddElement(&device_ptr->fences, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
@@ -685,7 +838,7 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 
 	assert(allocation.offset % allocation_info.Alignment == 0);
 
-	D3D12_RESOURCE_STATES initial_state = directx12_helperToTextureState(desc->format, desc->usage, OPAL_TEXTURE_STATE_UNDEFINED);
+	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON;
 	HRESULT hr = ID3D12Device_CreatePlacedResource(d3d12_device, allocation.memory, allocation.offset, &texture_info, initial_state, NULL, &IID_ID3D12Resource, &d3d12_texture);
 	if (!SUCCEEDED(hr))
 	{
@@ -702,6 +855,8 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	result.depth = (desc->type != OPAL_TEXTURE_TYPE_3D) ? texture_info.DepthOrArraySize : 1;
 	result.samples = texture_info.SampleDesc.Count;
 	result.allocation = allocation;
+	result.usage = desc->usage;
+	result.opal_format = desc->format;
 
 	*texture = (Opal_Texture)opal_poolAddElement(&device_ptr->textures, &result);
 	return OPAL_SUCCESS;
@@ -877,10 +1032,13 @@ static Opal_Result directx12_deviceCreateTextureView(Opal_Device this, const Opa
 	result.texture = texture_ptr->texture;
 	result.format = texture_ptr->format;
 	result.subresource_index = desc->base_mip + desc->base_layer * desc->mip_count;
+	result.num_subresources = desc->layer_count * desc->mip_count;
 	memcpy(&result.srv_desc, &srv_desc, sizeof(D3D12_SHADER_RESOURCE_VIEW_DESC));
 	memcpy(&result.uav_desc, &uav_desc, sizeof(D3D12_UNORDERED_ACCESS_VIEW_DESC));
 	memcpy(&result.rtv_desc, &rtv_desc, sizeof(D3D12_RENDER_TARGET_VIEW_DESC));
 	memcpy(&result.dsv_desc, &dsv_desc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
+	result.usage = texture_ptr->usage;
+	result.opal_format = texture_ptr->opal_format;
 
 	*texture_view = (Opal_TextureView)opal_poolAddElement(&device_ptr->texture_views, &result);
 	return OPAL_SUCCESS;
@@ -2201,6 +2359,11 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 		result.dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
 		result.dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 
+		result.subresource_index = 0;
+		result.num_subresources = 1;
+		result.usage = desc->usage;
+		result.opal_format = desc->format.texture_format;
+
 		texture_views[i] = (Opal_TextureView)opal_poolAddElement(&device_ptr->texture_views, &result);
 	}
 
@@ -2248,10 +2411,20 @@ static Opal_Result directx12_deviceDestroySemaphore(Opal_Device this, Opal_Semap
 
 static Opal_Result directx12_deviceDestroyFence(Opal_Device this, Opal_Fence fence)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(fence);
+	assert(this);
+	assert(fence);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)fence;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_Fence *fence_ptr = (DirectX12_Fence *)opal_poolGetElement(&device_ptr->fences, handle);
+	assert(fence_ptr);
+
+	opal_poolRemoveElement(&device_ptr->fences, handle);
+
+	directx12_destroyFence(device_ptr, fence_ptr);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
@@ -2772,6 +2945,19 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 		}
 
 		opal_poolShutdown(&ptr->buffers);
+	}
+
+	{
+		uint32_t head = opal_poolGetHeadIndex(&ptr->fences);
+		while (head != OPAL_POOL_HANDLE_NULL)
+		{
+			DirectX12_Fence *fence_ptr = (DirectX12_Fence *)opal_poolGetElementByIndex(&ptr->fences, head);
+			directx12_destroyFence(ptr, fence_ptr);
+
+			head = opal_poolGetNextIndex(&ptr->fences, head);
+		}
+
+		opal_poolShutdown(&ptr->fences);
 	}
 
 	{
@@ -3640,8 +3826,6 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	assert(command_buffer);
 	assert(framebuffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	ID3D12Device *d3d12_device = device_ptr->device;
 
@@ -3649,7 +3833,8 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_NONE);
 
-	ID3D12GraphicsCommandList4 *d3d12_command_buffer = command_buffer_ptr->list;
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
 
 	D3D12_RENDER_PASS_RENDER_TARGET_DESC color_render_targets[8] = {0};
 	D3D12_RENDER_PASS_RENDER_TARGET_DESC *color_ptrs = NULL;
@@ -3762,7 +3947,7 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	}
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_GRAPHICS;
-	ID3D12GraphicsCommandList4_BeginRenderPass(d3d12_command_buffer, framebuffer->num_color_attachments, color_ptrs, depth_stencil_ptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+	ID3D12GraphicsCommandList4_BeginRenderPass(command_buffer_ptr->list, framebuffer->num_color_attachments, color_ptrs, depth_stencil_ptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 	return OPAL_SUCCESS;
 }
 
@@ -4060,15 +4245,18 @@ static Opal_Result directx12_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Com
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_GRAPHICS);
 
-	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
 	ID3D12GraphicsCommandList4_EndRenderPass(command_buffer_ptr->list);
+
+	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
+
 	return OPAL_SUCCESS;
 }
 
@@ -4077,12 +4265,13 @@ static Opal_Result directx12_deviceCmdBeginComputePass(Opal_Device this, Opal_Co
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_NONE);
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_COMPUTE;
 	return OPAL_SUCCESS;
@@ -4238,12 +4427,17 @@ static Opal_Result directx12_deviceCmdComputeSetDescriptorSet(Opal_Device this, 
 
 static Opal_Result directx12_deviceCmdComputeMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(barriers);
+	assert(this);
+	assert(command_buffer);
+	assert(barriers);
 
-	// TODO: implement
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_COMPUTE);
+
+	directx12_cmdMemoryBarrier(device_ptr, command_buffer_ptr, barriers);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdComputeDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_threadgroups_x, uint32_t num_threadgroups_y, uint32_t num_threadgroups_z)
@@ -4266,14 +4460,16 @@ static Opal_Result directx12_deviceCmdEndComputePass(Opal_Device this, Opal_Comm
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_COMPUTE);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
+
 	return OPAL_SUCCESS;
 }
 
@@ -4282,12 +4478,13 @@ static Opal_Result directx12_deviceCmdBeginRaytracePass(Opal_Device this, Opal_C
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_NONE);
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_RAYTRACE;
 	return OPAL_SUCCESS;
@@ -4467,12 +4664,17 @@ static Opal_Result directx12_deviceCmdRaytraceSetShaderBindingTable(Opal_Device 
 
 static Opal_Result directx12_deviceCmdRaytraceMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(barriers);
+	assert(this);
+	assert(command_buffer);
+	assert(barriers);
 
-	// TODO: implement
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_COMPUTE);
+
+	directx12_cmdMemoryBarrier(device_ptr, command_buffer_ptr, barriers);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCmdRaytraceDispatch(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t width, uint32_t height, uint32_t depth)
@@ -4531,14 +4733,16 @@ static Opal_Result directx12_deviceCmdEndRaytracePass(Opal_Device this, Opal_Com
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_RAYTRACE);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
+
 	return OPAL_SUCCESS;
 }
 
@@ -4547,12 +4751,13 @@ static Opal_Result directx12_deviceCmdBeginCopyPass(Opal_Device this, Opal_Comma
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_NONE);
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_COPY;
 	return OPAL_SUCCESS;
@@ -4730,14 +4935,16 @@ static Opal_Result directx12_deviceCmdEndCopyPass(Opal_Device this, Opal_Command
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_COPY);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
+
 	return OPAL_SUCCESS;
 }
 
@@ -4746,12 +4953,13 @@ static Opal_Result directx12_deviceCmdBeginAccelerationStructurePass(Opal_Device
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_NONE);
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_ACCELERATION_STRUCTURE;
 	return OPAL_SUCCESS;
@@ -4895,14 +5103,16 @@ static Opal_Result directx12_deviceCmdEndAccelerationStructurePass(Opal_Device t
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
 	assert(command_buffer_ptr);
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_ACCELERATION_STRUCTURE);
 
 	command_buffer_ptr->pass = DIRECTX12_PASS_TYPE_NONE;
+
+	if (barriers != NULL)
+		directx12_cmdResourceBarrier(device_ptr, command_buffer_ptr, barriers);
+
 	return OPAL_SUCCESS;
 }
 
@@ -5060,6 +5270,7 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	// pools
 	opal_poolInitialize(&device_ptr->queues, sizeof(DirectX12_Queue), 32);
 	opal_poolInitialize(&device_ptr->semaphores, sizeof(DirectX12_Semaphore), 32);
+	opal_poolInitialize(&device_ptr->fences, sizeof(DirectX12_Fence), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(DirectX12_Buffer), 32);
 	opal_poolInitialize(&device_ptr->textures, sizeof(DirectX12_Texture), 32);
 	opal_poolInitialize(&device_ptr->texture_views, sizeof(DirectX12_TextureView), 32);

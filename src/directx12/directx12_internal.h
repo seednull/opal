@@ -119,6 +119,7 @@ typedef struct DirectX12_Device_t
 	Opal_Bump bump;
 	Opal_Pool queues;
 	Opal_Pool semaphores;
+	Opal_Pool fences;
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
@@ -156,12 +157,19 @@ typedef struct DirectX12_Semaphore_t
 	HANDLE event;
 } DirectX12_Semaphore;
 
+typedef struct DirectX12_Fence_t
+{
+	uint32_t unused;
+} DirectX12_Fence;
+
 typedef struct DirectX12_Buffer_t
 {
 	ID3D12Resource *buffer;
 	D3D12_GPU_VIRTUAL_ADDRESS address;
 	uint32_t map_count;
 	DirectX12_Allocation allocation;
+	Opal_BufferUsageFlags usage;
+	Opal_AllocationMemoryType memory_type;
 } DirectX12_Buffer;
 
 typedef struct DirectX12_Texture_t
@@ -173,6 +181,8 @@ typedef struct DirectX12_Texture_t
 	UINT64 height;
 	UINT samples;
 	DirectX12_Allocation allocation;
+	Opal_TextureUsageFlags usage;
+	Opal_TextureFormat opal_format;
 } DirectX12_Texture;
 
 typedef struct DirectX12_TextureView_t
@@ -180,10 +190,13 @@ typedef struct DirectX12_TextureView_t
 	ID3D12Resource *texture; // TODO: bad design, better to store Opal_Texture handle
 	DXGI_FORMAT format;
 	UINT subresource_index;
+	UINT num_subresources;
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 	D3D12_RENDER_TARGET_VIEW_DESC rtv_desc;
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+	Opal_TextureUsageFlags usage;
+	Opal_TextureFormat opal_format;
 } DirectX12_TextureView;
 
 typedef struct DirectX12_Sampler_t
