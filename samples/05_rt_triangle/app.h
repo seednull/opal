@@ -69,6 +69,7 @@ private:
 	Opal_CommandBuffer command_buffers[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 	Opal_Texture frame_textures[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 	Opal_TextureView frame_texture_views[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
+	bool frame_initialized[IN_FLIGHT_FRAMES] {false, false};
 
 	uint64_t current_frame {0};
 	uint64_t wait_frame {0};

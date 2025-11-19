@@ -376,6 +376,8 @@ void Application::resize(uint32_t w, uint32_t h)
 
 		result = opalDestroyTexture(device, frame_textures[i]);
 		assert(result == OPAL_SUCCESS);
+
+		frame_initialized[i] = false;
 	}
 
 	Opal_SwapchainDesc swapchain_desc = {};
@@ -465,8 +467,11 @@ void Application::render()
 
 	Opal_PassBarriersDesc compute_begin = { 1, &compute_begin_barrier };
 
+	Opal_PassBarriersDesc *compute_begin_ptr = frame_initialized[index] ? NULL : &compute_begin;
+	frame_initialized[index] = true;
+
 #ifdef OPAL_PLATFORM_MACOS
-	result = opalCmdBeginComputePass(device, command_buffer, &compute_begin);
+	result = opalCmdBeginComputePass(device, command_buffer, compute_begin_ptr);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdComputeSetPipelineLayout(device, command_buffer, pipeline_layout);
@@ -484,7 +489,7 @@ void Application::render()
 	result = opalCmdEndComputePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 #else
-	result = opalCmdBeginRaytracePass(device, command_buffer, &compute_begin);
+	result = opalCmdBeginRaytracePass(device, command_buffer, compute_begin_ptr);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceSetPipelineLayout(device, command_buffer, pipeline_layout);
