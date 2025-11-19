@@ -791,6 +791,8 @@ static Opal_Result directx12_deviceCreateBuffer(Opal_Device this, const Opal_Buf
 	result.buffer = d3d12_buffer;
 	result.address = ID3D12Resource_GetGPUVirtualAddress(d3d12_buffer);
 	result.allocation = allocation;
+	result.usage = desc->usage;
+	result.memory_type = desc->memory_type;
 
 	*buffer = (Opal_Buffer)opal_poolAddElement(&device_ptr->buffers, &result);
 	return OPAL_SUCCESS;
