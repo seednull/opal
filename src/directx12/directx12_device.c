@@ -3996,7 +3996,9 @@ static Opal_Result directx12_deviceCmdGraphicsSetPipeline(Opal_Device this, Opal
 	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
 
 	ID3D12GraphicsCommandList6_SetPipelineState(d3d12_list, pipeline_ptr->pipeline_state);
-	ID3D12GraphicsCommandList6_IASetPrimitiveTopology(d3d12_list, pipeline_ptr->primitive_topology);
+
+	if (pipeline_ptr->primitive_topology != D3D_PRIMITIVE_TOPOLOGY_UNDEFINED)
+		ID3D12GraphicsCommandList6_IASetPrimitiveTopology(d3d12_list, pipeline_ptr->primitive_topology);
 
 	return OPAL_SUCCESS;
 }
