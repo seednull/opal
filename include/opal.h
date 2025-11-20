@@ -1290,8 +1290,8 @@ typedef struct Opal_MeshletPipelineDesc_t
 	Opal_CompareOp depth_compare_op;
 
 	uint32_t stencil_enable;
-	Opal_StencilFaceState stentil_front;
-	Opal_StencilFaceState stentil_back;
+	Opal_StencilFaceState stencil_front;
+	Opal_StencilFaceState stencil_back;
 	uint32_t stencil_read_mask;
 	uint32_t stencil_write_mask;
 

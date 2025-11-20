@@ -2096,12 +2096,186 @@ static Opal_Result vulkan_deviceCreateMeshletPipeline(Opal_Device this, const Op
 {
 	assert(this);
 	assert(desc);
+	assert(desc->mesh_function.shader);
+	assert(desc->mesh_function.name);
+	assert(desc->fragment_function.shader);
+	assert(desc->fragment_function.name);
+	assert(desc->pipeline_layout);
 	assert(pipeline);
 
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(pipeline);
-	return OPAL_NOT_SUPPORTED;
+	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
+	VkDevice vulkan_device = device_ptr->device;
+
+	// pipeline layout
+	Vulkan_PipelineLayout *pipeline_layout_ptr = (Vulkan_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	VkPipelineLayout vulkan_pipeline_layout = pipeline_layout_ptr->layout;
+	VkPipeline vulkan_pipeline = VK_NULL_HANDLE;
+	VkPipelineCache vulkan_pipeline_cache = VK_NULL_HANDLE;
+
+	// shaders
+	Opal_Shader shaders[5] =
+	{
+		desc->mesh_function.shader,
+		desc->task_function.shader,
+		desc->fragment_function.shader,
+	};
+
+	const char *names[5] =
+	{
+		desc->mesh_function.name,
+		desc->task_function.name,
+		desc->fragment_function.name,
+	};
+
+	VkShaderStageFlagBits shader_stages[5] =
+	{
+		VK_SHADER_STAGE_MESH_BIT_EXT,
+		VK_SHADER_STAGE_TASK_BIT_EXT,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+	};
+
+	VkPipelineShaderStageCreateInfo shader_infos[5];
+	uint32_t num_shaders = 0;
+
+	for (uint32_t i = 0; i < 5; ++i)
+	{
+		Vulkan_Shader *shader_ptr = (Vulkan_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
+		if (shader_ptr == NULL)
+			continue;
+
+		shader_infos[num_shaders].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shader_infos[num_shaders].pNext = NULL;
+		shader_infos[num_shaders].flags = 0;
+		shader_infos[num_shaders].stage = shader_stages[i];
+		shader_infos[num_shaders].module = shader_ptr->shader;
+		shader_infos[num_shaders].pName = names[i];
+		shader_infos[num_shaders].pSpecializationInfo = NULL;
+		num_shaders++;
+	}
+
+
+	// viewport state
+	VkViewport default_viewport = {0};
+	VkRect2D default_scissor = {0};
+
+	VkPipelineViewportStateCreateInfo viewport = {0};
+	viewport.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewport.viewportCount = 1;
+	viewport.pViewports = &default_viewport;
+	viewport.scissorCount = 1;
+	viewport.pScissors = &default_scissor;
+
+	// rasterization state
+	VkPipelineRasterizationStateCreateInfo rasterization = {0};
+	rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterization.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterization.cullMode = vulkan_helperToCullMode(desc->cull_mode);
+	rasterization.frontFace = vulkan_helperToFrontFace(desc->front_face);
+	rasterization.lineWidth = 1.0f;
+
+	// multisample state
+	VkPipelineMultisampleStateCreateInfo multisample = {0};
+	multisample.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisample.rasterizationSamples = vulkan_helperToSamples(desc->rasterization_samples);
+
+	// depstencil state
+	VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
+	depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depth_stencil.depthTestEnable = desc->depth_enable;
+	depth_stencil.depthWriteEnable = desc->depth_write;
+	depth_stencil.depthCompareOp = vulkan_helperToCompareOp(desc->depth_compare_op);
+	depth_stencil.stencilTestEnable = desc->stencil_enable;
+	depth_stencil.front.failOp = vulkan_helperToStencilOp(desc->stencil_front.fail_op);
+	depth_stencil.front.depthFailOp = vulkan_helperToStencilOp(desc->stencil_front.depth_fail_op);
+	depth_stencil.front.passOp = vulkan_helperToStencilOp(desc->stencil_front.pass_op);
+	depth_stencil.front.compareOp = vulkan_helperToCompareOp(desc->stencil_front.compare_op);
+	depth_stencil.front.compareMask = desc->stencil_read_mask;
+	depth_stencil.front.writeMask = desc->stencil_write_mask;
+	depth_stencil.back.failOp = vulkan_helperToStencilOp(desc->stencil_back.fail_op);
+	depth_stencil.back.depthFailOp = vulkan_helperToStencilOp(desc->stencil_back.depth_fail_op);
+	depth_stencil.back.passOp = vulkan_helperToStencilOp(desc->stencil_back.pass_op);
+	depth_stencil.back.compareOp = vulkan_helperToCompareOp(desc->stencil_back.compare_op);
+	depth_stencil.back.compareMask = desc->stencil_read_mask;
+	depth_stencil.back.writeMask = desc->stencil_write_mask;
+
+	// colorblend state
+	VkPipelineColorBlendAttachmentState blend_states[8];
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+	{
+		VkPipelineColorBlendAttachmentState *blend_state = &blend_states[i];
+		const Opal_BlendState *opal_blend_state = &desc->color_blend_states[i];
+
+		blend_state->blendEnable = opal_blend_state->enable;
+		blend_state->srcColorBlendFactor = vulkan_helperToBlendFactor(opal_blend_state->src_color);
+		blend_state->dstColorBlendFactor = vulkan_helperToBlendFactor(opal_blend_state->dst_color);
+		blend_state->colorBlendOp = vulkan_helperToBlendOp(opal_blend_state->color_op);
+		blend_state->srcAlphaBlendFactor = vulkan_helperToBlendFactor(opal_blend_state->src_alpha);
+		blend_state->dstAlphaBlendFactor = vulkan_helperToBlendFactor(opal_blend_state->dst_alpha);
+		blend_state->alphaBlendOp = vulkan_helperToBlendOp(opal_blend_state->alpha_op);
+		blend_state->colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	}
+
+	VkPipelineColorBlendStateCreateInfo blend = {0};
+	blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	blend.attachmentCount = desc->num_color_attachments;
+	blend.pAttachments = blend_states;
+
+	// dynamic state
+	VkDynamicState dynamic_states[2] =
+	{
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamic = {0};
+	dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic.dynamicStateCount = 2;
+	dynamic.pDynamicStates = dynamic_states;
+
+	// dynamic rendering extension
+	VkFormat color_attachment_formats[8];
+
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+		color_attachment_formats[i] = vulkan_helperToImageFormat(desc->color_attachment_formats[i]);
+
+	VkPipelineRenderingCreateInfoKHR dynamic_rendering_info = {0};
+	dynamic_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	dynamic_rendering_info.colorAttachmentCount = desc->num_color_attachments;
+	dynamic_rendering_info.pColorAttachmentFormats = color_attachment_formats;
+
+	if (desc->depth_stencil_attachment_format)
+	{
+		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
+		dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
+	}
+
+	// pipeline
+	VkGraphicsPipelineCreateInfo pipeline_info = {0};
+	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipeline_info.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
+	pipeline_info.stageCount = num_shaders;
+	pipeline_info.pStages = shader_infos;
+	pipeline_info.pViewportState = &viewport;
+	pipeline_info.pRasterizationState = &rasterization;
+	pipeline_info.pMultisampleState = &multisample;
+	pipeline_info.pDepthStencilState = &depth_stencil;
+	pipeline_info.pColorBlendState = &blend;
+	pipeline_info.pDynamicState = &dynamic;
+	pipeline_info.layout = vulkan_pipeline_layout;
+	pipeline_info.pNext = &dynamic_rendering_info;
+
+	VkResult vulkan_result = device_ptr->vk.vkCreateGraphicsPipelines(vulkan_device, vulkan_pipeline_cache, 1, &pipeline_info, NULL, &vulkan_pipeline);
+
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	Vulkan_GraphicsPipeline result = {0};
+	result.pipeline = vulkan_pipeline;
+
+	*pipeline = (Opal_GraphicsPipeline)opal_poolAddElement(&device_ptr->graphics_pipelines, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result vulkan_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
