@@ -28,6 +28,12 @@ Intentionally removed api as there is no practical use for the end user.
 
 Opal command buffers will rely on command allocators for memory storage. User is free to create multiple command buffers for a single command allocator but only one command buffer is allowed to be in the recording state (via opalBeginCommandBuffer). Also, opalResetCommandAllocator requires all command buffers to be either in the initial state or executed. This design is similar to DirectX 12.
 
+### Synchronization
+
+Opal has the concept of passes. All synchronization can only occur between passes; thus passes define the execution order in a command buffer and the resource states. Synchronization between passes is always performed using split barriers and requires an Opal_Fence with the appropriate Opal_FenceOp value.
+
+The exception is the first pass — a split barrier may be omitted for it, but wait_stages must be set to OPAL_BARRIER_STAGE_NONE. Similarly, a split barrier may be omitted for the last pass, but block_stages must be set to OPAL_BARRIER_STAGE_NONE.
+
 ## Vulkan
 
 ### No support for queue priorities
