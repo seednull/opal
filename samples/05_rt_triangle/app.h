@@ -63,6 +63,7 @@ private:
 	Opal_Surface surface {OPAL_NULL_HANDLE};
 	Opal_Swapchain swapchain {OPAL_NULL_HANDLE};
 	Opal_Semaphore semaphore {OPAL_NULL_HANDLE};
+	Opal_Fence fence {OPAL_NULL_HANDLE};
 	
 	Opal_DescriptorSet descriptor_sets[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE, OPAL_NULL_HANDLE};
 	Opal_CommandAllocator command_allocators[IN_FLIGHT_FRAMES] {OPAL_NULL_HANDLE};
