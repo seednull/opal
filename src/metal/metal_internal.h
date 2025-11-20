@@ -130,6 +130,7 @@ typedef struct Metal_Texture_t
 {
 	id<MTLTexture> texture;
 	MTLPixelFormat format;
+	Opal_Samples samples;
 	Metal_Allocation allocation;
 } Metal_Texture;
 
@@ -267,7 +268,7 @@ Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceIn
 MTLDataType metal_helperToArgumentDataType(Opal_DescriptorType type);
 
 MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples samples);
-MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type);
+MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type, Opal_Samples samples);
 MTLPixelFormat metal_helperToPixelFormat(Opal_TextureFormat format);
 NSUInteger metal_helperToSampleCount(Opal_Samples samples);
 MTLTextureUsage metal_helperToTextureUsage(Opal_TextureUsageFlags flags);
@@ -297,7 +298,7 @@ MTLIndexType metal_helperToIndexType(Opal_IndexFormat format);
 uint32_t metal_helperToIndexSize(Opal_IndexFormat format);
 
 MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op);
-MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op);
+MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op, uint32_t resolve);
 
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space);
 

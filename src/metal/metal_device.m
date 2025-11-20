@@ -913,6 +913,7 @@ static Opal_Result metal_deviceCreateTexture(Opal_Device this, const Opal_Textur
 	Metal_Texture result = {0};
 	result.texture = metal_texture;
 	result.format = metal_format;
+	result.samples = desc->samples;
 	result.allocation = allocation;
 
 	*texture = (Opal_Texture)opal_poolAddElement(&device_ptr->textures, &result);
@@ -937,7 +938,7 @@ static Opal_Result metal_deviceCreateTextureView(Opal_Device this, const Opal_Te
 	{
 		metal_texture_view = [texture_ptr->texture
 			newTextureViewWithPixelFormat: texture_ptr->format
-			textureType: metal_helperToTextureViewType(desc->type)
+			textureType: metal_helperToTextureViewType(desc->type, texture_ptr->samples)
 			levels: NSMakeRange(desc->base_mip, desc->mip_count)
 			slices: NSMakeRange(desc->base_layer, desc->layer_count)
 		];
@@ -2964,11 +2965,14 @@ static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comma
 
 		Metal_TextureView *resolve_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
 
+		MTLLoadAction load_action = metal_helperToLoadAction(opal_attachment->load_op);
+		MTLStoreAction store_action = metal_helperToStoreAction(opal_attachment->store_op, resolve_texture_view_ptr != NULL);
+
 		info.colorAttachments[i].texture = texture_view_ptr->texture_view;
 		info.colorAttachments[i].level = texture_view_ptr->base_mip;
 		info.colorAttachments[i].slice = texture_view_ptr->base_layer;
-		info.colorAttachments[i].loadAction = metal_helperToLoadAction(opal_attachment->load_op);
-		info.colorAttachments[i].storeAction = metal_helperToStoreAction(opal_attachment->store_op);
+		info.colorAttachments[i].loadAction = load_action;
+		info.colorAttachments[i].storeAction = store_action;
 
 		if (resolve_texture_view_ptr)
 		{
@@ -2990,19 +2994,22 @@ static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comma
 
 		Metal_TextureView *resolve_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
 
+		MTLLoadAction load_action = metal_helperToLoadAction(opal_attachment->load_op);
+		MTLStoreAction store_action = metal_helperToStoreAction(opal_attachment->store_op, resolve_texture_view_ptr != NULL);
+
 		info.depthAttachment.texture = texture_view_ptr->texture_view;
 		info.depthAttachment.level = texture_view_ptr->base_mip;
 		info.depthAttachment.slice = texture_view_ptr->base_layer;
-		info.depthAttachment.loadAction = metal_helperToLoadAction(opal_attachment->load_op);
-		info.depthAttachment.storeAction = metal_helperToStoreAction(opal_attachment->store_op);
 		info.depthAttachment.clearDepth = opal_attachment->clear_value.depth_stencil.depth;
+		info.depthAttachment.loadAction = load_action;
+		info.depthAttachment.storeAction = store_action;
 
 		info.stencilAttachment.texture = texture_view_ptr->texture_view;
 		info.stencilAttachment.level = texture_view_ptr->base_mip;
 		info.stencilAttachment.slice = texture_view_ptr->base_layer;
-		info.stencilAttachment.loadAction = metal_helperToLoadAction(opal_attachment->load_op);
-		info.stencilAttachment.storeAction = metal_helperToStoreAction(opal_attachment->store_op);
 		info.stencilAttachment.clearStencil = opal_attachment->clear_value.depth_stencil.stencil;
+		info.stencilAttachment.loadAction = load_action;
+		info.stencilAttachment.storeAction = store_action;
 
 		if (resolve_texture_view_ptr)
 		{

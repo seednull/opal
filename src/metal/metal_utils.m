@@ -49,8 +49,14 @@ MTLTextureType metal_helperToTextureType(Opal_TextureType type, Opal_Samples sam
 	return metal_types[type];
 }
 
-MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type)
+MTLTextureType metal_helperToTextureViewType(Opal_TextureViewType type, Opal_Samples samples)
 {
+	if (type == OPAL_TEXTURE_VIEW_TYPE_2D && samples != OPAL_SAMPLES_1)
+		return MTLTextureType2DMultisample;
+
+	if (type == OPAL_TEXTURE_VIEW_TYPE_2D_ARRAY && samples != OPAL_SAMPLES_1)
+		return MTLTextureType2DMultisampleArray;
+
 	static MTLTextureType metal_types[] =
 	{
 		MTLTextureType1D,
@@ -544,7 +550,7 @@ MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op)
 	return metal_ops[op];
 }
 
-MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op)
+MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op, uint32_t resolve)
 {
 	MTLStoreAction metal_ops[] =
 	{
@@ -552,7 +558,13 @@ MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op)
 		MTLStoreActionStore,
 	};
 
-	return metal_ops[op];
+	MTLStoreAction metal_resolve_ops[] =
+	{
+		MTLStoreActionMultisampleResolve,
+		MTLStoreActionStoreAndMultisampleResolve,
+	};
+
+	return (resolve) ? metal_resolve_ops[op] : metal_ops[op];
 }
 
 
