@@ -131,8 +131,8 @@ static void directx12_cmdResourceBarrier(DirectX12_Device *device_ptr, DirectX12
 
 			switch (opal_barrier->fence_op)
 			{
-				case OPAL_FENCE_OP_SET: flags = D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY; break;
-				case OPAL_FENCE_OP_WAIT: flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY; break;
+				case OPAL_FENCE_OP_BEGIN: flags = D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY; break;
+				case OPAL_FENCE_OP_END: flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY; break;
 			}
 		}
 

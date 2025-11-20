@@ -176,8 +176,8 @@ typedef enum Opal_SemaphoreCreationFlags_t
 
 typedef enum Opal_FenceOp_t
 {
-	OPAL_FENCE_OP_SET = 0,
-	OPAL_FENCE_OP_WAIT,
+	OPAL_FENCE_OP_BEGIN = 0,
+	OPAL_FENCE_OP_END,
 
 	OPAL_FENCE_OP_ENUM_MAX,
 	OPAL_FENCE_OP_ENUM_FORCE32 = 0x7FFFFFFF,

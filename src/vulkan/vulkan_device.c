@@ -254,13 +254,13 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 		{
 			switch (opal_barrier->fence_op)
 			{
-				case OPAL_FENCE_OP_SET:
+				case OPAL_FENCE_OP_BEGIN:
 				{
 					device_ptr->vk.vkCmdSetEvent(command_buffer_ptr->command_buffer, fence_ptr->event, src_stages);
 				}
 				break;
 
-				case OPAL_FENCE_OP_WAIT:
+				case OPAL_FENCE_OP_END:
 				{
 					device_ptr->vk.vkCmdWaitEvents(
 						command_buffer_ptr->command_buffer,
