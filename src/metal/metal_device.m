@@ -2439,13 +2439,19 @@ static Opal_Result metal_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer)
 
 static Opal_Result metal_deviceWriteBuffer(Opal_Device this, Opal_Buffer buffer, uint64_t offset, const void *data, uint64_t size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(buffer);
-	OPAL_UNUSED(offset);
-	OPAL_UNUSED(data);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(buffer);
+	assert(data);
+	assert(size > 0);
 
-	return OPAL_NOT_SUPPORTED;
+	uint8_t *ptr = NULL;
+	Opal_Result result = metal_deviceMapBuffer(this, buffer, (void **)&ptr);
+	if (result != OPAL_SUCCESS)
+		return result;
+
+	memcpy(ptr + offset, data, size);
+
+	return metal_deviceUnmapBuffer(this, buffer);
 }
 
 static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries)
@@ -3843,13 +3849,49 @@ static Opal_Result metal_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Com
 
 static Opal_Result metal_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_BufferTextureRegion dst, Opal_Extent3D size)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(command_buffer);
-	OPAL_UNUSED(src);
-	OPAL_UNUSED(dst);
-	OPAL_UNUSED(size);
+	assert(this);
+	assert(command_buffer);
 
-	return OPAL_NOT_SUPPORTED;
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder != nil);
+	assert(command_buffer_ptr->acceleration_structure_pass_encoder == nil);
+
+	Metal_TextureView *src_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)src.texture_view);
+	assert(src_texture_view_ptr);
+	assert(src_texture_view_ptr->texture_view);
+
+	Metal_Buffer *dst_buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
+	assert(dst_buffer_ptr);
+	assert(dst_buffer_ptr->buffer);
+
+	MTLSize src_size = {0};
+	src_size.width = size.width;
+	src_size.height = size.height;
+	src_size.depth = size.depth;
+
+	MTLOrigin src_origin = {0};
+	src_origin.x = src.offset.x;
+	src_origin.y = src.offset.y;
+	src_origin.z = src.offset.z;
+
+	[command_buffer_ptr->copy_pass_encoder
+		copyFromTexture: src_texture_view_ptr->texture_view
+		sourceSlice: src_texture_view_ptr->base_layer
+		sourceLevel: src_texture_view_ptr->base_mip
+		sourceOrigin: src_origin
+		sourceSize: src_size
+		toBuffer: dst_buffer_ptr->buffer
+		destinationOffset: (NSUInteger)dst.offset
+		destinationBytesPerRow: (NSUInteger)dst.row_size
+		destinationBytesPerImage: (NSUInteger)0];
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result metal_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_TextureRegion src, Opal_TextureRegion dst, Opal_Extent3D size)
