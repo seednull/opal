@@ -476,21 +476,20 @@ void Application::render()
 	Opal_PassBarriersDesc *compute_begin_ptr = frame_initialized[index] ? NULL : &compute_begin;
 	frame_initialized[index] = true;
 
-	Opal_TextureTransitionDesc copy_begin_transitions[] =
+	Opal_TextureTransitionDesc compute_end_transitions[] =
 	{
 		frame_texture_view, OPAL_TEXTURE_STATE_UNORDERED_ACCESS, OPAL_TEXTURE_STATE_COPY_SRC,
-		swapchain_texture_view, OPAL_TEXTURE_STATE_UNDEFINED, OPAL_TEXTURE_STATE_COPY_DST,
 	};
 
-	Opal_BarrierDesc compute_to_copy_barrier = {};
-	compute_to_copy_barrier.wait_stages = OPAL_BARRIER_STAGE_ALL_COMPUTE;
-	compute_to_copy_barrier.block_stages = OPAL_BARRIER_STAGE_COPY;
-	compute_to_copy_barrier.num_texture_transitions = 2;
-	compute_to_copy_barrier.texture_transitions = copy_begin_transitions;
-	compute_to_copy_barrier.fence = fence;
-	compute_to_copy_barrier.fence_op = OPAL_FENCE_OP_BEGIN;
+	Opal_BarrierDesc compute_end_barrier = {};
+	compute_end_barrier.wait_stages = OPAL_BARRIER_STAGE_ALL_COMPUTE;
+	compute_end_barrier.block_stages = OPAL_BARRIER_STAGE_COPY;
+	compute_end_barrier.num_texture_transitions = 1;
+	compute_end_barrier.texture_transitions = compute_end_transitions;
+	compute_end_barrier.fence = fence;
+	compute_end_barrier.fence_op = OPAL_FENCE_OP_BEGIN;
 
-	Opal_PassBarriersDesc compute_end = { 1, &compute_to_copy_barrier };
+	Opal_PassBarriersDesc compute_end = { 1, &compute_end_barrier };
 
 #ifdef OPAL_PLATFORM_MACOS
 	result = opalCmdBeginComputePass(device, command_buffer, compute_begin_ptr);
@@ -536,9 +535,21 @@ void Application::render()
 	result = opalAcquire(device, swapchain, &swapchain_texture_view);
 	assert(result == OPAL_SUCCESS);
 
-	compute_to_copy_barrier.fence_op = OPAL_FENCE_OP_END;
+	Opal_TextureTransitionDesc copy_begin_transitions[] =
+	{
+		frame_texture_view, OPAL_TEXTURE_STATE_UNORDERED_ACCESS, OPAL_TEXTURE_STATE_COPY_SRC,
+		swapchain_texture_view, OPAL_TEXTURE_STATE_UNDEFINED, OPAL_TEXTURE_STATE_COPY_DST,
+	};
 
-	Opal_PassBarriersDesc copy_begin = { 1, &compute_to_copy_barrier };
+	Opal_BarrierDesc copy_begin_barrier = {};
+	copy_begin_barrier.wait_stages = OPAL_BARRIER_STAGE_ALL_COMPUTE;
+	copy_begin_barrier.block_stages = OPAL_BARRIER_STAGE_COPY;
+	copy_begin_barrier.num_texture_transitions = 2;
+	copy_begin_barrier.texture_transitions = copy_begin_transitions;
+	copy_begin_barrier.fence = fence;
+	copy_begin_barrier.fence_op = OPAL_FENCE_OP_END;
+
+	Opal_PassBarriersDesc copy_begin = { 1, &copy_begin_barrier };
 
 	Opal_TextureRegion src = { frame_texture_view, 0, 0, 0 };
 	Opal_TextureRegion dst = { swapchain_texture_view, 0, 0, 0 };
