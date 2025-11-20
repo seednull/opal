@@ -67,7 +67,7 @@
 {
 	assert(self.app);
 
-	float dt = static_cast<float>(1.0 / (sender.targetTimestamp - sender.timestamp));
+	float dt = static_cast<float>(sender.targetTimestamp - sender.timestamp);
 
 	self.app->update(dt);
 	self.app->render();
