@@ -197,7 +197,10 @@ MTLTextureUsage metal_helperToTextureUsage(Opal_TextureUsageFlags flags)
 {
 	MTLTextureUsage result = 0;
 	
-	if (flags & OPAL_TEXTURE_USAGE_SHADER_SAMPLED)
+	if (flags & OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED)
+		result |= MTLTextureUsageShaderRead;
+
+	if (flags & OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED)
 		result |= MTLTextureUsageShaderRead;
 
 	if (flags & OPAL_TEXTURE_USAGE_UNORDERED_ACCESS)
@@ -560,6 +563,25 @@ CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space)
 		case OPAL_COLOR_SPACE_SRGB: return kCGColorSpaceSRGB;
 		default: return nil;
 	}
+}
+
+MTLRenderStages metal_helperToRenderStages(Opal_BarrierStageFlags stages)
+{
+	MTLRenderStages result = 0;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_VERTEX)
+		result |= MTLRenderStageVertex;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_MESH)
+		result |= MTLRenderStageMesh;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_TASK)
+		result |= MTLRenderStageObject;
+
+	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_FRAGMENT)
+		result |= MTLRenderStageFragment;
+
+	return result;
 }
 
 /*

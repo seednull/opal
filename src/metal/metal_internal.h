@@ -84,6 +84,7 @@ typedef struct Metal_Device_t
 	Opal_Bump bump;
 	Opal_Pool queues;
 	Opal_Pool semaphores;
+	Opal_Pool fences;
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
@@ -113,6 +114,11 @@ typedef struct Metal_Semaphore_t
 	id<MTLEvent> event;
 	id<MTLSharedEvent> shared_event;
 } Metal_Semaphore;
+
+typedef struct Metal_Fence_t
+{
+	id<MTLFence> fence;
+} Metal_Fence;
 
 typedef struct Metal_Buffer_t
 {
@@ -294,6 +300,8 @@ MTLLoadAction metal_helperToLoadAction(Opal_LoadOp op);
 MTLStoreAction metal_helperToStoreAction(Opal_StoreOp op);
 
 CFStringRef metal_helperToColorspaceName(Opal_ColorSpace space);
+
+MTLRenderStages metal_helperToRenderStages(Opal_BarrierStageFlags stages);
 
 Opal_Result metal_allocatorInitialize(Metal_Device *device, uint32_t heap_size, uint32_t max_heap_allocations, uint32_t max_heaps);
 Opal_Result metal_allocatorShutdown(Metal_Device *device);
