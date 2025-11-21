@@ -1248,9 +1248,9 @@ typedef struct Opal_GraphicsPipelineDesc_t
 
 	uint32_t num_vertex_streams;
 	const Opal_VertexStream *vertex_streams;
-	Opal_PrimitiveType primitive_type;
 	Opal_IndexFormat strip_index_format;
 
+	Opal_PrimitiveType primitive_type;
 	Opal_CullMode cull_mode;
 	Opal_FrontFace front_face;
 	Opal_Samples rasterization_samples;
@@ -1281,6 +1281,7 @@ typedef struct Opal_MeshletPipelineDesc_t
 	Opal_ShaderFunction mesh_function;
 	Opal_ShaderFunction fragment_function;
 
+	Opal_PrimitiveType primitive_type;
 	Opal_CullMode cull_mode;
 	Opal_FrontFace front_face;
 	Opal_Samples rasterization_samples;
