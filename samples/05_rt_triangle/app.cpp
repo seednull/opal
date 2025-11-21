@@ -10,8 +10,8 @@
 static constexpr Opal_Api target_api = OPAL_API_DIRECTX12;
 #elif OPAL_PLATFORM_MACOS
 static constexpr Opal_Api target_api = OPAL_API_METAL;
-#elif OPAL_PLATFORM_WEB
-static constexpr Opal_Api target_api = OPAL_API_WEBGPU;
+#else
+#error "Unsupported platform"
 #endif
 
 #define UNUSED(x) do { (void)(x); } while(0)
