@@ -1760,9 +1760,19 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 		blend_state->RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 	}
 
-	pipeline_info.SampleMask = 0xFFFFFFFF;
+	// render target state
+	pipeline_info.NumRenderTargets = desc->num_color_attachments;
 
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+		pipeline_info.RTVFormats[i] = directx12_helperToDXGITextureFormat(desc->color_attachment_formats[i]);
+
+	if (desc->depth_stencil_attachment_format)
+		pipeline_info.DSVFormat = directx12_helperToDXGITextureFormat(*desc->depth_stencil_attachment_format);
+
+	pipeline_info.SampleMask = 0xFFFFFFFF;
+	
 	// rasterizer state
+	pipeline_info.PrimitiveTopologyType = directx12_helperToPrimitiveTopologyType(desc->primitive_type);
 	pipeline_info.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 	pipeline_info.RasterizerState.CullMode = directx12_helperToCullMode(desc->cull_mode);
 	pipeline_info.RasterizerState.FrontCounterClockwise = (desc->front_face == OPAL_FRONT_FACE_COUNTER_CLOCKWISE);
@@ -1786,7 +1796,7 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 	pipeline_info.DepthStencilState.BackFace.StencilDepthFailOp = directx12_helperToStencilOp(desc->stencil_back.depth_fail_op);
 	pipeline_info.DepthStencilState.BackFace.StencilPassOp = directx12_helperToStencilOp(desc->stencil_back.pass_op);
 	pipeline_info.DepthStencilState.BackFace.StencilFunc = directx12_helperToComparisonFunc(desc->stencil_back.compare_op);
-	
+
 	// vertex input state
 	uint32_t num_vertex_attributes = 0;
 	for (uint32_t i = 0; i < desc->num_vertex_streams; ++i)
@@ -1819,20 +1829,8 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 	pipeline_info.InputLayout.NumElements = num_attributes;
 	pipeline_info.InputLayout.pInputElementDescs = vertex_attributes;
 
-	// primitive state
-	pipeline_info.PrimitiveTopologyType = directx12_helperToPrimitiveTopologyType(desc->primitive_type);
-
 	if (desc->primitive_type == OPAL_PRIMITIVE_TYPE_LINE_STRIP || desc->primitive_type == OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP)
 		pipeline_info.IBStripCutValue = directx12_helperToStripCutValue(desc->strip_index_format);
-
-	// render target state
-	pipeline_info.NumRenderTargets = desc->num_color_attachments;
-
-	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
-		pipeline_info.RTVFormats[i] = directx12_helperToDXGITextureFormat(desc->color_attachment_formats[i]);
-
-	if (desc->depth_stencil_attachment_format)
-		pipeline_info.DSVFormat = directx12_helperToDXGITextureFormat(*desc->depth_stencil_attachment_format);
 
 	ID3D12PipelineState *d3d12_pipeline_state = NULL;
 	HRESULT hr = ID3D12Device_CreateGraphicsPipelineState(d3d12_device, &pipeline_info, &IID_ID3D12PipelineState, &d3d12_pipeline_state);
@@ -1849,11 +1847,168 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 
 static Opal_Result directx12_deviceCreateMeshletPipeline(Opal_Device this, const Opal_MeshletPipelineDesc *desc, Opal_GraphicsPipeline *pipeline)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(desc);
-	OPAL_UNUSED(pipeline);
+	assert(this);
+	assert(desc);
+	assert(pipeline);
 
-	return OPAL_NOT_SUPPORTED;
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	ID3D12Device *d3d12_device = device_ptr->device;
+
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)desc->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	ID3D12Device2 *d3d12_device2 = NULL;
+	HRESULT hr = ID3D12Device_QueryInterface(d3d12_device, &IID_ID3D12Device2, &d3d12_device2);
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	// shaders
+	Opal_Shader shaders[3] =
+	{
+		desc->mesh_function.shader,
+		desc->task_function.shader,
+		desc->fragment_function.shader,
+	};
+
+	D3D12_SHADER_BYTECODE shader_bytecodes[3] = {0};
+
+	for (uint32_t i = 0; i < 5; ++i)
+	{
+		DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
+		if (shader_ptr == NULL)
+			continue;
+
+		shader_bytecodes[i].pShaderBytecode = shader_ptr->data;
+		shader_bytecodes[i].BytecodeLength = shader_ptr->size;
+	}
+
+	// blend state
+	D3D12_BLEND_DESC blend_state = {0};
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+	{
+		D3D12_RENDER_TARGET_BLEND_DESC *target_blend_state = &blend_state.RenderTarget[i];
+		const Opal_BlendState *opal_blend_state = &desc->color_blend_states[i];
+
+		target_blend_state->BlendEnable = opal_blend_state->enable;
+		target_blend_state->SrcBlend = directx12_helperToBlendFactor(opal_blend_state->src_color);
+		target_blend_state->DestBlend = directx12_helperToBlendFactor(opal_blend_state->dst_color);
+		target_blend_state->BlendOp = directx12_helperToBlendOp(opal_blend_state->color_op);
+		target_blend_state->SrcBlendAlpha = directx12_helperToBlendFactor(opal_blend_state->src_alpha);
+		target_blend_state->DestBlendAlpha = directx12_helperToBlendFactor(opal_blend_state->dst_alpha);
+		target_blend_state->BlendOpAlpha = directx12_helperToBlendOp(opal_blend_state->alpha_op);
+		target_blend_state->RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	}
+
+	// render target state
+	typedef struct DirectX12_ColorTargets_t
+	{
+		DXGI_FORMAT target_formats[8];
+		UINT num_targets;
+	} DirectX12_ColorTargets;
+
+	DirectX12_ColorTargets color_target_states = {0};
+	color_target_states.num_targets = desc->num_color_attachments;
+
+	for (uint32_t i = 0; i < desc->num_color_attachments; ++i)
+		color_target_states.target_formats[i] = directx12_helperToDXGITextureFormat(desc->color_attachment_formats[i]);
+
+	DXGI_FORMAT depth_target_state = {0};
+	if (desc->depth_stencil_attachment_format)
+		depth_target_state = directx12_helperToDXGITextureFormat(*desc->depth_stencil_attachment_format);
+
+	// primitive topology state
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE primitive_topology_type = directx12_helperToPrimitiveTopologyType(desc->primitive_type);
+	
+	// rasterizer state
+	D3D12_RASTERIZER_DESC rasterizer_state = {0};
+	rasterizer_state.FillMode = D3D12_FILL_MODE_SOLID;
+	rasterizer_state.CullMode = directx12_helperToCullMode(desc->cull_mode);
+	rasterizer_state.FrontCounterClockwise = (desc->front_face == OPAL_FRONT_FACE_COUNTER_CLOCKWISE);
+	rasterizer_state.MultisampleEnable = (desc->rasterization_samples != OPAL_SAMPLES_1);
+	
+	// multisample state
+	UINT sample_mask = 0xFFFFFFFF;
+	DXGI_SAMPLE_DESC sample_desc = { directx12_helperToSampleCount(desc->rasterization_samples), 0 };
+
+	// depthstencil state
+	D3D12_DEPTH_STENCIL_DESC depth_stencil_state = {0};
+	depth_stencil_state.DepthEnable = desc->depth_enable;
+	depth_stencil_state.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	depth_stencil_state.DepthFunc = directx12_helperToComparisonFunc(desc->depth_compare_op);
+	depth_stencil_state.StencilEnable = desc->stencil_enable;
+	depth_stencil_state.StencilReadMask = (UINT8)desc->stencil_read_mask;
+	depth_stencil_state.StencilWriteMask = (UINT8)desc->stencil_write_mask;
+	depth_stencil_state.FrontFace.StencilFailOp = directx12_helperToStencilOp(desc->stencil_front.fail_op);
+	depth_stencil_state.FrontFace.StencilDepthFailOp = directx12_helperToStencilOp(desc->stencil_front.depth_fail_op);
+	depth_stencil_state.FrontFace.StencilPassOp = directx12_helperToStencilOp(desc->stencil_front.pass_op);
+	depth_stencil_state.FrontFace.StencilFunc = directx12_helperToComparisonFunc(desc->stencil_front.compare_op);
+	depth_stencil_state.BackFace.StencilFailOp = directx12_helperToStencilOp(desc->stencil_back.fail_op);
+	depth_stencil_state.BackFace.StencilDepthFailOp = directx12_helperToStencilOp(desc->stencil_back.depth_fail_op);
+	depth_stencil_state.BackFace.StencilPassOp = directx12_helperToStencilOp(desc->stencil_back.pass_op);
+	depth_stencil_state.BackFace.StencilFunc = directx12_helperToComparisonFunc(desc->stencil_back.compare_op);
+
+	// fill stream
+	typedef struct DirectX12_PipelineStreamSubobject_t
+	{
+		D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type;
+		void *ptr;
+		uint32_t size;	
+	} DirectX12_PipelineStreamSubobject;
+
+	DirectX12_PipelineStreamSubobject subobjects[] =
+	{
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE, pipeline_layout_ptr->root_signature, sizeof(ID3D12RootSignature *) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS, &shader_bytecodes[0], sizeof(D3D12_SHADER_BYTECODE) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS, &shader_bytecodes[1], sizeof(D3D12_SHADER_BYTECODE) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS, &shader_bytecodes[2], sizeof(D3D12_SHADER_BYTECODE) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND, &blend_state, sizeof(D3D12_BLEND_DESC) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK, &sample_mask, sizeof(UINT) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER, &rasterizer_state, sizeof(D3D12_RASTERIZER_DESC) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL, &depth_stencil_state, sizeof(D3D12_DEPTH_STENCIL_DESC) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY, &primitive_topology_type, sizeof(D3D12_PRIMITIVE_TOPOLOGY_TYPE) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, &color_target_states, sizeof(DirectX12_ColorTargets) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, &depth_stencil_state, sizeof(DXGI_FORMAT) },
+		{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC, &sample_desc, sizeof(DXGI_SAMPLE_DESC) },
+	};
+
+	uint32_t num_subobjects = sizeof(subobjects) / sizeof(DirectX12_PipelineStreamSubobject);
+
+	opal_bumpReset(&device_ptr->bump);
+	uint32_t alignment = sizeof(void *);
+	uint32_t size = 0;
+
+	uint32_t type_aligned_size = alignUp(sizeof(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE), alignment);
+	for (uint32_t i = 0; i < num_subobjects; ++i)
+	{
+		uint32_t data_aligned_size = alignUp(subobjects[i].size, alignment);
+		uint32_t offset = opal_bumpAlloc(&device_ptr->bump, type_aligned_size + data_aligned_size);
+
+		memcpy(device_ptr->bump.data + offset, &subobjects[i].type, sizeof(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE));
+
+		offset += type_aligned_size;
+		memcpy(device_ptr->bump.data + offset, subobjects[i].ptr, subobjects[i].size);
+
+		size += type_aligned_size;
+		size += data_aligned_size;
+	}
+
+	D3D12_PIPELINE_STATE_STREAM_DESC pso_desc = {0};
+	pso_desc.pPipelineStateSubobjectStream = device_ptr->bump.data;
+	pso_desc.SizeInBytes = size;
+
+	ID3D12PipelineState *d3d12_pipeline_state = NULL;
+	hr = ID3D12Device2_CreatePipelineState(d3d12_device2, &pso_desc, &IID_ID3D12PipelineState, &d3d12_pipeline_state);
+	ID3D12Device2_Release(d3d12_device2);
+
+	if (!SUCCEEDED(hr))
+		return OPAL_DIRECTX12_ERROR;
+
+	DirectX12_GraphicsPipeline result = {0};
+	result.pipeline_state = d3d12_pipeline_state;
+	result.primitive_topology = directx12_helperToPrimitiveTopology(desc->primitive_type);
+
+	*pipeline = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->graphics_pipelines, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result directx12_deviceCreateComputePipeline(Opal_Device this, const Opal_ComputePipelineDesc *desc, Opal_ComputePipeline *pipeline)
@@ -3989,14 +4144,12 @@ static Opal_Result directx12_deviceCmdGraphicsSetPipeline(Opal_Device this, Opal
 
 	DirectX12_GraphicsPipeline *pipeline_ptr = (DirectX12_GraphicsPipeline *)opal_poolGetElement(&device_ptr->graphics_pipelines, (Opal_PoolHandle)pipeline);
 	assert(pipeline_ptr);
+	assert(pipeline_ptr->primitive_topology != D3D_PRIMITIVE_TOPOLOGY_UNDEFINED);
 
 	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
 
 	ID3D12GraphicsCommandList6_SetPipelineState(d3d12_list, pipeline_ptr->pipeline_state);
-
-	if (pipeline_ptr->primitive_topology != D3D_PRIMITIVE_TOPOLOGY_UNDEFINED)
-		ID3D12GraphicsCommandList6_IASetPrimitiveTopology(d3d12_list, pipeline_ptr->primitive_topology);
-
+	ID3D12GraphicsCommandList6_IASetPrimitiveTopology(d3d12_list, pipeline_ptr->primitive_topology);
 	return OPAL_SUCCESS;
 }
 
