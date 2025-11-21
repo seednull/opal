@@ -157,6 +157,7 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc = {};
 	swapchain_desc.surface = surface;
+	swapchain_desc.queue = queue;
 	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_COPY_DST);
 
 	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
@@ -388,6 +389,7 @@ void Application::resize(uint32_t w, uint32_t h)
 
 	Opal_SwapchainDesc swapchain_desc = {};
 	swapchain_desc.surface = surface;
+	swapchain_desc.queue = queue;
 	swapchain_desc.usage = (Opal_TextureUsageFlags)(OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_COPY_DST);
 
 	result = opalGetPreferredSurfaceFormat(device, surface, &swapchain_desc.format);
