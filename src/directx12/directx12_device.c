@@ -2267,10 +2267,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_MAILBOX) ? 3 : 2;
 
 	// present queue
-	Opal_Queue *queues = device_ptr->queue_handles[OPAL_DEVICE_ENGINE_TYPE_MAIN];
-	assert(device_ptr->device_engines_info.queue_counts[OPAL_DEVICE_ENGINE_TYPE_MAIN] != 0);
-
-	DirectX12_Queue *queue_ptr = (DirectX12_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)queues[0]);
+	DirectX12_Queue *queue_ptr = (DirectX12_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)desc->queue);
 	assert(queue_ptr);
 
 	// present mode

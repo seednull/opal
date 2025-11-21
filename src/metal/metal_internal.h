@@ -248,7 +248,7 @@ typedef struct Metal_ComputePipeline_t
 typedef struct Metal_Swapchain_t
 {
 	Opal_Surface surface;
-	id<MTLCommandQueue> queue;
+	Opal_Queue queue;
 	CGColorSpaceRef colorspace;
 
 	Opal_TextureView current_texture_view;

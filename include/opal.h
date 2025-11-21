@@ -1349,6 +1349,7 @@ typedef struct Opal_SwapchainDesc_t
 	Opal_SurfaceFormat format;
 	Opal_TextureUsageFlags usage;
 	Opal_Surface surface;
+	Opal_Queue queue;
 } Opal_SwapchainDesc;
 
 typedef struct Opal_SubmitDesc_t

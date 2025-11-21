@@ -476,7 +476,6 @@ static void metal_destroySwapchain(Metal_Device *device_ptr, Metal_Swapchain *sw
 	@autoreleasepool
 	{
 		CGColorSpaceRelease(swapchain_ptr->colorspace);
-		[swapchain_ptr->queue release];
 	}
 }
 
@@ -1636,7 +1635,6 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	Metal_Instance *instance_ptr = device_ptr->instance;
 
-	id<MTLCommandQueue> metal_queue = nil;
 	CGColorSpaceRef metal_colorspace = nil;
 
 	// surface
@@ -1663,12 +1661,6 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 		if (!colorspace_name)
 			return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
 
-		// present queue
-		metal_queue = [device_ptr->device newCommandQueue];
-
-		if (!metal_queue)
-			return OPAL_METAL_ERROR;
-
 		// config
 		metal_colorspace = CGColorSpaceCreateWithName(colorspace_name);
 
@@ -1679,14 +1671,12 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 		layer_ptr.framebufferOnly = (desc->usage == OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
 		layer_ptr.displaySyncEnabled = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE);
 		layer_ptr.maximumDrawableCount = num_textures;
-
-		[metal_queue retain];
 	}
 
 	// create opal struct
 	Metal_Swapchain result = {0};
 	result.surface = desc->surface;
-	result.queue = metal_queue;
+	result.queue = desc->queue;
 	result.colorspace = metal_colorspace;
 
 	*swapchain = (Opal_Swapchain)opal_poolAddElement(&device_ptr->swapchains, &result);
@@ -2905,9 +2895,12 @@ static Opal_Result metal_devicePresent(Opal_Device this, Opal_Swapchain swapchai
 	Metal_Swapchain *swapchain_ptr = (Metal_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
 	assert(swapchain_ptr);
 
+	Metal_Queue *queue_ptr = (Metal_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)swapchain_ptr->queue);
+	assert(queue_ptr);
+
 	@autoreleasepool
 	{
-		id<MTLCommandBuffer> present_command_buffer = [swapchain_ptr->queue commandBufferWithUnretainedReferences];
+		id<MTLCommandBuffer> present_command_buffer = [queue_ptr->queue commandBufferWithUnretainedReferences];
 		if (!present_command_buffer)
 			return OPAL_METAL_ERROR;
 

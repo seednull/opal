@@ -2556,26 +2556,13 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 		extent = surface_capabilities.minImageExtent;
 
 	// surface present queue
-	uint32_t present_queue_family = VK_QUEUE_FAMILY_IGNORED;
+	Vulkan_Queue *queue_ptr = (Vulkan_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)desc->queue);
+	assert(queue_ptr);
+	
 	VkBool32 present_supported = VK_FALSE;
-	Opal_Queue present_queue = OPAL_NULL_HANDLE;
-
-	for (uint32_t i = 0; i < OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX; ++i)
-	{
-		uint32_t queue_family = device_ptr->device_engines_info.queue_families[i];
-		Opal_Queue *queues = device_ptr->queue_handles[i];
-
-		vulkan_result = vkGetPhysicalDeviceSurfaceSupportKHR(vulkan_physical_device, queue_family, vulkan_surface, &present_supported);
-		if (vulkan_result != VK_SUCCESS)
-			continue;
-
-		if (present_supported)
-		{
-			present_queue_family = queue_family;
-			present_queue = queues[0];
-			break;
-		}
-	}
+	vulkan_result = vkGetPhysicalDeviceSurfaceSupportKHR(vulkan_physical_device, queue_ptr->family_index, vulkan_surface, &present_supported);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
 
 	if (present_supported == VK_FALSE)
 		return OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED;
@@ -2768,7 +2755,7 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 
 	Vulkan_Swapchain result = {0};
 	result.swapchain = vulkan_swapchain;
-	result.present_queue = present_queue;
+	result.present_queue = desc->queue;
 	result.texture_views = texture_views;
 	result.acquire_semaphores = vulkan_acquire_semaphores;
 	result.present_semaphores = vulkan_present_semaphores;
