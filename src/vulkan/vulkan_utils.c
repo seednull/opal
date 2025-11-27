@@ -770,7 +770,7 @@ VkPipelineStageFlags vulkan_helperToPipelineWaitStages(Opal_BarrierStageFlags st
 	VkPipelineStageFlags result = 0;
 
 	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_VERTEX)
-		result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
 	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_MESH)
 		result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
@@ -804,7 +804,7 @@ VkPipelineStageFlags vulkan_helperToPipelineBlockStages(Opal_BarrierStageFlags s
 	VkPipelineStageFlags result = 0;
 
 	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_VERTEX)
-		result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
 	if (stages & OPAL_BARRIER_STAGE_GRAPHICS_MESH)
 		result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
