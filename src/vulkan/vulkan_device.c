@@ -4583,8 +4583,6 @@ static Opal_Result vulkan_deviceCmdEndGraphicsPass(Opal_Device this, Opal_Comman
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4604,8 +4602,6 @@ static Opal_Result vulkan_deviceCmdBeginComputePass(Opal_Device this, Opal_Comma
 {
 	assert(this);
 	assert(command_buffer);
-
-	OPAL_UNUSED(barriers); // TODO: implement
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -4706,8 +4702,6 @@ static Opal_Result vulkan_deviceCmdEndComputePass(Opal_Device this, Opal_Command
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4726,8 +4720,6 @@ static Opal_Result vulkan_deviceCmdBeginRaytracePass(Opal_Device this, Opal_Comm
 {
 	assert(this);
 	assert(command_buffer);
-
-	OPAL_UNUSED(barriers); // TODO: implement
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -4889,8 +4881,6 @@ static Opal_Result vulkan_deviceCmdEndRaytracePass(Opal_Device this, Opal_Comman
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -4909,8 +4899,6 @@ static Opal_Result vulkan_deviceCmdBeginCopyPass(Opal_Device this, Opal_CommandB
 {
 	assert(this);
 	assert(command_buffer);
-
-	OPAL_UNUSED(barriers); // TODO: implement
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -5072,8 +5060,6 @@ static Opal_Result vulkan_deviceCmdEndCopyPass(Opal_Device this, Opal_CommandBuf
 	assert(this);
 	assert(command_buffer);
 
-	OPAL_UNUSED(barriers); // TODO: implement
-
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
 	Vulkan_CommandBuffer *command_buffer_ptr = (Vulkan_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
@@ -5092,8 +5078,6 @@ static Opal_Result vulkan_deviceCmdBeginAccelerationStructurePass(Opal_Device th
 {
 	assert(this);
 	assert(command_buffer);
-
-	OPAL_UNUSED(barriers); // TODO: implement
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
@@ -5282,8 +5266,6 @@ static Opal_Result vulkan_deviceCmdEndAccelerationStructurePass(Opal_Device this
 {
 	assert(this);
 	assert(command_buffer);
-
-	OPAL_UNUSED(barriers); // TODO: implement
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
 
