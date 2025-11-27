@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Opal Sample (06_gpu_particles)</title>
+    <style>
+      html, body {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+      }
+  </style>
+  </head>
+  <body>
+     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+
+    <script type='text/javascript'>
+      var canvasElement = document.getElementById('canvas');
+
+      var Module = {
+        canvas: canvasElement,
+
+        onRuntimeInitialized: () => {
+          canvasElement.width = window.innerWidth;
+          canvasElement.height = window.innerHeight;
+        }
+      };
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>

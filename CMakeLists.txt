@@ -108,4 +108,6 @@ if (OPAL_BUILD_SAMPLES)
 	if (NOT EMSCRIPTEN)
 		add_subdirectory(samples/05_rt_triangle)
 	endif()
+
+	add_subdirectory(samples/06_gpu_particles)
 endif()
