@@ -11,7 +11,7 @@ function(compile_glsl SRC)
 						"^\\.frag" "^\\.mesh" "^\\.task" "^\\.rgen" "^\\.rint"
 						"^\\.rahit" "^\\.rchit" "^\\.rmiss" "^\\.rcall")
 
-	list(APPEND ENTRY_POINTS vertexMain main main main main
+	list(APPEND ENTRY_POINTS vertexMain main main main computeMain
 							 fragmentMain main main rayGenerationMain rayIntersectionMain
 							 rayAnyHitMain rayClosestHitMain rayMissMain main)
 
@@ -53,7 +53,7 @@ function(compile_hlsl SRC)
 						 ps_6_1 ms_6_1 as_6_1 lib_6_3 lib_6_3
 						 lib_6_3 lib_6_3 lib_6_3 lib_6_3)
 
-	list(APPEND ENTRY_POINTS vertexMain main main main main
+	list(APPEND ENTRY_POINTS vertexMain main main main computeMain
 							 fragmentMain main main rayGenerationMain rayIntersectionMain
 							 rayAnyHitMain rayClosestHitMain rayMissMain main)
 
