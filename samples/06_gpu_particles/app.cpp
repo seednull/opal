@@ -7,7 +7,7 @@
 #include <cmath>
 
 #ifdef OPAL_PLATFORM_WINDOWS
-static constexpr Opal_Api target_api = OPAL_API_VULKAN;
+static constexpr Opal_Api target_api = OPAL_API_DIRECTX12;
 #elif OPAL_PLATFORM_MACOS
 static constexpr Opal_Api target_api = OPAL_API_METAL;
 #elif OPAL_PLATFORM_WEB
@@ -781,7 +781,7 @@ void Application::buildContent()
 	{
 		Opal_BufferDesc desc =
 		{
-			sizeof(AppData),
+			alignUp(sizeof(AppData), 256),
 			OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 			OPAL_ALLOCATION_HINT_AUTO,
 			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM),
@@ -795,7 +795,7 @@ void Application::buildContent()
 	{
 		Opal_BufferDesc desc =
 		{
-			sizeof(CameraData),
+			alignUp(sizeof(CameraData), 256),
 			OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 			OPAL_ALLOCATION_HINT_AUTO,
 			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM),
@@ -915,12 +915,12 @@ void Application::buildDescriptors()
 		bindings[0].binding = 0;
 		bindings[0].data.buffer_view.buffer = render_application;
 		bindings[0].data.buffer_view.offset = 0;
-		bindings[0].data.buffer_view.size = sizeof(AppData);
+		bindings[0].data.buffer_view.size = alignUp(sizeof(AppData), 256);
 
 		bindings[1].binding = 1;
 		bindings[1].data.buffer_view.buffer = render_camera;
 		bindings[1].data.buffer_view.offset = 0;
-		bindings[1].data.buffer_view.size = sizeof(CameraData);
+		bindings[1].data.buffer_view.size = alignUp(sizeof(CameraData), 256);
 
 		Opal_DescriptorSetAllocationDesc desc =
 		{
