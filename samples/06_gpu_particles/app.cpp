@@ -635,7 +635,7 @@ void Application::render()
 	graphics_begin_barrier.buffer_transitions = compute_to_graphics_buffer_transitions;
 	graphics_begin_barrier.num_texture_transitions = 1;
 	graphics_begin_barrier.texture_transitions = compute_to_graphics_texture_transitions;
-	compute_end_barrier.fence = fence;
+	graphics_begin_barrier.fence = fence;
 	graphics_begin_barrier.fence_op = OPAL_FENCE_OP_END;
 
 	Opal_PassBarriersDesc graphics_begin = { 1, &graphics_begin_barrier };
