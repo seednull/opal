@@ -7,27 +7,27 @@ layout(set = 0, binding = 0) uniform Application
 	float dt;
 } application;
 
-layout(std140, set = 1, binding = 0) buffer ParticlePositions
+layout(std430, set = 1, binding = 0) buffer ParticlePositions
 {
 	vec4 data[];
 } positions;
 
-layout(std140, set = 1, binding = 1) buffer ParticleVelocities
+layout(std430, set = 1, binding = 1) buffer ParticleVelocities
 {
 	vec4 data[];
 } velocities;
 
-layout(std140, set = 1, binding = 2) buffer ParticleParameters
+layout(std430, set = 1, binding = 2) buffer ParticleParameters
 {
 	vec4 data[];
 } parameters;
 
-layout(std140, set = 1, binding = 3) buffer FreeIndices
+layout(std430, set = 1, binding = 3) buffer FreeIndices
 {
-	uvec4 data[];
+	uint data[];
 } free_indices;
 
-layout(std140, set = 1, binding = 4) buffer EmitterData
+layout(std430, set = 1, binding = 4) buffer EmitterData
 {
 	int num_free;
 	int num_particles;
@@ -39,14 +39,14 @@ layout(std140, set = 1, binding = 4) buffer EmitterData
 	float max_imass;
 } emitter;
 
-layout(std140, set = 1, binding = 5) buffer MeshVertices
+layout(std430, set = 1, binding = 5) buffer MeshVertices
 {
 	vec4 data[];
 } mesh_vertices;
 
-layout(std140, set = 1, binding = 6) buffer MeshIndices
+layout(std430, set = 1, binding = 6) buffer MeshIndices
 {
-	uvec4 data[];
+	uint data[];
 } mesh_indices;
 
 const vec4 RANDOM_SCALE = vec4(443.897f, 441.423f, 0.0973f, 0.1099f);
@@ -76,22 +76,10 @@ vec4 randomPointOnTriangle(vec2 barycentric, vec4 v0, vec4 v1, vec4 v2)
 	return v0 + e1 * b1 + e2 * b2;
 }
 
-uint fetchMeshIndex(uint index)
-{
-	uint element = index / 4;
-	uint offset = index % 4;
-
-	return mesh_indices.data[element][offset];
-}
-
 uint popFreeParticleIndex()
 {
 	uint index = atomicAdd(emitter.num_free, -1);
-
-	uint element = index / 4;
-	uint offset = index % 4;
-
-	return free_indices.data[element][offset];
+	return free_indices.data[index];
 }
 
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
@@ -103,24 +91,21 @@ void computeMain()
 		return;
 
 	uint triangle_index = free_index % uint(emitter.num_triangles);
-	uint i0 = fetchMeshIndex(triangle_index * 3 + 0);
-	uint i1 = fetchMeshIndex(triangle_index * 3 + 1);
-	uint i2 = fetchMeshIndex(triangle_index * 3 + 2);
+	uint i0 = mesh_indices.data[triangle_index * 3 + 0];
+	uint i1 = mesh_indices.data[triangle_index * 3 + 1];
+	uint i2 = mesh_indices.data[triangle_index * 3 + 2];
 
 	vec4 v0 = mesh_vertices.data[i0];
 	vec4 v1 = mesh_vertices.data[i1];
 	vec4 v2 = mesh_vertices.data[i2];
 
-	vec3 uv = vec3(float(free_index) / gl_NumWorkGroups.x, application.time, 0.0f);
-
-	uint particle_index = popFreeParticleIndex();
-
-	uv.z = float(free_index);
+	vec3 uv = vec3(float(triangle_index), application.time, float(free_index));
 	vec3 value = random3(uv);
 
 	float lifetime = mix(emitter.min_lifetime, emitter.max_lifetime, value.x);
 	float imass = mix(emitter.min_imass, emitter.max_imass, value.x);
 
+	uint particle_index = popFreeParticleIndex();
 	positions.data[particle_index] = randomPointOnTriangle(value.yz, v0, v1, v2);
 	velocities.data[particle_index] = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	parameters.data[particle_index] = vec4(lifetime, lifetime, imass, 0.0f);

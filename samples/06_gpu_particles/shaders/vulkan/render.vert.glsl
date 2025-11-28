@@ -15,9 +15,9 @@ const float PARTICLE_SIZE = 0.005f;
 const vec2 vertices[4] =
 {
 	vec2(-1.0f, -1.0f),
-	vec2(-1.0f, 1.0f),
-	vec2(1.0f, -1.0f),
-	vec2(1.0f, 1.0f),
+	vec2(-1.0f,  1.0f),
+	vec2( 1.0f, -1.0f),
+	vec2( 1.0f,  1.0f),
 };
 
 void vertexMain()

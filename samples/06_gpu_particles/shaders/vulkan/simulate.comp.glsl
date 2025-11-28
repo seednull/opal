@@ -7,27 +7,27 @@ layout(set = 0, binding = 0) uniform Application
 	float dt;
 } application;
 
-layout(std140, set = 1, binding = 0) buffer ParticlePositions
+layout(std430, set = 1, binding = 0) buffer ParticlePositions
 {
 	vec4 data[];
 } positions;
 
-layout(std140, set = 1, binding = 1) buffer ParticleVelocities
+layout(std430, set = 1, binding = 1) buffer ParticleVelocities
 {
 	vec4 data[];
 } velocities;
 
-layout(std140, set = 1, binding = 2) buffer ParticleParameters
+layout(std430, set = 1, binding = 2) buffer ParticleParameters
 {
 	vec4 data[];
 } parameters;
 
-layout(std140, set = 1, binding = 3) buffer FreeIndices
+layout(std430, set = 1, binding = 3) buffer FreeIndices
 {
-	uvec4 data[];
+	uint data[];
 } free_indices;
 
-layout(std140, set = 1, binding = 4) buffer EmitterData
+layout(std430, set = 1, binding = 4) buffer EmitterData
 {
 	int num_free;
 	int num_particles;
@@ -58,18 +58,16 @@ vec3 random3(vec3 p)
 void pushFreeParticeIndex(uint value)
 {
 	uint index = atomicAdd(emitter.num_free, 1);
-
-	uint element = index / 4;
-	uint offset = index % 4;
-
-	free_indices.data[element][offset] = value;
+	free_indices.data[index] = value;
 }
 
 uint pcg3d16(uvec3 p)
 {
 	uvec3 v = p * 1664525u + 1013904223u;
-	v.x += v.y*v.z; v.y += v.z*v.x; v.z += v.x*v.y;
-	v.x += v.y*v.z;
+	v.x += v.y * v.z;
+	v.y += v.z * v.x;
+	v.z += v.x * v.y;
+	v.x += v.y * v.z;
 	return v.x;
 }
 
@@ -99,7 +97,7 @@ float simplexNoise3d(float x, float y, float z)
 	vec3 x2 = x0 - i2 + C.yyy;
 	vec3 x3 = x0 - D.yyy;
 
-	i = i + 32768.5f;
+	i += 32768.5f;
 	uint hash0 = pcg3d16(uvec3(i));
 	uint hash1 = pcg3d16(uvec3(i + i1));
 	uint hash2 = pcg3d16(uvec3(i + i2));
@@ -110,10 +108,11 @@ float simplexNoise3d(float x, float y, float z)
 	vec3 p2 = gradient3d(hash2);
 	vec3 p3 = gradient3d(hash3);
 
-	// Mix final noise value.
+	// Mix final noise value
 	vec4 m = clamp(0.5f - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0f, 1.0f);
 	vec4 mt = m * m;
 	vec4 m4 = mt * mt;
+
 	return 62.6f * dot(m4, vec4(dot(x0, p0), dot(x1, p1), dot(x2, p2), dot(x3, p3)));
 }
 
