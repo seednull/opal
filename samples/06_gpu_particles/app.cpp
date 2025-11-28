@@ -172,7 +172,13 @@ inline vec3 normalize(const vec3 &v)
 
 /*
  */
-bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device, Opal_Shader *shader)
+static uint32_t alignUp(uint32_t value, uint32_t alignment)
+{
+	uint32_t mask = alignment - 1;
+	return (value + mask) & ~mask;
+}
+
+static bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device, Opal_Shader *shader)
 {
 	assert(name);
 	assert(device);
@@ -210,7 +216,7 @@ bool loadShader(const char *name, Opal_ShaderSourceType type, Opal_Device device
 	return result == OPAL_SUCCESS;
 }
 
-bool uploadDataToBuffer(Opal_Device device, Opal_Queue queue, const void *data, size_t size, Opal_BufferState target_state, Opal_Buffer destination_buffer)
+static bool uploadDataToBuffer(Opal_Device device, Opal_Queue queue, const void *data, size_t size, Opal_BufferState target_state, Opal_Buffer destination_buffer)
 {
 	// staging buffer
 	Opal_BufferDesc staging_buffer_desc =
@@ -566,7 +572,8 @@ void Application::render()
 	result = opalCmdBeginComputePass(device, command_buffer, NULL);
 	assert(result == OPAL_SUCCESS);
 
-	uint32_t num_triangles = LOGO_NUM_INDICES / 3;
+	uint32_t num_workgroups = alignUp(NUM_PARTICLES, THREADS_PER_WORKGROUP) / THREADS_PER_WORKGROUP;
+
 	result = opalCmdComputeSetPipelineLayout(device, command_buffer, compute_pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
@@ -579,7 +586,7 @@ void Application::render()
 	result = opalCmdComputeSetPipeline(device, command_buffer, emit_pipeline);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdComputeDispatch(device, command_buffer, num_triangles, 1, 1);
+	result = opalCmdComputeDispatch(device, command_buffer, num_workgroups, 1, 1);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_Buffer sync_buffers[] = { particle_positions, particle_velocities, particle_parameters, particle_indices, particle_counters };
@@ -589,8 +596,6 @@ void Application::render()
 
 	result = opalCmdComputeMemoryBarrier(device, command_buffer, &barriers);
 	assert(result == OPAL_SUCCESS);
-
-	uint32_t num_workgroups = (NUM_PARTICLES + 31) / 32;
 
 	result = opalCmdComputeSetPipeline(device, command_buffer, simulate_pipeline);
 	assert(result == OPAL_SUCCESS);
@@ -673,7 +678,7 @@ void Application::render()
 	result = opalCmdGraphicsSetScissor(device, command_buffer, 0, 0, width, height);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdGraphicsDraw(device, command_buffer, 6, NUM_PARTICLES, 0, 0);
+	result = opalCmdGraphicsDraw(device, command_buffer, 4, NUM_PARTICLES, 0, 0);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_BufferTransitionDesc graphics_end_buffer_transitions[] =
@@ -872,7 +877,7 @@ void Application::buildContent()
 		EmitterData data = {};
 		data.counters[0] = NUM_PARTICLES;
 		data.counters[1] = NUM_PARTICLES;
-		data.counters[2] = NUM_PARTICLES;
+		data.counters[2] = LOGO_NUM_INDICES / 3;
 		data.counters[3] = 0;
 		data.random[0] = MIN_PARTICLE_LIFETIME;
 		data.random[1] = MAX_PARTICLE_LIFETIME;
@@ -1010,7 +1015,7 @@ void Application::buildPipelines()
 
 		pipeline_desc.num_vertex_streams = 1;
 		pipeline_desc.vertex_streams = vertex_streams;
-		pipeline_desc.primitive_type = OPAL_PRIMITIVE_TYPE_TRIANGLE_LIST;
+		pipeline_desc.primitive_type = OPAL_PRIMITIVE_TYPE_TRIANGLE_STRIP;
 
 		pipeline_desc.cull_mode = OPAL_CULL_MODE_NONE;
 		pipeline_desc.front_face = OPAL_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -1034,7 +1039,7 @@ void Application::buildPipelines()
 		Opal_ComputePipelineDesc pipeline_desc = {};
 		pipeline_desc.pipeline_layout = compute_pipeline_layout;
 		pipeline_desc.compute_function = { emit_shader, "computeMain" };
-		pipeline_desc.threadgroup_size_x = 1;
+		pipeline_desc.threadgroup_size_x = THREADS_PER_WORKGROUP;
 		pipeline_desc.threadgroup_size_y = 1;
 		pipeline_desc.threadgroup_size_z = 1;
 
@@ -1045,7 +1050,7 @@ void Application::buildPipelines()
 		Opal_ComputePipelineDesc pipeline_desc = {};
 		pipeline_desc.pipeline_layout = compute_pipeline_layout;
 		pipeline_desc.compute_function = { simulate_shader, "computeMain" };
-		pipeline_desc.threadgroup_size_x = 32;
+		pipeline_desc.threadgroup_size_x = THREADS_PER_WORKGROUP;
 		pipeline_desc.threadgroup_size_y = 1;
 		pipeline_desc.threadgroup_size_z = 1;
 

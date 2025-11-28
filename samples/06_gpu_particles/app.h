@@ -55,6 +55,7 @@ private:
 	static constexpr float MAX_PARTICLE_IMASS = 0.01f;
 	static constexpr uint32_t NUM_PARTICLES = 10000000;
 	static constexpr uint32_t WAIT_TIMEOUT_MS = 1000;
+	static constexpr uint32_t THREADS_PER_WORKGROUP = 256;
 
 private:
 	Opal_Instance instance {OPAL_NULL_HANDLE};

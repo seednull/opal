@@ -12,14 +12,12 @@ layout(location = 0) out vec4 out_data;
 
 const float PARTICLE_SIZE = 0.005f;
 
-const vec2 vertices[6] =
+const vec2 vertices[4] =
 {
 	vec2(-1.0f, -1.0f),
 	vec2(-1.0f, 1.0f),
-	vec2(1.0f, 1.0f),
-	vec2(1.0f, 1.0f),
 	vec2(1.0f, -1.0f),
-	vec2(-1.0f, -1.0f),
+	vec2(1.0f, 1.0f),
 };
 
 void vertexMain()

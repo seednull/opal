@@ -31,14 +31,13 @@ layout(std140, set = 1, binding = 4) buffer EmitterData
 {
 	int num_free;
 	int num_particles;
-	ivec2 padding;
+	int num_triangles;
+	int padding;
 	float min_lifetime;
 	float max_lifetime;
 	float min_imass;
 	float max_imass;
 } emitter;
-
-layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 const vec4 RANDOM_SCALE = vec4(443.897f, 441.423f, 0.0973f, 0.1099f);
 
@@ -56,7 +55,7 @@ vec3 random3(vec3 p)
 	return fract((p.xxy + p.yzz) * p.zyx);
 }
 
-void writeFreeParticeIndex(uint value)
+void pushFreeParticeIndex(uint value)
 {
 	uint index = atomicAdd(emitter.num_free, 1);
 
@@ -144,10 +143,11 @@ vec4 curlNoise3d(vec4 p)
 	return vec4(normalize(curl), 0.0f);
 }
 
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
 void computeMain()
 {
 	uint particle_index = gl_GlobalInvocationID.x;
-
 	if (particle_index >= emitter.num_particles)
 		return;
 
@@ -169,7 +169,7 @@ void computeMain()
 
 	if (parameter.x < 0.0f)
 	{
-		writeFreeParticeIndex(particle_index);
+		pushFreeParticeIndex(particle_index);
 	}
 
 	positions.data[particle_index] = position;
