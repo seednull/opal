@@ -1444,16 +1444,12 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 	uint32_t num_inline_descriptors = 0;
 
-	uint32_t *src_table_offsets = NULL;
+	uint32_t *layout_table_offsets = NULL;
 
 	if (num_descriptor_set_layouts > 0)
 	{
-		opal_bumpReset(&device_ptr->bump);
-
-		uint32_t table_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(uint32_t) * num_descriptor_set_layouts * 2);
-
-		src_table_offsets = (uint32_t *)(device_ptr->bump.data + table_offset);
-		memset(src_table_offsets, UINT32_MAX, sizeof(uint32_t) * num_descriptor_set_layouts * 2);
+		layout_table_offsets = (uint32_t *)malloc(sizeof(uint32_t) * num_descriptor_set_layouts * 2);
+		memset(layout_table_offsets, UINT32_MAX, sizeof(uint32_t) * num_descriptor_set_layouts * 2);
 
 		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
 		{
@@ -1470,13 +1466,13 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 
 			if (num_set_resource_descriptors > 0)
 			{
-				src_table_offsets[i * 2 + 0] = i;
+				layout_table_offsets[i * 2 + 0] = i;
 				num_resource_tables++;
 			}
 
 			if (num_set_sampler_descriptors > 0)
 			{
-				src_table_offsets[i * 2 + 1] = i;
+				layout_table_offsets[i * 2 + 1] = i;
 				num_sampler_tables++;
 			}
 
@@ -1488,12 +1484,13 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
 		{
 			uint32_t index = i * 2 + 1;
-			uint32_t offset = src_table_offsets[index];
+			uint32_t offset = layout_table_offsets[index];
 
 			if (offset != UINT32_MAX)
-				src_table_offsets[index] += num_resource_tables;
+				layout_table_offsets[index] += num_resource_tables;
 		}
 
+		opal_bumpReset(&device_ptr->bump);
 		uint32_t parameters_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_ROOT_PARAMETER) * (num_resource_tables + num_sampler_tables + num_inline_descriptors));
 		uint32_t ranges_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_DESCRIPTOR_RANGE) * (num_resource_descriptors + num_sampler_descriptors));
 
@@ -1685,9 +1682,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 	if (num_descriptor_set_layouts > 0)
 	{
 		result.num_layout_table_offsets = num_descriptor_set_layouts * 2;
-		result.layout_table_offsets = (uint32_t *)malloc(sizeof(uint32_t) * result.num_layout_table_offsets);
-
-		memcpy(result.layout_table_offsets, src_table_offsets, sizeof(uint32_t) * result.num_layout_table_offsets);
+		result.layout_table_offsets = layout_table_offsets;
 	}
 
 	result.num_inline_descriptors = num_inline_descriptors;
