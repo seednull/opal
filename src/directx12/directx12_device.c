@@ -753,7 +753,7 @@ static Opal_Result directx12_deviceCreateFence(Opal_Device this, Opal_Fence *fen
 
 	DirectX12_Fence result = {0};
 
-	*fence = (Opal_Semaphore)opal_poolAddElement(&device_ptr->fences, &result);
+	*fence = (Opal_Fence)opal_poolAddElement(&device_ptr->fences, &result);
 	return OPAL_SUCCESS;
 }
 
