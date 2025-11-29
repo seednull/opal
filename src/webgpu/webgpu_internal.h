@@ -39,6 +39,7 @@ typedef struct WebGPU_Device_t
 
 	Opal_Pool queues;
 	Opal_Pool semaphores;
+	Opal_Pool fences;
 	Opal_Pool buffers;
 	Opal_Pool textures;
 	Opal_Pool texture_views;
@@ -71,6 +72,11 @@ typedef struct WebGPU_Semaphore_t
 {
 	uint64_t value;
 } WebGPU_Semaphore;
+
+typedef struct WebGPU_Fence_t
+{
+	uint32_t unused;
+} WebGPU_Fence;
 
 typedef struct WebGPU_Buffer_t
 {

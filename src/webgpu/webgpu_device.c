@@ -388,10 +388,15 @@ static Opal_Result webgpu_deviceCreateSemaphore(Opal_Device this, const Opal_Sem
 
 static Opal_Result webgpu_deviceCreateFence(Opal_Device this, Opal_Fence *fence)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(fence);
+	assert(this);
+	assert(fence);
 
-	return OPAL_NOT_SUPPORTED;
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+
+	WebGPU_Fence result = {0};
+
+	*fence = (Opal_Fence)opal_poolAddElement(&device_ptr->fences, &result);
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceCreateBuffer(Opal_Device this, const Opal_BufferDesc *desc, Opal_Buffer *buffer)
@@ -1096,10 +1101,16 @@ static Opal_Result webgpu_deviceDestroySemaphore(Opal_Device this, Opal_Semaphor
 
 static Opal_Result webgpu_deviceDestroyFence(Opal_Device this, Opal_Fence fence)
 {
-	OPAL_UNUSED(this);
-	OPAL_UNUSED(fence);
+	assert(this);
+	assert(fence);
 
-	return OPAL_NOT_SUPPORTED;
+	Opal_PoolHandle handle = (Opal_PoolHandle)fence;
+	assert(handle != OPAL_POOL_HANDLE_NULL);
+
+	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
+	opal_poolRemoveElement(&device_ptr->fences, handle);
+
+	return OPAL_SUCCESS;
 }
 
 static Opal_Result webgpu_deviceDestroyBuffer(Opal_Device this, Opal_Buffer buffer)
@@ -1523,6 +1534,7 @@ static Opal_Result webgpu_deviceDestroy(Opal_Device this)
 		opal_poolShutdown(&ptr->buffers);
 	}
 
+	opal_poolShutdown(&ptr->fences);
 	opal_poolShutdown(&ptr->semaphores);
 
 	{
@@ -2979,6 +2991,7 @@ Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *
 	// pools
 	opal_poolInitialize(&device_ptr->queues, sizeof(WebGPU_Queue), 32);
 	opal_poolInitialize(&device_ptr->semaphores, sizeof(WebGPU_Semaphore), 32);
+	opal_poolInitialize(&device_ptr->fences, sizeof(WebGPU_Fence), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(WebGPU_Buffer), 32);
 	opal_poolInitialize(&device_ptr->textures, sizeof(WebGPU_Texture), 32);
 	opal_poolInitialize(&device_ptr->texture_views, sizeof(WebGPU_Texture), 32);
