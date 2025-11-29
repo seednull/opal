@@ -30,9 +30,9 @@ layout(std430, set = 1, binding = 3) buffer FreeIndices
 layout(std430, set = 1, binding = 4) buffer EmitterData
 {
 	int num_free;
-	int num_particles;
-	int num_triangles;
-	int padding;
+	uint num_particles;
+	uint num_triangles;
+	uint padding;
 	float min_lifetime;
 	float max_lifetime;
 	float min_imass;
@@ -50,13 +50,6 @@ layout(std430, set = 1, binding = 6) buffer MeshIndices
 } mesh_indices;
 
 const vec4 RANDOM_SCALE = vec4(443.897f, 441.423f, 0.0973f, 0.1099f);
-
-vec2 random2(vec2 p)
-{
-	vec3 p3 = fract(p.xyx * RANDOM_SCALE.xyz);
-	p3 += dot(p3, p3.yzx + 19.19f);
-	return fract((p3.xx + p3.yz) * p3.zy);
-}
 
 vec3 random3(vec3 p)
 {
@@ -87,10 +80,10 @@ layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 void computeMain()
 {
 	uint free_index = gl_GlobalInvocationID.x;
-	if (free_index >= emitter.num_free)
+	if (free_index >= uint(emitter.num_free))
 		return;
 
-	uint triangle_index = free_index % uint(emitter.num_triangles);
+	uint triangle_index = free_index % emitter.num_triangles;
 	uint i0 = mesh_indices.data[triangle_index * 3 + 0];
 	uint i1 = mesh_indices.data[triangle_index * 3 + 1];
 	uint i2 = mesh_indices.data[triangle_index * 3 + 2];

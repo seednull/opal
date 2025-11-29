@@ -18,7 +18,7 @@ cbuffer Camera: register(b1, space0)
 
 static const float PARTICLE_SIZE = 0.005f;
 
-static const float2 vertices[4] =
+static const float2 VERTICES[4] =
 {
 	float2(-1.0f, -1.0f),
 	float2(-1.0f,  1.0f),
@@ -28,17 +28,16 @@ static const float2 vertices[4] =
 
 VertexToFragment vertexMain(VertexInput input)
 {
-	VertexToFragment output;
-
 	float lifetime = pow(saturate(input.position.w), 0.1f);
 	float size = PARTICLE_SIZE * lifetime;
 
-	float2 offset = vertices[input.vertex_id];
+	float2 offset = VERTICES[input.vertex_id];
 
 	float4 view_position = mul(view, float4(input.position.xyz, 1.0f));
 	view_position.x += offset.x * size;
 	view_position.y += offset.y * size;
 
+	VertexToFragment output;
 	output.position = mul(projection, view_position);
 	output.data = float4(offset.x, offset.y, input.position.w, 0.0f);
 

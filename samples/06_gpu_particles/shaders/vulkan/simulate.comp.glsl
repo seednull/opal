@@ -30,9 +30,9 @@ layout(std430, set = 1, binding = 3) buffer FreeIndices
 layout(std430, set = 1, binding = 4) buffer EmitterData
 {
 	int num_free;
-	int num_particles;
-	int num_triangles;
-	int padding;
+	uint num_particles;
+	uint num_triangles;
+	uint padding;
 	float min_lifetime;
 	float max_lifetime;
 	float min_imass;
@@ -41,24 +41,11 @@ layout(std430, set = 1, binding = 4) buffer EmitterData
 
 const vec4 RANDOM_SCALE = vec4(443.897f, 441.423f, 0.0973f, 0.1099f);
 
-vec2 random2(vec2 p)
-{
-	vec3 p3 = fract(p.xyx * RANDOM_SCALE.xyz);
-	p3 += dot(p3, p3.yzx + 19.19f);
-	return fract((p3.xx + p3.yz) * p3.zy);
-}
-
 vec3 random3(vec3 p)
 {
 	p = fract(p * RANDOM_SCALE.xyz);
 	p += dot(p, p.yxz + 19.19f);
 	return fract((p.xxy + p.yzz) * p.zyx);
-}
-
-void pushFreeParticeIndex(uint value)
-{
-	uint index = atomicAdd(emitter.num_free, 1);
-	free_indices.data[index] = value;
 }
 
 uint pcg3d16(uvec3 p)
@@ -142,6 +129,12 @@ vec4 curlNoise3d(vec4 p)
 	return vec4(normalize(curl), 0.0f);
 }
 
+void pushFreeParticleIndex(uint value)
+{
+	uint index = atomicAdd(emitter.num_free, 1);
+	free_indices.data[index] = value;
+}
+
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 void computeMain()
@@ -168,7 +161,7 @@ void computeMain()
 
 	if (parameter.x < 0.0f)
 	{
-		pushFreeParticeIndex(particle_index);
+		pushFreeParticleIndex(particle_index);
 	}
 
 	positions.data[particle_index] = position;

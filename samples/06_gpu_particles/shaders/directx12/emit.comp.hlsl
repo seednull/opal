@@ -8,9 +8,9 @@ cbuffer Application: register(b0, space0)
 struct EmitterData
 {
 	int num_free;
-	int num_partices;
-	int num_triangles;
-	int padding;
+	uint num_partices;
+	uint num_triangles;
+	uint padding;
 	float min_lifetime;
 	float max_lifetime;
 	float min_imass;
@@ -26,13 +26,6 @@ RWStructuredBuffer<float4> mesh_vertices: register(u5, space1);
 RWStructuredBuffer<uint> mesh_indices: register(u6, space1);
 
 static const float4 RANDOM_SCALE = float4(443.897f, 441.423f, 0.0973f, 0.1099f);
-
-float2 random2(float2 p)
-{
-	float3 p3 = frac(float3(p.x, p.y, p.x) * RANDOM_SCALE.xyz);
-	p3 += dot(p3, float3(p3.y, p3.z, p3.x) + 19.19f);
-	return frac((p3.xx + p3.yz) * p3.zy);
-}
 
 float3 random3(float3 p)
 {
@@ -54,17 +47,17 @@ float4 randomPointOnTriangle(float2 barycentric, float4 v0, float4 v1, float4 v2
 
 uint popFreeParticleIndex()
 {
-	uint index;
+	int index;
 	InterlockedAdd(emitter[0].num_free, -1, index);
 
 	return free_indices[index];
 }
 
 [numthreads(256, 1, 1)]
-void computeMain(uint3 global_invocation : SV_DispatchThreadID)
+void computeMain(uint3 global_invocation_id : SV_DispatchThreadID)
 {
-	uint free_index = global_invocation.x;
-	if (free_index >= emitter[0].num_free)
+	uint free_index = global_invocation_id.x;
+	if (free_index >= uint(emitter[0].num_free))
 		return;
 
 	uint triangle_index = free_index % emitter[0].num_triangles;

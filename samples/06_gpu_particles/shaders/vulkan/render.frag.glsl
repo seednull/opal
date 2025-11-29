@@ -3,9 +3,9 @@
 layout(location = 0) in vec4 in_data;
 layout(location = 0) out vec4 out_color;
 
-vec3 START_COLOR = vec3(60.0f / 255.0f, 106.0f / 255.0f, 155.0f / 255.0f);
-vec3 END_COLOR = vec3(57.0f / 255.0f, 218.0f / 255.0f, 155.0f / 255.0f);
-float ATTENUATION_POWER = 0.01f;
+const vec3 START_COLOR = vec3(60.0f / 255.0f, 106.0f / 255.0f, 155.0f / 255.0f);
+const vec3 END_COLOR = vec3(57.0f / 255.0f, 218.0f / 255.0f, 155.0f / 255.0f);
+const float ATTENUATION_POWER = 0.01f;
 
 void fragmentMain()
 {

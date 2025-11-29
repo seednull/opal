@@ -12,7 +12,7 @@ layout(location = 0) out vec4 out_data;
 
 const float PARTICLE_SIZE = 0.005f;
 
-const vec2 vertices[4] =
+const vec2 VERTICES[4] =
 {
 	vec2(-1.0f, -1.0f),
 	vec2(-1.0f,  1.0f),
@@ -25,7 +25,7 @@ void vertexMain()
 	float lifetime = pow(clamp(in_position.w, 0.0f, 1.0f), 0.1f);
 	float size = PARTICLE_SIZE * lifetime;
 
-	vec2 offset = vertices[gl_VertexIndex];
+	vec2 offset = VERTICES[gl_VertexIndex];
 
 	vec4 view_position = camera.view * vec4(in_position.xyz, 1.0);
 	view_position.x += offset.x * size;
