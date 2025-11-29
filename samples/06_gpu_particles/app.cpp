@@ -21,7 +21,7 @@ static const char *emit_shader_paths[] =
 	"samples/06_gpu_particles/shaders/vulkan/emit.comp.spv",
 	"samples/06_gpu_particles/shaders/directx12/emit.comp.cso",
 	nullptr,
-	nullptr,
+	"samples/06_gpu_particles/shaders/webgpu/emit.comp.wgsl",
 	nullptr,
 };
 
@@ -30,7 +30,7 @@ static const char *simulate_shader_paths[] =
 	"samples/06_gpu_particles/shaders/vulkan/simulate.comp.spv",
 	"samples/06_gpu_particles/shaders/directx12/simulate.comp.cso",
 	nullptr,
-	nullptr,
+	"samples/06_gpu_particles/shaders/webgpu/simulate.comp.wgsl",
 	nullptr,
 };
 
@@ -39,7 +39,7 @@ static const char *vertex_shader_paths[] =
 	"samples/06_gpu_particles/shaders/vulkan/render.vert.spv",
 	"samples/06_gpu_particles/shaders/directx12/render.vert.cso",
 	nullptr,
-	nullptr,
+	"samples/06_gpu_particles/shaders/webgpu/render.vert.wgsl",
 	nullptr,
 };
 
@@ -48,7 +48,7 @@ static const char *fragment_shader_paths[] =
 	"samples/06_gpu_particles/shaders/vulkan/render.frag.spv",
 	"samples/06_gpu_particles/shaders/directx12/render.frag.cso",
 	nullptr,
-	nullptr,
+	"samples/06_gpu_particles/shaders/webgpu/render.frag.wgsl",
 	nullptr,
 };
 
@@ -224,7 +224,7 @@ static bool uploadDataToBuffer(Opal_Device device, Opal_Queue queue, const void 
 		size,
 		OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 		OPAL_ALLOCATION_HINT_AUTO,
-		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_COPY_SRC),
+		static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_COPY_SRC | OPAL_BUFFER_USAGE_COPY_DST),
 		OPAL_BUFFER_STATE_GENERIC_READ,
 	};
 
@@ -784,7 +784,7 @@ void Application::buildContent()
 			alignUp(sizeof(AppData), 256),
 			OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 			OPAL_ALLOCATION_HINT_AUTO,
-			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM),
+			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM | OPAL_BUFFER_USAGE_COPY_DST),
 			OPAL_BUFFER_STATE_GENERIC_READ,
 		};
 
@@ -798,7 +798,7 @@ void Application::buildContent()
 			alignUp(sizeof(CameraData), 256),
 			OPAL_ALLOCATION_MEMORY_TYPE_UPLOAD,
 			OPAL_ALLOCATION_HINT_AUTO,
-			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM),
+			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNIFORM | OPAL_BUFFER_USAGE_COPY_DST),
 			OPAL_BUFFER_STATE_GENERIC_READ,
 		};
 
@@ -875,14 +875,14 @@ void Application::buildContent()
 		assert(result == OPAL_SUCCESS);
 
 		EmitterData data = {};
-		data.counters[0] = NUM_PARTICLES;
-		data.counters[1] = NUM_PARTICLES;
-		data.counters[2] = LOGO_NUM_INDICES / 3;
-		data.counters[3] = 0;
-		data.random[0] = MIN_PARTICLE_LIFETIME;
-		data.random[1] = MAX_PARTICLE_LIFETIME;
-		data.random[2] = MIN_PARTICLE_IMASS;
-		data.random[3] = MAX_PARTICLE_IMASS;
+		data.num_free = NUM_PARTICLES;
+		data.num_partices = NUM_PARTICLES;
+		data.num_triangles = LOGO_NUM_INDICES / 3;
+		data.padding = 0;
+		data.min_lifetime = MIN_PARTICLE_LIFETIME;
+		data.max_lifetime = MAX_PARTICLE_LIFETIME;
+		data.min_imass = MIN_PARTICLE_IMASS;
+		data.max_imass = MAX_PARTICLE_IMASS;
 
 		bool success = uploadDataToBuffer(device, queue, &data, sizeof(EmitterData), OPAL_BUFFER_STATE_UNORDERED_ACCESS, particle_counters);
 		assert(success);
@@ -890,19 +890,42 @@ void Application::buildContent()
 
 	// mesh
 	{
+		uint64_t size = sizeof(float) * 4 * LOGO_NUM_VERTICES;
+
 		Opal_BufferDesc desc =
 		{
-			sizeof(LogoMeshData),
+			size,
 			OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL,
 			OPAL_ALLOCATION_HINT_AUTO,
 			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNORDERED_ACCESS | OPAL_BUFFER_USAGE_COPY_DST),
 			OPAL_BUFFER_STATE_UNORDERED_ACCESS,
 		};
 
-		Opal_Result result = opalCreateBuffer(device, &desc, &mesh);
+		Opal_Result result = opalCreateBuffer(device, &desc, &mesh_vertices);
 		assert(result == OPAL_SUCCESS);
 
-		bool success = uploadDataToBuffer(device, queue, &logo, sizeof(LogoMeshData), OPAL_BUFFER_STATE_UNORDERED_ACCESS, mesh);
+		uint8_t *data = reinterpret_cast<uint8_t *>(&logo) + offsetof(LogoMeshData, vertices);
+		bool success = uploadDataToBuffer(device, queue, data, size, OPAL_BUFFER_STATE_UNORDERED_ACCESS, mesh_vertices);
+		assert(success);
+	}
+
+	{
+		uint64_t size = sizeof(uint32_t) * LOGO_NUM_INDICES;
+
+		Opal_BufferDesc desc =
+		{
+			size,
+			OPAL_ALLOCATION_MEMORY_TYPE_DEVICE_LOCAL,
+			OPAL_ALLOCATION_HINT_AUTO,
+			static_cast<Opal_BufferUsageFlags>(OPAL_BUFFER_USAGE_UNORDERED_ACCESS | OPAL_BUFFER_USAGE_COPY_DST),
+			OPAL_BUFFER_STATE_UNORDERED_ACCESS,
+		};
+
+		Opal_Result result = opalCreateBuffer(device, &desc, &mesh_indices);
+		assert(result == OPAL_SUCCESS);
+
+		uint8_t *data = reinterpret_cast<uint8_t *>(&logo) + offsetof(LogoMeshData, indices);
+		bool success = uploadDataToBuffer(device, queue, data, size, OPAL_BUFFER_STATE_UNORDERED_ACCESS, mesh_indices);
 		assert(success);
 	}
 }
@@ -961,15 +984,14 @@ void Application::buildDescriptors()
 		bindings[4].data.storage_buffer_view.num_elements = 1;
 
 		bindings[5].binding = 5;
-		bindings[5].data.storage_buffer_view.buffer = mesh;
+		bindings[5].data.storage_buffer_view.buffer = mesh_vertices;
 		bindings[5].data.storage_buffer_view.element_size = sizeof(float) * 4;
 		bindings[5].data.storage_buffer_view.num_elements = LOGO_NUM_VERTICES;
 
 		bindings[6].binding = 6;
-		bindings[6].data.storage_buffer_view.buffer = mesh;
+		bindings[6].data.storage_buffer_view.buffer = mesh_indices;
 		bindings[6].data.storage_buffer_view.element_size = sizeof(uint32_t);
 		bindings[6].data.storage_buffer_view.num_elements = LOGO_NUM_INDICES;
-		bindings[6].data.storage_buffer_view.offset = offsetof(LogoMeshData, indices);
 
 		Opal_DescriptorSetAllocationDesc desc =
 		{
@@ -1081,7 +1103,10 @@ void Application::destroyContent()
 	result = opalDestroyBuffer(device, render_camera);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalDestroyBuffer(device, mesh);
+	result = opalDestroyBuffer(device, mesh_vertices);
+	assert(result == OPAL_SUCCESS);
+
+	result = opalDestroyBuffer(device, mesh_indices);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalDestroyBuffer(device, particle_positions);

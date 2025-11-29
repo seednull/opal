@@ -121,8 +121,11 @@ target_compile_definitions(${TARGET} PRIVATE ${OPAL_PLATFORM_DEFINES})
 if (EMSCRIPTEN)
 	# TODO: could be better
 	set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "
-		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/main.vert.wgsl@samples/06_gpu_particles/shaders/webgpu/main.vert.wgsl
-		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/main.frag.wgsl@samples/06_gpu_particles/shaders/webgpu/main.frag.wgsl
+		-sALLOW_MEMORY_GROWTH
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/emit.comp.wgsl@samples/06_gpu_particles/shaders/webgpu/emit.comp.wgsl
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/simulate.comp.wgsl@samples/06_gpu_particles/shaders/webgpu/simulate.comp.wgsl
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/render.vert.wgsl@samples/06_gpu_particles/shaders/webgpu/render.vert.wgsl
+		--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/shaders/webgpu/render.frag.wgsl@samples/06_gpu_particles/shaders/webgpu/render.frag.wgsl
 		--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/main.wasm.html
 	")
 endif()

@@ -28,8 +28,14 @@ private:
 private:
 	struct EmitterData
 	{
-		uint32_t counters[4];
-		float random[4];
+		int32_t num_free;
+		uint32_t num_partices;
+		uint32_t num_triangles;
+		uint32_t padding;
+		float min_lifetime;
+		float max_lifetime;
+		float min_imass;
+		float max_imass;
 	};
 
 	struct AppData
@@ -53,7 +59,12 @@ private:
 	static constexpr float MAX_PARTICLE_LIFETIME = 10.0f;
 	static constexpr float MIN_PARTICLE_IMASS = 1.0f;
 	static constexpr float MAX_PARTICLE_IMASS = 0.01f;
+#ifdef OPAL_PLATFORM_WEB
+	static constexpr uint32_t NUM_PARTICLES = 5000000;
+#else
 	static constexpr uint32_t NUM_PARTICLES = 10000000;
+#endif
+
 	static constexpr uint32_t WAIT_TIMEOUT_MS = 1000;
 	static constexpr uint32_t THREADS_PER_WORKGROUP = 256;
 
@@ -77,7 +88,8 @@ private:
 	Opal_Buffer render_application {OPAL_NULL_HANDLE};
 	Opal_Buffer render_camera {OPAL_NULL_HANDLE};
 
-	Opal_Buffer mesh {OPAL_NULL_HANDLE};
+	Opal_Buffer mesh_vertices {OPAL_NULL_HANDLE};
+	Opal_Buffer mesh_indices {OPAL_NULL_HANDLE};
 
 	Opal_Buffer particle_positions {OPAL_NULL_HANDLE};
 	Opal_Buffer particle_velocities {OPAL_NULL_HANDLE};
