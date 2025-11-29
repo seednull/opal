@@ -1073,7 +1073,7 @@ static Opal_Result vulkan_deviceCreateFence(Opal_Device this, Opal_Fence *fence)
 	Vulkan_Fence result = {0};
 	result.event = vulkan_event;
 
-	*fence = (Opal_Semaphore)opal_poolAddElement(&device_ptr->fences, &result);
+	*fence = (Opal_Fence)opal_poolAddElement(&device_ptr->fences, &result);
 	return OPAL_SUCCESS;
 }
 
