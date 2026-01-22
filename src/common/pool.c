@@ -281,7 +281,7 @@ uint32_t opal_poolGetHeadIndex(const Opal_Pool *pool)
 uint32_t opal_poolGetTailIndex(const Opal_Pool *pool)
 {
 	assert(pool);
-	return pool->head;
+	return pool->tail;
 }
 
 uint32_t opal_poolGetNextIndex(const Opal_Pool *pool, uint32_t index)
