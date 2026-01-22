@@ -22,16 +22,16 @@
 #endif
 
 #if defined(OPAL_SHARED_LIBRARY)
-	#define OPAL_APIENTRY OPAL_EXPORT extern
+	#define OPAL_APIENTRY extern OPAL_EXPORT
 #else
-	#define OPAL_APIENTRY OPAL_IMPORT extern
+	#define OPAL_APIENTRY extern OPAL_IMPORT
 #endif
 
 #if !defined(OPAL_NULL_HANDLE)
 	#define OPAL_NULL_HANDLE 0
 #endif
 
-#define OPAL_DEFINE_HANDLE(TYPE) typedef uint64_t TYPE;
+#define OPAL_DEFINE_HANDLE(TYPE) typedef uint64_t TYPE
 
 #ifdef __cplusplus
 extern "C" {
