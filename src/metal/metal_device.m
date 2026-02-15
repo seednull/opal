@@ -3185,7 +3185,7 @@ static Opal_Result metal_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opa
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+static Opal_Result metal_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3209,7 +3209,7 @@ static Opal_Result metal_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opa
 
 		id<MTLBuffer> metal_buffer = buffer_ptr->buffer;
 		uint64_t buffer_offset = vertex_buffers[i].offset;
-		uint32_t buffer_binding = command_buffer_ptr->vertex_binding_offset + i;
+		uint32_t buffer_binding = command_buffer_ptr->vertex_binding_offset + first_index + i;
 
 		[command_buffer_ptr->graphics_pass_encoder setVertexBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
 	}

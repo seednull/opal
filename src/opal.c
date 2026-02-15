@@ -1004,7 +1004,7 @@ Opal_Result opalCmdGraphicsSetDescriptorSet(Opal_Device device, Opal_CommandBuff
 	return ptr->vtbl->cmdGraphicsSetDescriptorSet(device, command_buffer, index, descriptor_set, num_dynamic_offsets, dynamic_offsets);
 }
 
-Opal_Result opalCmdGraphicsSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+Opal_Result opalCmdGraphicsSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	if (device == OPAL_NULL_HANDLE)
 		return OPAL_INVALID_DEVICE;
@@ -1013,7 +1013,7 @@ Opal_Result opalCmdGraphicsSetVertexBuffers(Opal_Device device, Opal_CommandBuff
 	assert(ptr->vtbl);
 	assert(ptr->vtbl->cmdGraphicsSetVertexBuffers);
 
-	return ptr->vtbl->cmdGraphicsSetVertexBuffers(device, command_buffer, num_vertex_buffers, vertex_buffers);
+	return ptr->vtbl->cmdGraphicsSetVertexBuffers(device, command_buffer, first_index, num_vertex_buffers, vertex_buffers);
 }
 
 Opal_Result opalCmdGraphicsSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer)

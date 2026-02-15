@@ -2231,7 +2231,7 @@ static Opal_Result webgpu_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Op
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result webgpu_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+static Opal_Result webgpu_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	assert(this);
 	assert(command_buffer);
@@ -2254,7 +2254,7 @@ static Opal_Result webgpu_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Op
 		WebGPU_Buffer *buffer_ptr = (WebGPU_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)view.buffer);
 		assert(buffer_ptr);
 
-		wgpuRenderPassEncoderSetVertexBuffer(webgpu_render_encoder, i, buffer_ptr->buffer, view.offset, view.size);
+		wgpuRenderPassEncoderSetVertexBuffer(webgpu_render_encoder, first_index + i, buffer_ptr->buffer, view.offset, view.size);
 	}
 
 	return OPAL_SUCCESS;

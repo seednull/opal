@@ -4251,7 +4251,7 @@ static Opal_Result directx12_deviceCmdGraphicsSetDescriptorSet(Opal_Device this,
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+static Opal_Result directx12_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4279,7 +4279,7 @@ static Opal_Result directx12_deviceCmdGraphicsSetVertexBuffers(Opal_Device this,
 		buffer_views[i].StrideInBytes = vertex_buffers[i].stride;
 	}
 
-	ID3D12GraphicsCommandList6_IASetVertexBuffers(command_buffer_ptr->list, 0, num_vertex_buffers, buffer_views);
+	ID3D12GraphicsCommandList6_IASetVertexBuffers(command_buffer_ptr->list, first_index, num_vertex_buffers, buffer_views);
 	return OPAL_SUCCESS;
 }
 

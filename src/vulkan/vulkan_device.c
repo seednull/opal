@@ -4434,7 +4434,7 @@ static Opal_Result vulkan_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Op
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result vulkan_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+static Opal_Result vulkan_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4464,7 +4464,7 @@ static Opal_Result vulkan_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Op
 		offsets[i] = vertex_buffers[i].offset;
 	}
 	
-	device_ptr->vk.vkCmdBindVertexBuffers(command_buffer_ptr->command_buffer, 0, num_vertex_buffers, buffers, offsets);
+	device_ptr->vk.vkCmdBindVertexBuffers(command_buffer_ptr->command_buffer, first_index, num_vertex_buffers, buffers, offsets);
 	return OPAL_SUCCESS;
 }
 

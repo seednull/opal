@@ -1457,7 +1457,7 @@ typedef Opal_Result (*PFN_opalCmdBeginGraphicsPass)(Opal_Device device, Opal_Com
 typedef Opal_Result (*PFN_opalCmdGraphicsSetPipelineLayout)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetPipeline)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetDescriptorSet)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
-typedef Opal_Result (*PFN_opalCmdGraphicsSetVertexBuffers)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
+typedef Opal_Result (*PFN_opalCmdGraphicsSetVertexBuffers)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetIndexBuffer)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetViewport)(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);
 typedef Opal_Result (*PFN_opalCmdGraphicsSetScissor)(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
@@ -1711,7 +1711,7 @@ OPAL_APIENTRY Opal_Result opalCmdBeginGraphicsPass(Opal_Device device, Opal_Comm
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetPipelineLayout(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_PipelineLayout pipeline_layout);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetPipeline(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_GraphicsPipeline pipeline);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetDescriptorSet(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets);
-OPAL_APIENTRY Opal_Result opalCmdGraphicsSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
+OPAL_APIENTRY Opal_Result opalCmdGraphicsSetVertexBuffers(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetIndexBuffer(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_IndexBufferView index_buffer);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetViewport(Opal_Device device, Opal_CommandBuffer command_buffer, Opal_Viewport viewport);
 OPAL_APIENTRY Opal_Result opalCmdGraphicsSetScissor(Opal_Device device, Opal_CommandBuffer command_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
