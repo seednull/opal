@@ -614,10 +614,11 @@ static Opal_Result null_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
+static Opal_Result null_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(first_index);
 	OPAL_UNUSED(num_vertex_buffers);
 	OPAL_UNUSED(vertex_buffers);
 
