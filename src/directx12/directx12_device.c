@@ -1778,7 +1778,7 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 
 	// depthstencil state
 	pipeline_info.DepthStencilState.DepthEnable = desc->depth_enable;
-	pipeline_info.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	pipeline_info.DepthStencilState.DepthWriteMask = desc->depth_write ? D3D12_DEPTH_WRITE_MASK_ALL : 0;
 	pipeline_info.DepthStencilState.DepthFunc = directx12_helperToComparisonFunc(desc->depth_compare_op);
 	pipeline_info.DepthStencilState.StencilEnable = desc->stencil_enable;
 	pipeline_info.DepthStencilState.StencilReadMask = (UINT8)desc->stencil_read_mask;
