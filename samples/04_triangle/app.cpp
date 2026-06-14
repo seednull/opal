@@ -442,7 +442,7 @@ void Application::render()
 	Opal_VertexBufferView vertex_buffer = { triangle_buffer, 0, sizeof(Vertex) * 3, sizeof(Vertex) };
 	Opal_IndexBufferView index_buffer = { triangle_buffer, offsetof(TriangleData, indices), sizeof(uint32_t) * 3, OPAL_INDEX_FORMAT_UINT32 };
 
-	result = opalCmdGraphicsSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
+	result = opalCmdGraphicsSetVertexBuffers(device, command_buffer, 0, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdGraphicsSetIndexBuffer(device, command_buffer, index_buffer);

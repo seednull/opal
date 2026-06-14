@@ -662,7 +662,7 @@ void Application::render()
 
 	Opal_VertexBufferView vertex_buffer = { particle_positions, 0, NUM_PARTICLES * sizeof(float) * 4, sizeof(float) * 4 };
 
-	result = opalCmdGraphicsSetVertexBuffers(device, command_buffer, 1, &vertex_buffer);
+	result = opalCmdGraphicsSetVertexBuffers(device, command_buffer, 0, 1, &vertex_buffer);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_Viewport viewport =
