@@ -292,7 +292,7 @@ static Opal_InstanceTable instance_vtbl =
 
 /*
  */
-Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result vulkan_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	static const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 

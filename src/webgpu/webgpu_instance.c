@@ -219,7 +219,7 @@ static Opal_InstanceTable instance_vtbl =
 
 /*
  */
-Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result webgpu_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);

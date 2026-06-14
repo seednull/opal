@@ -258,7 +258,7 @@ static Opal_InstanceTable instance_vtbl =
 
 /*
  */
-Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result directx12_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);

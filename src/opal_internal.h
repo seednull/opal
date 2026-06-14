@@ -4,10 +4,10 @@
 
 #define OPAL_UNUSED(x) do { (void)(x); } while(0)
 
-Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
-Opal_Result null_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result vulkan_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result directx12_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result metal_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result webgpu_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
+Opal_Result null_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance);
 
 uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint);

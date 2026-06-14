@@ -170,7 +170,7 @@ static Opal_InstanceTable instance_vtbl =
 
 /*
  */
-Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result metal_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);

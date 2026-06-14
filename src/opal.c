@@ -21,11 +21,11 @@ Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal
 {
 	switch (api)
 	{
-		case OPAL_API_VULKAN: return vulkan_createInstance(desc, instance);
-		case OPAL_API_DIRECTX12: return directx12_createInstance(desc, instance);
-		case OPAL_API_METAL: return metal_createInstance(desc, instance);
-		case OPAL_API_WEBGPU: return webgpu_createInstance(desc, instance);
-		case OPAL_API_NULL: return null_createInstance(desc, instance);
+		case OPAL_API_VULKAN: return vulkan_opalCreateInstance(desc, instance);
+		case OPAL_API_DIRECTX12: return directx12_opalCreateInstance(desc, instance);
+		case OPAL_API_METAL: return metal_opalCreateInstance(desc, instance);
+		case OPAL_API_WEBGPU: return webgpu_opalCreateInstance(desc, instance);
+		case OPAL_API_NULL: return null_opalCreateInstance(desc, instance);
 
 		case OPAL_API_AUTO:
 		{
@@ -33,22 +33,22 @@ Opal_Result opalCreateInstance(Opal_Api api, const Opal_InstanceDesc *desc, Opal
 
 #if OPAL_BACKEND_DIRECTX12
 			if (result != OPAL_SUCCESS)
-				result = directx12_createInstance(desc, instance);
+				result = directx12_opalCreateInstance(desc, instance);
 #endif
 
 #if OPAL_BACKEND_VULKAN
 			if (result != OPAL_SUCCESS)
-				result = vulkan_createInstance(desc, instance);
+				result = vulkan_opalCreateInstance(desc, instance);
 #endif
 
 #if OPAL_BACKEND_METAL
 			if (result != OPAL_SUCCESS)
-				result = metal_createInstance(desc, instance);
+				result = metal_opalCreateInstance(desc, instance);
 #endif
 
 #if OPAL_BACKEND_WEBGPU
 			if (result != OPAL_SUCCESS)
-				result = webgpu_createInstance(desc, instance);
+				result = webgpu_opalCreateInstance(desc, instance);
 #endif
 
 			return result;

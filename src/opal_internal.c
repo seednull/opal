@@ -55,7 +55,7 @@ uint32_t opal_evaluateDevice(const Opal_DeviceInfo *info, Opal_DeviceHint hint)
 
 #if !defined(OPAL_BACKEND_DIRECTX12)
 
-Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result directx12_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);
@@ -70,7 +70,7 @@ Opal_Result directx12_createInstance(const Opal_InstanceDesc *desc, Opal_Instanc
 
 #if !defined(OPAL_BACKEND_WEBGPU)
 
-Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result webgpu_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);
@@ -85,7 +85,7 @@ Opal_Result webgpu_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 
 #if !defined(OPAL_BACKEND_VULKAN)
 
-Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result vulkan_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);
@@ -100,7 +100,7 @@ Opal_Result vulkan_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *
 
 #if !defined(OPAL_BACKEND_METAL)
 
-Opal_Result metal_createInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
+Opal_Result metal_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
 	assert(desc);
 	assert(instance);
