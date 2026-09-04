@@ -5033,8 +5033,8 @@ static Opal_Result vulkan_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_C
 	copy_region.extent.depth = size.depth;
 
 	copy_region.srcOffset.x = src.offset.x;
-	copy_region.srcOffset.z = src.offset.y;
-	copy_region.srcOffset.y = src.offset.z;
+	copy_region.srcOffset.y = src.offset.y;
+	copy_region.srcOffset.z = src.offset.z;
 
 	copy_region.srcSubresource.aspectMask = src_image_view_ptr->aspect_mask;
 	copy_region.srcSubresource.mipLevel = src_image_view_ptr->base_mip;
@@ -5042,8 +5042,8 @@ static Opal_Result vulkan_deviceCmdCopyTextureToTexture(Opal_Device this, Opal_C
 	copy_region.srcSubresource.layerCount = src_image_view_ptr->num_layers;
 
 	copy_region.dstOffset.x = dst.offset.x;
-	copy_region.dstOffset.z = dst.offset.y;
-	copy_region.dstOffset.y = dst.offset.z;
+	copy_region.dstOffset.y = dst.offset.y;
+	copy_region.dstOffset.z = dst.offset.z;
 
 	copy_region.dstSubresource.aspectMask = dst_image_view_ptr->aspect_mask;
 	copy_region.dstSubresource.mipLevel = dst_image_view_ptr->base_mip;
