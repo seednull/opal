@@ -100,6 +100,8 @@ typedef struct Vulkan_DeviceEnginesInfo_t
 typedef struct Vulkan_Instance_t
 {
 	Opal_InstanceTable *vtbl;
+	Opal_InstanceCallbacks callbacks;
+	VkDebugUtilsMessengerEXT debug_messenger;
 	// TODO: add head for Vulkan_Device intrusive list
 	uint32_t heap_size;
 	uint32_t max_heap_allocations;

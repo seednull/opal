@@ -34,6 +34,35 @@ static void webgpu_deviceCallback(WGPURequestDeviceStatus status, WGPUDevice dev
 	request->finished = 1;
 }
 
+static void webgpu_uncapturedErrorCallback(WGPUErrorType type, char const *message, void *user_data)
+{
+	const WebGPU_Instance *instance_ptr = (const WebGPU_Instance *)user_data;
+	assert(instance_ptr);
+
+	if (instance_ptr->callbacks.debug_message.function == NULL)
+		return;
+
+	const char *kind = "error";
+	Opal_DebugMessageType opal_type = OPAL_DEBUG_MESSAGE_TYPE_GENERAL;
+
+	switch (type)
+	{
+		case WGPUErrorType_Validation: kind = "validation"; opal_type = OPAL_DEBUG_MESSAGE_TYPE_VALIDATION; break;
+		case WGPUErrorType_OutOfMemory: kind = "out of memory"; break;
+		case WGPUErrorType_Internal: kind = "internal"; break;
+		default: break;
+	}
+
+	Opal_DebugMessage opal_message = {0};
+	opal_message.severity = OPAL_DEBUG_MESSAGE_SEVERITY_ERROR;
+	opal_message.type = opal_type;
+	opal_message.id = (int32_t)type;
+	opal_message.id_name = kind;
+	opal_message.text = message;
+
+	instance_ptr->callbacks.debug_message.function(&opal_message, instance_ptr->callbacks.debug_message.user_data);
+}
+
 static WGPUAdapter webgpu_requestAdapterSync(WGPUInstance instance, WGPUPowerPreference preference)
 {
 	WebGPU_AsyncRequest request = {0};
@@ -44,22 +73,28 @@ static WGPUAdapter webgpu_requestAdapterSync(WGPUInstance instance, WGPUPowerPre
 	wgpuInstanceRequestAdapter(instance, &options, webgpu_adapterCallback, &request);
 
 	while (!request.finished)
-		emscripten_sleep(5);
+		emscripten_sleep(0);
 
 	return (WGPUAdapter)request.payload;
 }
 
-static WGPUDevice webgpu_requestDeviceSync(WGPUAdapter adapter)
+static WGPUDevice webgpu_requestDeviceSync(WGPUAdapter adapter, WebGPU_Instance *instance_ptr)
 {
+	assert(instance_ptr);
+
 	WebGPU_AsyncRequest request = {0};
 
 	WGPUDeviceDescriptor device_desc = {0};
 	wgpuAdapterRequestDevice(adapter, &device_desc, webgpu_deviceCallback, &request);
 
 	while (!request.finished)
-		emscripten_sleep(5);
+		emscripten_sleep(0);
 
-	return (WGPUDevice)request.payload;
+	WGPUDevice device = (WGPUDevice)request.payload;
+	if (device != NULL)
+		wgpuDeviceSetUncapturedErrorCallback(device, webgpu_uncapturedErrorCallback, instance_ptr);
+
+	return device;
 }
 
 /*
@@ -121,7 +156,7 @@ static Opal_Result webgpu_instanceCreateDefaultDevice(Opal_Instance this, Opal_D
 	if (webgpu_adapter == NULL)
 		return OPAL_WEBGPU_ERROR;
 
-	WGPUDevice webgpu_device = webgpu_requestDeviceSync(webgpu_adapter);
+	WGPUDevice webgpu_device = webgpu_requestDeviceSync(webgpu_adapter, instance_ptr);
 
 	if (webgpu_device == NULL)
 	{
@@ -230,6 +265,9 @@ Opal_Result webgpu_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instan
 
 	WebGPU_Instance *ptr = (WebGPU_Instance *)malloc(sizeof(WebGPU_Instance));
 	assert(ptr);
+
+	memset(ptr, 0, sizeof(WebGPU_Instance));
+	memcpy(&ptr->callbacks, &desc->callbacks, sizeof(Opal_InstanceCallbacks));
 
 	// vtable
 	ptr->vtbl = &instance_vtbl;

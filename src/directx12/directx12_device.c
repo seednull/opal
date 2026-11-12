@@ -14,6 +14,67 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 /*
  */
+static void __stdcall directx12_debugMessageCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void *context)
+{
+	OPAL_UNUSED(category);
+
+	const DirectX12_Instance *instance_ptr = (const DirectX12_Instance *)context;
+	assert(instance_ptr);
+
+	if (instance_ptr->callbacks.debug_message.function == NULL)
+		return;
+
+	if (severity > D3D12_MESSAGE_SEVERITY_WARNING)
+		return;
+
+	Opal_DebugMessageSeverity opal_severity = OPAL_DEBUG_MESSAGE_SEVERITY_WARNING;
+
+	if (severity != D3D12_MESSAGE_SEVERITY_WARNING)
+		opal_severity = OPAL_DEBUG_MESSAGE_SEVERITY_ERROR;
+
+	Opal_DebugMessage opal_message = {0};
+	opal_message.severity = opal_severity;
+	opal_message.type = OPAL_DEBUG_MESSAGE_TYPE_VALIDATION;
+	opal_message.id = (int32_t)id;
+	opal_message.id_name = NULL;
+	opal_message.text = description;
+
+	instance_ptr->callbacks.debug_message.function(&opal_message, instance_ptr->callbacks.debug_message.user_data);
+}
+
+static void directx12_flushDebugMessages(DirectX12_Device *device_ptr)
+{
+	assert(device_ptr);
+
+	if (device_ptr->info_queue == NULL)
+		return;
+
+	if (device_ptr->info_queue1 != NULL)
+	{
+		ID3D12InfoQueue1_ClearStoredMessages(device_ptr->info_queue1);
+		return;
+	}
+
+	// NOTE: one D3D12_MESSAGE for the header + room for a description of up to 4096 bytes (the debug layer cuts longer ones)
+	D3D12_MESSAGE storage[1 + (4096 + sizeof(D3D12_MESSAGE) - 1) / sizeof(D3D12_MESSAGE)];
+
+	UINT64 num_messages = ID3D12InfoQueue_GetNumStoredMessagesAllowedByRetrievalFilter(device_ptr->info_queue);
+	for (UINT64 i = 0; i < num_messages; ++i)
+	{
+		SIZE_T size = 0;
+		if (!SUCCEEDED(ID3D12InfoQueue_GetMessage(device_ptr->info_queue, i, NULL, &size)))
+			continue;
+
+		if (size > sizeof(storage))
+			continue;
+
+		if (SUCCEEDED(ID3D12InfoQueue_GetMessage(device_ptr->info_queue, i, storage, &size)))
+			directx12_debugMessageCallback(storage->Category, storage->Severity, storage->ID, storage->pDescription, device_ptr->instance);
+	}
+
+	ID3D12InfoQueue_ClearStoredMessages(device_ptr->info_queue);
+}
+
 static Opal_Result directx12_deviceAllocateMemory(DirectX12_Device *device_ptr, const DirectX12_AllocationDesc *desc, DirectX12_Allocation *allocation)
 {
 	assert(device_ptr);
@@ -3147,6 +3208,19 @@ static Opal_Result directx12_deviceDestroy(Opal_Device this)
 
 	OPAL_UNUSED(result);
 
+	directx12_flushDebugMessages(ptr);
+
+	if (ptr->info_queue1)
+	{
+		ID3D12InfoQueue1_UnregisterMessageCallback(ptr->info_queue1, ptr->info_queue1_cookie);
+		ID3D12InfoQueue1_Release(ptr->info_queue1);
+	}
+
+	if (ptr->info_queue)
+	{
+		ID3D12InfoQueue_Release(ptr->info_queue);
+	}
+
 	IDXGIAdapter1_Release(ptr->adapter);
 	ID3D12Device_Release(ptr->device);
 
@@ -3909,6 +3983,7 @@ static Opal_Result directx12_deviceSubmit(Opal_Device this, Opal_Queue queue, co
 		ID3D12CommandQueue_Signal(queue_ptr->queue, semaphore_ptr->fence, desc->signal_values[i]);
 	}
 
+	directx12_flushDebugMessages(device_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -3939,6 +4014,8 @@ static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swap
 	assert(swapchain_ptr);
 
 	HRESULT hr = IDXGISwapChain3_Present(swapchain_ptr->swapchain, 0, swapchain_ptr->present_flags);
+	directx12_flushDebugMessages(device_ptr);
+
 	if (!SUCCEEDED(hr))
 		return OPAL_DIRECTX12_ERROR;
 
@@ -5406,6 +5483,37 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	device_ptr->instance = instance_ptr;
 	device_ptr->adapter = adapter;
 	device_ptr->device = device;
+	device_ptr->info_queue = NULL;
+	device_ptr->info_queue1 = NULL;
+	device_ptr->info_queue1_cookie = 0;
+
+	if (instance_ptr->debug != NULL)
+	{
+		ID3D12Device_QueryInterface(device, &IID_ID3D12InfoQueue, (void **)&device_ptr->info_queue);
+		ID3D12Device_QueryInterface(device, &IID_ID3D12InfoQueue1, (void **)&device_ptr->info_queue1);
+
+		if (device_ptr->info_queue != NULL)
+		{
+			D3D12_MESSAGE_SEVERITY severities[] = {D3D12_MESSAGE_SEVERITY_CORRUPTION, D3D12_MESSAGE_SEVERITY_ERROR, D3D12_MESSAGE_SEVERITY_WARNING};
+
+			D3D12_INFO_QUEUE_FILTER filter = {0};
+			filter.AllowList.NumSeverities = sizeof(severities) / sizeof(severities[0]);
+			filter.AllowList.pSeverityList = severities;
+
+			HRESULT hr = ID3D12InfoQueue_PushStorageFilter(device_ptr->info_queue, &filter);
+			assert(SUCCEEDED(hr));
+
+			OPAL_UNUSED(hr);
+		}
+
+		if (device_ptr->info_queue1 != NULL)
+		{
+			HRESULT hr = ID3D12InfoQueue1_RegisterMessageCallback(device_ptr->info_queue1, directx12_debugMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, instance_ptr, &device_ptr->info_queue1_cookie);
+			assert(SUCCEEDED(hr));
+
+			OPAL_UNUSED(hr);
+		}
+	}
 
 	// allocator
 	Opal_Result result = directx12_allocatorInitialize(device_ptr, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);

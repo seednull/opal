@@ -298,6 +298,9 @@ Opal_Result directx12_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Ins
 	DirectX12_Instance *ptr = (DirectX12_Instance *)malloc(sizeof(DirectX12_Instance));
 	assert(ptr);
 
+	memset(ptr, 0, sizeof(DirectX12_Instance));
+	memcpy(&ptr->callbacks, &desc->callbacks, sizeof(Opal_InstanceCallbacks));
+
 	// vtable
 	ptr->vtbl = &instance_vtbl;
 

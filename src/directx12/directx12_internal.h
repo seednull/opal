@@ -93,6 +93,7 @@ typedef struct DirectX12_DeviceEnginesInfo_t
 typedef struct DirectX12_Instance_t
 {
 	Opal_InstanceTable *vtbl;
+	Opal_InstanceCallbacks callbacks;
 	IDXGIFactory2 *factory;
 	ID3D12Debug1 *debug;
 	uint32_t heap_size;
@@ -140,6 +141,10 @@ typedef struct DirectX12_Device_t
 
 	DirectX12_Allocator allocator;
 	DirectX12_FramebufferDescriptorHeap framebuffer_descriptor_heap;
+
+	ID3D12InfoQueue *info_queue;
+	ID3D12InfoQueue1 *info_queue1;
+	DWORD info_queue1_cookie;
 } DirectX12_Device;
 
 typedef struct DirectX12_Queue_t

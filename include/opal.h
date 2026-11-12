@@ -135,6 +135,25 @@ typedef enum Opal_InstanceCreationFlags_t
 	OPAL_INSTANCE_CREATION_FLAGS_ENUM_FORCE32 = 0x7FFFFFFF,
 } Opal_InstanceCreationFlags;
 
+typedef enum Opal_DebugMessageSeverity_t
+{
+	OPAL_DEBUG_MESSAGE_SEVERITY_WARNING = 0,
+	OPAL_DEBUG_MESSAGE_SEVERITY_ERROR,
+
+	OPAL_DEBUG_MESSAGE_SEVERITY_ENUM_MAX,
+	OPAL_DEBUG_MESSAGE_SEVERITY_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_DebugMessageSeverity;
+
+typedef enum Opal_DebugMessageType_t
+{
+	OPAL_DEBUG_MESSAGE_TYPE_GENERAL = 0,
+	OPAL_DEBUG_MESSAGE_TYPE_VALIDATION,
+	OPAL_DEBUG_MESSAGE_TYPE_PERFORMANCE,
+
+	OPAL_DEBUG_MESSAGE_TYPE_ENUM_MAX,
+	OPAL_DEBUG_MESSAGE_TYPE_ENUM_FORCE32 = 0x7FFFFFFF,
+} Opal_DebugMessageType;
+
 typedef enum Opal_DeviceHint_t
 {
 	OPAL_DEVICE_HINT_DEFAULT = 0,
@@ -863,6 +882,28 @@ typedef struct Opal_IndexBufferView_t
 	Opal_IndexFormat format;
 } Opal_IndexBufferView;
 
+typedef struct Opal_DebugMessage_t
+{
+	Opal_DebugMessageSeverity severity;
+	Opal_DebugMessageType type;
+	int32_t id;
+	const char *id_name;
+	const char *text;
+} Opal_DebugMessage;
+
+typedef void (*PFN_opalDebugMessageCallback)(const Opal_DebugMessage *message, void *user_data);
+
+typedef struct Opal_InstanceDebugMessageCallback_t
+{
+	PFN_opalDebugMessageCallback function;
+	void *user_data;
+} Opal_InstanceDebugMessageCallback;
+
+typedef struct Opal_InstanceCallbacks_t
+{
+	Opal_InstanceDebugMessageCallback debug_message;
+} Opal_InstanceCallbacks;
+
 typedef struct Opal_InstanceDesc_t
 {
 	const char *application_name;
@@ -873,6 +914,7 @@ typedef struct Opal_InstanceDesc_t
 	uint32_t max_heap_allocations;
 	uint32_t max_heaps;
 	Opal_InstanceCreationFlags flags;
+	Opal_InstanceCallbacks callbacks;
 } Opal_InstanceDesc;
 
 typedef struct Opal_SemaphoreDesc_t

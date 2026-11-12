@@ -6,6 +6,35 @@
 
 /*
  */
+static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT *data, void *user_data)
+{
+	const Vulkan_Instance *instance_ptr = (const Vulkan_Instance *)user_data;
+	assert(instance_ptr);
+
+	if (instance_ptr->callbacks.debug_message.function == NULL)
+		return VK_FALSE;
+
+	Opal_DebugMessageSeverity opal_severity = OPAL_DEBUG_MESSAGE_SEVERITY_WARNING;
+	if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+		opal_severity = OPAL_DEBUG_MESSAGE_SEVERITY_ERROR;
+
+	Opal_DebugMessageType opal_type = OPAL_DEBUG_MESSAGE_TYPE_GENERAL;
+	if (types & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+		opal_type = OPAL_DEBUG_MESSAGE_TYPE_VALIDATION;
+	else if (types & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+		opal_type = OPAL_DEBUG_MESSAGE_TYPE_PERFORMANCE;
+
+	Opal_DebugMessage opal_message = {0};
+	opal_message.severity = opal_severity;
+	opal_message.type = opal_type;
+	opal_message.id = data->messageIdNumber;
+	opal_message.id_name = data->pMessageIdName;
+	opal_message.text = data->pMessage;
+
+	instance_ptr->callbacks.debug_message.function(&opal_message, instance_ptr->callbacks.debug_message.user_data);
+	return VK_FALSE;
+}
+
 static Opal_Result vulkan_volkInitialize()
 {
 	static int once = 0;
@@ -19,17 +48,6 @@ static Opal_Result vulkan_volkInitialize()
 	}
 
 	return OPAL_SUCCESS;
-}
-
-static void vulkan_volkLoadInstance(VkInstance instance)
-{
-	static int once = 0;
-
-	if (!once)
-	{
-		volkLoadInstance(instance);
-		once = 1;
-	}
 }
 
 /*
@@ -270,6 +288,9 @@ static Opal_Result vulkan_instanceDestroy(Opal_Instance this)
 
 	opal_poolShutdown(&ptr->surfaces);
 
+	if (ptr->debug_messenger != VK_NULL_HANDLE)
+		vkDestroyDebugUtilsMessengerEXT(ptr->instance, ptr->debug_messenger, NULL);
+
 	vkDestroyInstance(ptr->instance, NULL);
 
 	free(ptr);
@@ -294,7 +315,7 @@ static Opal_InstanceTable instance_vtbl =
  */
 Opal_Result vulkan_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instance *instance)
 {
-	static const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
+	static const char *VK_LAYER_KHRONOS_VALIDATION_NAME = "VK_LAYER_KHRONOS_validation";
 
 	Opal_Result opal_result = vulkan_volkInitialize();
 	if (opal_result != OPAL_SUCCESS)
@@ -314,39 +335,78 @@ Opal_Result vulkan_opalCreateInstance(const Opal_InstanceDesc *desc, Opal_Instan
 	info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	info.pApplicationInfo = &app_info;
 
+	const char *layers[16];
+	uint32_t num_layers = 0;
+
 	const char *extensions[16];
 	uint32_t num_extensions = 0;
 
 	extensions[num_extensions++] = VK_KHR_SURFACE_EXTENSION_NAME;
 	extensions[num_extensions++] = vulkan_platformGetSurfaceExtension();
 
-	info.enabledExtensionCount = num_extensions;
-	info.ppEnabledExtensionNames = extensions;
+	Vulkan_Instance *ptr = (Vulkan_Instance *)malloc(sizeof(Vulkan_Instance));
+	assert(ptr);
+
+	memset(ptr, 0, sizeof(Vulkan_Instance));
+	memcpy(&ptr->callbacks, &desc->callbacks, sizeof(Opal_InstanceCallbacks));
+
+	ptr->heap_size = desc->heap_size;
+	ptr->max_heap_allocations = desc->max_heap_allocations;
+	ptr->max_heaps = desc->max_heaps;
+	ptr->flags = desc->flags;
+
+	VkDebugUtilsMessengerCreateInfoEXT messenger_info = {0};
+	messenger_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	messenger_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	messenger_info.pfnUserCallback = vulkan_debugMessageCallback;
+	messenger_info.pUserData = ptr;
 
 	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_DEBUG_LAYERS)
 	{
-		info.enabledLayerCount = 1;
-		info.ppEnabledLayerNames = &validation_layer_name;
+		layers[num_layers++] = VK_LAYER_KHRONOS_VALIDATION_NAME;
+
+		if (desc->callbacks.debug_message.function != NULL)
+		{
+			extensions[num_extensions++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+			info.pNext = &messenger_info;
+		}
 	}
+
+	info.enabledLayerCount = num_layers;
+	info.ppEnabledLayerNames = layers;
+
+	info.enabledExtensionCount = num_extensions;
+	info.ppEnabledExtensionNames = extensions;
 
 	VkResult result = vkCreateInstance(&info, NULL, &vulkan_instance);
 	if (result != VK_SUCCESS)
+	{
+		free(ptr);
 		return OPAL_VULKAN_ERROR;
+	}
 
-	vulkan_volkLoadInstance(vulkan_instance);
+	volkLoadInstance(vulkan_instance);
 
-	Vulkan_Instance *ptr = (Vulkan_Instance *)malloc(sizeof(Vulkan_Instance));
-	assert(ptr);
+	VkDebugUtilsMessengerEXT vulkan_debug_messenger = VK_NULL_HANDLE;
+	if (desc->flags & OPAL_INSTANCE_CREATION_FLAGS_USE_DEBUG_LAYERS && desc->callbacks.debug_message.function != NULL)
+	{
+		result = vkCreateDebugUtilsMessengerEXT(vulkan_instance, &messenger_info, NULL, &vulkan_debug_messenger);
+		if (result != VK_SUCCESS)
+		{
+			vkDestroyInstance(vulkan_instance, NULL);
+			free(ptr);
+
+			return OPAL_VULKAN_ERROR;
+		}
+	}
 
 	// vtable
 	ptr->vtbl = &instance_vtbl;
 
 	// data
 	ptr->instance = vulkan_instance;
-	ptr->heap_size = desc->heap_size;
-	ptr->max_heap_allocations = desc->max_heap_allocations;
-	ptr->max_heaps = desc->max_heaps;
-	ptr->flags = desc->flags;
+	ptr->debug_messenger = vulkan_debug_messenger;
 
 	// pools
 	opal_poolInitialize(&ptr->surfaces, sizeof(Vulkan_Surface), 32);

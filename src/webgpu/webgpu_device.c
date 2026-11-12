@@ -1950,7 +1950,7 @@ static Opal_Result webgpu_deviceWaitSemaphore(Opal_Device this, Opal_Semaphore s
 		if (semaphore_ptr->value >= value)
 			return OPAL_SUCCESS;
 
-		emscripten_sleep(1);
+		emscripten_sleep(0);
 	}
 
 	return OPAL_WAIT_TIMEOUT;

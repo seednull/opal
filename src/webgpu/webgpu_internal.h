@@ -22,6 +22,7 @@ typedef enum WebGPU_PassType_t
 typedef struct WebGPU_Instance_t
 {
 	Opal_InstanceTable *vtbl;
+	Opal_InstanceCallbacks callbacks;
 	WGPUInstance instance;
 	Opal_Pool surfaces;
 } WebGPU_Instance;
