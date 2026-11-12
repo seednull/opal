@@ -2873,7 +2873,7 @@ static Opal_Result metal_deviceAcquire(Opal_Device this, Opal_Swapchain swapchai
 	{
 		id<CAMetalDrawable> drawable = [surface_ptr->layer nextDrawable];
 		if (!drawable)
-			return OPAL_METAL_ERROR;
+			return OPAL_WAIT_TIMEOUT;
 
 		Metal_TextureView result = {0};
 		result.texture_view = drawable.texture;
