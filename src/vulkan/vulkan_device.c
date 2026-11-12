@@ -265,6 +265,7 @@ static Opal_Result vulkan_buildSwapchain(Vulkan_Device *device_ptr, const Opal_S
 		result.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
 		result.usage = desc->usage;
 		result.format = desc->format.texture_format;
+		result.swapchain_image = VK_TRUE;
 
 		texture_views[i] = (Opal_TextureView)opal_poolAddElement(&device_ptr->image_views, &result);
 	}
@@ -439,8 +440,34 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 			assert(fence_ptr);
 		}
 
-		VkPipelineStageFlagBits src_stages = vulkan_helperToPipelineWaitStages(opal_barrier->wait_stages);
-		VkPipelineStageFlagBits dst_stages = vulkan_helperToPipelineBlockStages(opal_barrier->block_stages);
+		VkPipelineStageFlags wait_stages = 0;
+		VkPipelineStageFlags block_stages = 0;
+
+		if (opal_barrier->wait_stages != OPAL_BARRIER_STAGE_NONE)
+			wait_stages = vulkan_helperToPipelineWaitStages(opal_barrier->wait_stages);
+
+		if (opal_barrier->block_stages != OPAL_BARRIER_STAGE_NONE)
+			block_stages = vulkan_helperToPipelineBlockStages(opal_barrier->block_stages);
+
+		for (uint32_t j = 0; j < opal_barrier->num_texture_transitions; ++j)
+		{
+			const Opal_TextureTransitionDesc *opal_transition = &opal_barrier->texture_transitions[j];
+
+			Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)opal_transition->texture_view);
+			assert(image_view_ptr);
+
+			wait_stages |= vulkan_helperToImageWaitStages(opal_transition->state_before, image_view_ptr->format, image_view_ptr->swapchain_image);
+			block_stages |= vulkan_helperToImageBlockStages(opal_transition->state_after, image_view_ptr->format);
+		}
+
+		wait_stages &= device_ptr->supported_pipeline_stages;
+		block_stages &= device_ptr->supported_pipeline_stages;
+
+		if (wait_stages == 0)
+			wait_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+		if (block_stages == 0)
+			block_stages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
 		opal_bumpReset(&device_ptr->bump);
 		uint32_t buffer_barriers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkBufferMemoryBarrier) * opal_barrier->num_buffer_transitions);
@@ -464,11 +491,8 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 
 				vulkan_barrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 
-				if (opal_barrier->wait_stages != OPAL_BARRIER_STAGE_NONE)
-					vulkan_barrier->srcAccessMask = vulkan_helperToBufferAccessMask(buffer_ptr->usage, opal_transition->state_before);
-
-				if (opal_barrier->block_stages != OPAL_BARRIER_STAGE_NONE)
-					vulkan_barrier->dstAccessMask = vulkan_helperToBufferAccessMask(buffer_ptr->usage, opal_transition->state_after);
+				vulkan_barrier->srcAccessMask = vulkan_helperToBufferWaitAccessMask(buffer_ptr->usage, opal_transition->state_before, wait_stages);
+				vulkan_barrier->dstAccessMask = vulkan_helperToBufferBlockAccessMask(buffer_ptr->usage, opal_transition->state_after, block_stages);
 
 				vulkan_barrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				vulkan_barrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -492,11 +516,8 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 
 				vulkan_barrier->sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 
-				if (opal_barrier->wait_stages != OPAL_BARRIER_STAGE_NONE)
-					vulkan_barrier->srcAccessMask = vulkan_helperToImageAccessMask(image_view_ptr->usage, opal_transition->state_before);
-				
-				if (opal_barrier->block_stages != OPAL_BARRIER_STAGE_NONE)
-					vulkan_barrier->dstAccessMask = vulkan_helperToImageAccessMask(image_view_ptr->usage, opal_transition->state_after);
+				vulkan_barrier->srcAccessMask = vulkan_helperToImageWaitAccessMask(image_view_ptr->usage, opal_transition->state_before, image_view_ptr->format, wait_stages);
+				vulkan_barrier->dstAccessMask = vulkan_helperToImageBlockAccessMask(image_view_ptr->usage, opal_transition->state_after, image_view_ptr->format, block_stages);
 
 				vulkan_barrier->oldLayout = vulkan_helperToImageLayout(image_view_ptr->usage, opal_transition->state_before, image_view_ptr->format);
 				vulkan_barrier->newLayout = vulkan_helperToImageLayout(image_view_ptr->usage, opal_transition->state_after, image_view_ptr->format);
@@ -517,7 +538,7 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 			{
 				case OPAL_FENCE_OP_BEGIN:
 				{
-					device_ptr->vk.vkCmdSetEvent(command_buffer_ptr->command_buffer, fence_ptr->event, src_stages);
+					device_ptr->vk.vkCmdSetEvent(command_buffer_ptr->command_buffer, fence_ptr->event, wait_stages);
 				}
 				break;
 
@@ -526,7 +547,7 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 					device_ptr->vk.vkCmdWaitEvents(
 						command_buffer_ptr->command_buffer,
 						1, &fence_ptr->event,
-						src_stages, dst_stages,
+						wait_stages, block_stages,
 						0, NULL,
 						opal_barrier->num_buffer_transitions, buffer_barriers,
 						opal_barrier->num_texture_transitions, texture_barriers
@@ -540,7 +561,7 @@ static void vulkan_cmdPipelineBarrier(Vulkan_Device *device_ptr, Vulkan_CommandB
 		{
 			device_ptr->vk.vkCmdPipelineBarrier(
 				command_buffer_ptr->command_buffer,
-				src_stages, dst_stages, 0,
+				wait_stages, block_stages, 0,
 				0, NULL,
 				opal_barrier->num_buffer_transitions, buffer_barriers,
 				opal_barrier->num_texture_transitions, texture_barriers
@@ -559,8 +580,8 @@ static void vulkan_cmdStageBarrier(Vulkan_Device *device_ptr, Vulkan_CommandBuff
 	VkPipelineStageFlagBits src_stages = stage;
 	VkPipelineStageFlagBits dst_stages = stage;
 
-	VkAccessFlagBits src_access = VK_ACCESS_SHADER_WRITE_BIT;
-	VkAccessFlagBits dst_access = VK_ACCESS_SHADER_READ_BIT;
+	VkAccessFlags src_access = VK_ACCESS_SHADER_WRITE_BIT;
+	VkAccessFlags dst_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
 	opal_bumpReset(&device_ptr->bump);
 	uint32_t buffer_barriers_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(VkBufferMemoryBarrier) * barriers->num_buffers);
@@ -1562,6 +1583,7 @@ static Opal_Result vulkan_deviceCreateTextureView(Opal_Device this, const Opal_T
 	result.aspect_mask = image_view_info.subresourceRange.aspectMask;
 	result.usage = image_ptr->usage;
 	result.format = image_ptr->format;
+	result.swapchain_image = VK_FALSE;
 
 	*texture_view = (Opal_TextureView)opal_poolAddElement(&device_ptr->image_views, &result);
 	return OPAL_SUCCESS;
@@ -4173,7 +4195,7 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, const
 
 		wait_semaphores[current_wait_object] = swapchain_ptr->acquire_semaphores[swapchain_ptr->current_semaphore];
 		wait_values[current_wait_object] = 0;
-		wait_masks[current_wait_object] = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		wait_masks[current_wait_object] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		current_wait_object++;
 	}
 
@@ -5512,6 +5534,28 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 	device_ptr->max_descriptor_size = descriptor_sizes[0];
 	for (uint32_t i = 1; i < sizeof(descriptor_sizes) / sizeof(size_t); ++i)
 		device_ptr->max_descriptor_size = max(device_ptr->max_descriptor_size, descriptor_sizes[i]);
+
+	// supported pipeline stages
+	Opal_DeviceInfo info = {0};
+	vulkan_helperFillDeviceInfo(physical_device, &info);
+
+	device_ptr->supported_pipeline_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+	device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+	device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+	device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_HOST_BIT;
+
+	if (info.features.tessellation_shader)
+		device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+
+	if (info.features.geometry_shader)
+		device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+
+	if (info.features.meshlet_pipeline)
+		device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
+
+	if (info.features.raytrace_pipeline)
+		device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
 
 	// allocator
 #ifdef OPAL_HAS_VMA

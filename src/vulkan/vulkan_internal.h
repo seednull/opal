@@ -122,6 +122,7 @@ typedef struct Vulkan_Device_t
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytrace_properties;
 	VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptor_buffer_properties;
 	size_t max_descriptor_size;
+	VkPipelineStageFlags supported_pipeline_stages;
 	Vulkan_DeviceEnginesInfo device_engines_info;
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
@@ -210,6 +211,7 @@ typedef struct Vulkan_ImageView_t
 	VkImageAspectFlagBits aspect_mask;
 	Opal_TextureUsageFlags usage;
 	Opal_TextureFormat format;
+	VkBool32 swapchain_image;
 } Vulkan_ImageView;
 
 typedef struct Vulkan_Sampler_t
@@ -402,10 +404,14 @@ VkPipelineStageFlags vulkan_helperToPipelineWaitStages(Opal_BarrierStageFlags st
 VkPipelineStageFlags vulkan_helperToPipelineBlockStages(Opal_BarrierStageFlags stages);
 
 VkBufferUsageFlags vulkan_helperToBufferUsage(Opal_BufferUsageFlags usage);
-VkAccessFlags vulkan_helperToBufferAccessMask(Opal_BufferUsageFlags usage, Opal_BufferState state);
+VkAccessFlags vulkan_helperToBufferWaitAccessMask(Opal_BufferUsageFlags usage, Opal_BufferState state, VkPipelineStageFlags stages);
+VkAccessFlags vulkan_helperToBufferBlockAccessMask(Opal_BufferUsageFlags usage, Opal_BufferState state, VkPipelineStageFlags stages);
 
 VkImageUsageFlags vulkan_helperToImageUsage(Opal_TextureUsageFlags usage, Opal_TextureFormat format);
-VkAccessFlags vulkan_helperToImageAccessMask(Opal_TextureUsageFlags usage, Opal_TextureState state);
+VkPipelineStageFlags vulkan_helperToImageWaitStages(Opal_TextureState state, Opal_TextureFormat format, VkBool32 swapchain_image);
+VkPipelineStageFlags vulkan_helperToImageBlockStages(Opal_TextureState state, Opal_TextureFormat format);
+VkAccessFlags vulkan_helperToImageWaitAccessMask(Opal_TextureUsageFlags usage, Opal_TextureState state, Opal_TextureFormat format, VkPipelineStageFlags stages);
+VkAccessFlags vulkan_helperToImageBlockAccessMask(Opal_TextureUsageFlags usage, Opal_TextureState state, Opal_TextureFormat format, VkPipelineStageFlags stages);
 VkImageLayout vulkan_helperToImageLayout(Opal_TextureUsageFlags usage, Opal_TextureState state, Opal_TextureFormat format);
 
 const char *vulkan_platformGetSurfaceExtension();
