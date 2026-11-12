@@ -180,11 +180,18 @@ static Opal_Result vulkan_buildSwapchain(Vulkan_Device *device_ptr, const Opal_S
 		return OPAL_VULKAN_ERROR;
 
 	// images
+	vulkan_result = device_ptr->vk.vkGetSwapchainImagesKHR(vulkan_device, vulkan_swapchain, &num_images, NULL);
+	if (vulkan_result != VK_SUCCESS)
+	{
+		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
+		return OPAL_VULKAN_ERROR;
+	}
+
 	opal_bumpReset(&device_ptr->bump);
 	opal_bumpAlloc(&device_ptr->bump, sizeof(VkImage) * num_images);
 
 	VkImage *vulkan_images = (VkImage *)device_ptr->bump.data;
-	device_ptr->vk.vkGetSwapchainImagesKHR(vulkan_device, vulkan_swapchain, &num_images, vulkan_images);
+	vulkan_result = device_ptr->vk.vkGetSwapchainImagesKHR(vulkan_device, vulkan_swapchain, &num_images, vulkan_images);
 	if (vulkan_result != VK_SUCCESS)
 	{
 		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
@@ -4194,7 +4201,7 @@ static Opal_Result vulkan_deviceSubmit(Opal_Device this, Opal_Queue queue, const
 		Vulkan_Swapchain *swapchain_ptr = (Vulkan_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->signal_swapchains[i]);
 		assert(swapchain_ptr);
 
-		signal_semaphores[current_signal_object] = swapchain_ptr->present_semaphores[swapchain_ptr->current_semaphore];
+		signal_semaphores[current_signal_object] = swapchain_ptr->present_semaphores[swapchain_ptr->current_image];
 		signal_values[current_signal_object] = 0;
 		current_signal_object++;
 	}
@@ -4240,13 +4247,16 @@ static Opal_Result vulkan_deviceAcquire(Opal_Device this, Opal_Swapchain swapcha
 	semaphore_index %= swapchain_ptr->num_images;
 
 	VkSemaphore vulkan_semaphore = swapchain_ptr->acquire_semaphores[semaphore_index];
-	uint64_t timeout = 0;
+	uint64_t timeout = 1000000000ull;
 
 	VkResult result = device_ptr->vk.vkAcquireNextImageKHR(vulkan_device, swapchain_ptr->swapchain, timeout, vulkan_semaphore, VK_NULL_HANDLE, &swapchain_ptr->current_image);
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		return OPAL_SWAPCHAIN_OUT_OF_DATE;
 
-	if (result != VK_SUCCESS)
+	if (result == VK_TIMEOUT || result == VK_NOT_READY)
+		return OPAL_WAIT_TIMEOUT;
+
+	if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		return OPAL_VULKAN_ERROR;
 
 	assert(swapchain_ptr->current_image < swapchain_ptr->num_images);
@@ -4270,8 +4280,7 @@ static Opal_Result vulkan_devicePresent(Opal_Device this, Opal_Swapchain swapcha
 	Vulkan_Queue *queue_ptr = (Vulkan_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)swapchain_ptr->present_queue);
 	assert(queue_ptr);
 
-	uint32_t semaphore_index = swapchain_ptr->current_semaphore;
-	VkSemaphore vulkan_semaphore = swapchain_ptr->present_semaphores[semaphore_index];
+	VkSemaphore vulkan_semaphore = swapchain_ptr->present_semaphores[swapchain_ptr->current_image];
 
 	VkPresentInfoKHR present_info = {0};
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -4285,7 +4294,7 @@ static Opal_Result vulkan_devicePresent(Opal_Device this, Opal_Swapchain swapcha
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		return OPAL_SWAPCHAIN_OUT_OF_DATE;
 
-	if (result != VK_SUCCESS)
+	if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		return OPAL_VULKAN_ERROR;
 
 	return OPAL_SUCCESS;
