@@ -2341,8 +2341,12 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	if (desc->depth_stencil_attachment_format)
 	{
-		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
-		dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
+		Opal_TextureFormat depth_stencil_format = *desc->depth_stencil_attachment_format;
+		VkImageAspectFlags aspect_mask = vulkan_helperToImageAspectMask(depth_stencil_format);
+
+		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToImageFormat(depth_stencil_format);
+		if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)
+			dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToImageFormat(depth_stencil_format);
 	}
 
 	// pipeline
@@ -2530,8 +2534,12 @@ static Opal_Result vulkan_deviceCreateMeshletPipeline(Opal_Device this, const Op
 
 	if (desc->depth_stencil_attachment_format)
 	{
-		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
-		dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToImageFormat(*desc->depth_stencil_attachment_format);
+		Opal_TextureFormat depth_stencil_format = *desc->depth_stencil_attachment_format;
+		VkImageAspectFlags aspect_mask = vulkan_helperToImageAspectMask(depth_stencil_format);
+
+		dynamic_rendering_info.depthAttachmentFormat = vulkan_helperToImageFormat(depth_stencil_format);
+		if (aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT)
+			dynamic_rendering_info.stencilAttachmentFormat = vulkan_helperToImageFormat(depth_stencil_format);
 	}
 
 	// pipeline
@@ -4365,6 +4373,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 	uint32_t width = 0;
 	uint32_t height = 0;
+	VkImageAspectFlags depth_stencil_aspect_mask = 0;
 
 	opal_bumpReset(&device_ptr->bump);
 
@@ -4423,6 +4432,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 		width = max(width, image_view_ptr->width);
 		height = max(height, image_view_ptr->height);
+		depth_stencil_aspect_mask = image_view_ptr->aspect_mask;
 
 		vulkan_depth_stencil_attachment->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		vulkan_depth_stencil_attachment->imageView = image_view_ptr->image_view;
@@ -4430,7 +4440,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 
 		if (resolve_image_view_ptr)
 		{
-			vulkan_depth_stencil_attachment->resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+			vulkan_depth_stencil_attachment->resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
 			vulkan_depth_stencil_attachment->resolveImageView = resolve_image_view_ptr->image_view;
 			vulkan_depth_stencil_attachment->resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		}
@@ -4450,7 +4460,9 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 	rendering_info.colorAttachmentCount = framebuffer->num_color_attachments;
 	rendering_info.pColorAttachments = vulkan_color_attachments;
 	rendering_info.pDepthAttachment = vulkan_depth_stencil_attachment;
-	rendering_info.pStencilAttachment = vulkan_depth_stencil_attachment;
+
+	if (vulkan_depth_stencil_attachment && (depth_stencil_aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT))
+		rendering_info.pStencilAttachment = vulkan_depth_stencil_attachment;
 
 	device_ptr->vk.vkCmdBeginRenderingKHR(command_buffer_ptr->command_buffer, &rendering_info);
 
