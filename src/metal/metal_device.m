@@ -1654,7 +1654,7 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 		if (desc->mode == OPAL_PRESENT_MODE_MAILBOX)
 			return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
 
-		uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE) ? 1 : 2;
+		uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE) ? 2 : 3;
 
 		// surface format
 		MTLPixelFormat format = metal_helperToPixelFormat(desc->format.texture_format);
@@ -1673,7 +1673,7 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 		layer_ptr.pixelFormat = format;
 		layer_ptr.colorspace = metal_colorspace;
 		layer_ptr.framebufferOnly = (desc->usage == OPAL_TEXTURE_USAGE_FRAMEBUFFER_ATTACHMENT);
-		layer_ptr.displaySyncEnabled = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE);
+		layer_ptr.displaySyncEnabled = (desc->mode != OPAL_PRESENT_MODE_IMMEDIATE);
 		layer_ptr.maximumDrawableCount = num_textures;
 	}
 
