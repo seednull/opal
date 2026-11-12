@@ -2501,7 +2501,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	assert(surface_ptr);
 
 	// surface capabilities
-	uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_MAILBOX) ? 3 : 2;
+	uint32_t num_textures = (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE) ? 2 : 3;
 
 	// present queue
 	DirectX12_Queue *queue_ptr = (DirectX12_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)desc->queue);
@@ -4069,7 +4069,11 @@ static Opal_Result directx12_devicePresent(Opal_Device this, Opal_Swapchain swap
 	DirectX12_Swapchain *swapchain_ptr = (DirectX12_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
 	assert(swapchain_ptr);
 
-	HRESULT hr = IDXGISwapChain3_Present(swapchain_ptr->swapchain, 0, swapchain_ptr->present_flags);
+	UINT sync_interval = 0;
+	if (swapchain_ptr->mode == OPAL_PRESENT_MODE_FIFO)
+		sync_interval = 1;
+
+	HRESULT hr = IDXGISwapChain3_Present(swapchain_ptr->swapchain, sync_interval, swapchain_ptr->present_flags);
 	directx12_flushDebugMessages(device_ptr);
 
 	if (!SUCCEEDED(hr))
