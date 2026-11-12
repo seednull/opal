@@ -34,6 +34,7 @@ static uint32_t vulkan_memory_not_preferred_flags[] =
 /*
  */
 static Opal_Result vulkan_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view);
+static Opal_Result vulkan_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain);
 static Opal_Result vulkan_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr);
 static Opal_Result vulkan_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
 static Opal_Result vulkan_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
@@ -41,6 +42,259 @@ static Opal_Result vulkan_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descr
 
 /*
  */
+static Opal_Result vulkan_buildSwapchain(Vulkan_Device *device_ptr, const Opal_SwapchainDesc *desc, VkSwapchainKHR old_swapchain, Vulkan_Swapchain *swapchain_ptr)
+{
+	assert(device_ptr);
+	assert(desc);
+	assert(desc->surface);
+	assert(swapchain_ptr);
+
+	Vulkan_Instance *instance_ptr = device_ptr->instance;
+	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
+	VkDevice vulkan_device = device_ptr->device;
+
+	// surface
+	Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)desc->surface);
+	assert(surface_ptr);
+
+	VkSurfaceKHR vulkan_surface = surface_ptr->surface;
+	VkSwapchainKHR vulkan_swapchain = VK_NULL_HANDLE;
+
+	// surface capabilities
+	VkSurfaceCapabilitiesKHR surface_capabilities = {0};
+	VkResult vulkan_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan_physical_device, vulkan_surface, &surface_capabilities);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	uint32_t num_images = surface_capabilities.minImageCount + 1;
+
+	if (surface_capabilities.maxImageCount > 0)
+		num_images = min(num_images, surface_capabilities.maxImageCount);
+
+	VkExtent2D extent = surface_capabilities.currentExtent;
+
+	if (extent.width == 0xFFFFFFFF || extent.height == 0xFFFFFFFF)
+		extent = surface_capabilities.minImageExtent;
+
+	// a minimized window has no size to draw at
+	if (extent.width == 0 || extent.height == 0)
+		return OPAL_SURFACE_NOT_DRAWABLE;
+
+	// surface present queue
+	Vulkan_Queue *queue_ptr = (Vulkan_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)desc->queue);
+	assert(queue_ptr);
+	
+	VkBool32 present_supported = VK_FALSE;
+	vulkan_result = vkGetPhysicalDeviceSurfaceSupportKHR(vulkan_physical_device, queue_ptr->family_index, vulkan_surface, &present_supported);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	if (present_supported == VK_FALSE)
+		return OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED;
+
+	// surface present mode
+	uint32_t num_present_modes = 0;
+	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, NULL);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * num_present_modes);
+
+	VkPresentModeKHR *present_modes = (VkPresentModeKHR *)device_ptr->bump.data;
+	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, present_modes);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	VkPresentModeKHR wanted_present_mode = vulkan_helperToPresentMode(desc->mode);
+	VkBool32 found_present_mode = VK_FALSE;
+
+	for (uint32_t i = 0; i < num_present_modes; ++i)
+	{
+		if (present_modes[i] == wanted_present_mode)
+		{
+			found_present_mode = VK_TRUE;
+			break;
+		}
+	}
+
+	if (found_present_mode == VK_FALSE)
+		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
+
+	// surface formats
+	uint32_t num_surface_formats = 0;
+	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, NULL);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * num_surface_formats);
+
+	VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)device_ptr->bump.data;
+	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, surface_formats);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	VkFormat wanted_format = vulkan_helperToImageFormat(desc->format.texture_format);
+	VkColorSpaceKHR wanted_color_space = vulkan_helperToColorSpace(desc->format.color_space);
+
+	VkBool32 found_format = VK_FALSE;
+	VkBool32 found_color_space = VK_FALSE;
+
+	for (uint32_t i = 0; i < num_surface_formats; ++i)
+	{
+		if (surface_formats[i].format == wanted_format)
+			found_format = VK_TRUE;
+
+		if (surface_formats[i].colorSpace == wanted_color_space)
+			found_color_space = VK_TRUE;
+		
+		if (found_format && found_color_space)
+			break;
+	}
+
+	if (found_format == VK_FALSE)
+		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
+
+	if (found_color_space == VK_FALSE)
+		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
+
+	// swap chain
+	VkSwapchainCreateInfoKHR swapchain_info = {0};
+	swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	swapchain_info.surface = vulkan_surface;
+	swapchain_info.minImageCount = num_images;
+	swapchain_info.imageFormat = wanted_format;
+	swapchain_info.imageColorSpace = wanted_color_space;
+	swapchain_info.imageExtent = extent;
+	swapchain_info.imageArrayLayers = 1;
+	swapchain_info.imageUsage = vulkan_helperToImageUsage(desc->usage, desc->format.texture_format);
+	swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+	swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	swapchain_info.presentMode = wanted_present_mode;
+	swapchain_info.oldSwapchain = old_swapchain;
+
+	vulkan_result = device_ptr->vk.vkCreateSwapchainKHR(vulkan_device, &swapchain_info, NULL, &vulkan_swapchain);
+	if (vulkan_result != VK_SUCCESS)
+		return OPAL_VULKAN_ERROR;
+
+	// images
+	opal_bumpReset(&device_ptr->bump);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkImage) * num_images);
+
+	VkImage *vulkan_images = (VkImage *)device_ptr->bump.data;
+	device_ptr->vk.vkGetSwapchainImagesKHR(vulkan_device, vulkan_swapchain, &num_images, vulkan_images);
+	if (vulkan_result != VK_SUCCESS)
+	{
+		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
+		return OPAL_VULKAN_ERROR;
+	}
+
+	// semaphores & image views
+	VkSemaphore *vulkan_acquire_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_images);
+	memset(vulkan_acquire_semaphores, 0, sizeof(VkSemaphore) * num_images);
+
+	VkSemaphore *vulkan_present_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_images);
+	memset(vulkan_present_semaphores, 0, sizeof(VkSemaphore) * num_images);
+
+	Opal_TextureView *texture_views = (Opal_TextureView *)malloc(sizeof(Opal_TextureView) * num_images);
+	memset(texture_views, OPAL_NULL_HANDLE, sizeof(Opal_TextureView) * num_images);
+
+	VkSemaphoreCreateInfo semaphore_info = {0};
+	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkBool32 success = VK_TRUE;
+	for (uint32_t i = 0; i < num_images; ++i)
+	{
+		vulkan_result = device_ptr->vk.vkCreateSemaphore(vulkan_device, &semaphore_info, NULL, &vulkan_acquire_semaphores[i]);
+		if (vulkan_result != VK_SUCCESS)
+		{
+			success = VK_FALSE;
+			break;
+		}
+
+		vulkan_result = device_ptr->vk.vkCreateSemaphore(vulkan_device, &semaphore_info, NULL, &vulkan_present_semaphores[i]);
+		if (vulkan_result != VK_SUCCESS)
+		{
+			success = VK_FALSE;
+			break;
+		}
+
+		VkImageView vulkan_image_view = VK_NULL_HANDLE;
+
+		VkImageViewCreateInfo image_view_info = {0};
+		image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		image_view_info.image = vulkan_images[i];
+		image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		image_view_info.format = wanted_format;
+		image_view_info.components.r = VK_COMPONENT_SWIZZLE_R;
+		image_view_info.components.g = VK_COMPONENT_SWIZZLE_G;
+		image_view_info.components.b = VK_COMPONENT_SWIZZLE_B;
+		image_view_info.components.a = VK_COMPONENT_SWIZZLE_A;
+		image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		image_view_info.subresourceRange.baseArrayLayer = 0;
+		image_view_info.subresourceRange.layerCount = 1;
+		image_view_info.subresourceRange.baseMipLevel = 0;
+		image_view_info.subresourceRange.levelCount = 1;
+
+		vulkan_result = device_ptr->vk.vkCreateImageView(vulkan_device, &image_view_info, NULL, &vulkan_image_view);
+		if (vulkan_result != VK_SUCCESS)
+		{
+			success = VK_FALSE;
+			break;
+		}
+
+		Vulkan_ImageView result = {0};
+		result.image_view = vulkan_image_view;
+		result.image = vulkan_images[i];
+		result.width = extent.width;
+		result.height = extent.height;
+		result.depth = 1;
+		result.base_mip = 0;
+		result.num_mips = 1;
+		result.base_layer = 0;
+		result.num_layers = 1;
+		result.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
+		result.usage = desc->usage;
+		result.format = desc->format.texture_format;
+
+		texture_views[i] = (Opal_TextureView)opal_poolAddElement(&device_ptr->image_views, &result);
+	}
+
+	if (success != VK_TRUE)
+	{
+		for (uint32_t i = 0; i < num_images; ++i)
+		{
+			device_ptr->vk.vkDestroySemaphore(vulkan_device, vulkan_acquire_semaphores[i], NULL);
+			device_ptr->vk.vkDestroySemaphore(vulkan_device, vulkan_present_semaphores[i], NULL);
+
+			if (texture_views[i] != OPAL_NULL_HANDLE)
+				vulkan_deviceDestroyTextureView((Opal_Device)device_ptr, texture_views[i]);
+		}
+
+		free(vulkan_acquire_semaphores);
+		free(vulkan_present_semaphores);
+		free(texture_views);
+
+		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
+		return OPAL_VULKAN_ERROR;
+	}
+
+	Vulkan_Swapchain result = {0};
+	result.swapchain = vulkan_swapchain;
+	result.present_queue = desc->queue;
+	result.texture_views = texture_views;
+	result.acquire_semaphores = vulkan_acquire_semaphores;
+	result.present_semaphores = vulkan_present_semaphores;
+	result.num_images = num_images;
+	result.current_image = 0;
+	result.current_semaphore = 0;
+
+	*swapchain_ptr = result;
+	return OPAL_SUCCESS;
+}
+
 static Opal_Result vulkan_deviceAllocateMemory(Vulkan_Device *device_ptr, const Vulkan_AllocationDesc *desc, Vulkan_Allocation *allocation)
 {
 	assert(device_ptr);
@@ -2524,244 +2778,27 @@ static Opal_Result vulkan_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 {
 	assert(this);
 	assert(desc);
-	assert(desc->surface);
 	assert(swapchain);
 
 	Vulkan_Device *device_ptr = (Vulkan_Device *)this;
-	Vulkan_Instance *instance_ptr = device_ptr->instance;
-	VkPhysicalDevice vulkan_physical_device = device_ptr->physical_device;
-	VkDevice vulkan_device = device_ptr->device;
 
-	// surface
-	Vulkan_Surface *surface_ptr = (Vulkan_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)desc->surface);
-	assert(surface_ptr);
-
-	VkSurfaceKHR vulkan_surface = surface_ptr->surface;
-	VkSwapchainKHR vulkan_swapchain = VK_NULL_HANDLE;
-
-	// surface capabilities
-	VkSurfaceCapabilitiesKHR surface_capabilities = {0};
-	VkResult vulkan_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan_physical_device, vulkan_surface, &surface_capabilities);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	uint32_t num_images = surface_capabilities.minImageCount + 1;
-
-	if (surface_capabilities.maxImageCount > 0)
-		num_images = min(num_images, surface_capabilities.maxImageCount);
-
-	VkExtent2D extent = surface_capabilities.currentExtent;
-
-	if (extent.width == 0xFFFFFFFF || extent.height == 0xFFFFFFFF)
-		extent = surface_capabilities.minImageExtent;
-
-	// surface present queue
-	Vulkan_Queue *queue_ptr = (Vulkan_Queue *)opal_poolGetElement(&device_ptr->queues, (Opal_PoolHandle)desc->queue);
-	assert(queue_ptr);
-	
-	VkBool32 present_supported = VK_FALSE;
-	vulkan_result = vkGetPhysicalDeviceSurfaceSupportKHR(vulkan_physical_device, queue_ptr->family_index, vulkan_surface, &present_supported);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	if (present_supported == VK_FALSE)
-		return OPAL_SWAPCHAIN_PRESENT_NOT_SUPPORTED;
-
-	// surface present mode
-	uint32_t num_present_modes = 0;
-	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, NULL);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * num_present_modes);
-
-	VkPresentModeKHR *present_modes = (VkPresentModeKHR *)device_ptr->bump.data;
-	vulkan_result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_present_modes, present_modes);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	VkPresentModeKHR wanted_present_mode = vulkan_helperToPresentMode(desc->mode);
-	VkBool32 found_present_mode = VK_FALSE;
-
-	for (uint32_t i = 0; i < num_present_modes; ++i)
+	VkSwapchainKHR old_swapchain = VK_NULL_HANDLE;
+	if (desc->old_swapchain != OPAL_NULL_HANDLE)
 	{
-		if (present_modes[i] == wanted_present_mode)
-		{
-			found_present_mode = VK_TRUE;
-			break;
-		}
-	}
+		Vulkan_Swapchain *old_swapchain_ptr = (Vulkan_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->old_swapchain);
+		assert(old_swapchain_ptr);
 
-	if (found_present_mode == VK_FALSE)
-		return OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED;
-
-	// surface formats
-	uint32_t num_surface_formats = 0;
-	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, NULL);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * num_surface_formats);
-
-	VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)device_ptr->bump.data;
-	vulkan_result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_surface_formats, surface_formats);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	VkFormat wanted_format = vulkan_helperToImageFormat(desc->format.texture_format);
-	VkColorSpaceKHR wanted_color_space = vulkan_helperToColorSpace(desc->format.color_space);
-
-	VkBool32 found_format = VK_FALSE;
-	VkBool32 found_color_space = VK_FALSE;
-
-	for (uint32_t i = 0; i < num_surface_formats; ++i)
-	{
-		if (surface_formats[i].format == wanted_format)
-			found_format = VK_TRUE;
-
-		if (surface_formats[i].colorSpace == wanted_color_space)
-			found_color_space = VK_TRUE;
-		
-		if (found_format && found_color_space)
-			break;
-	}
-
-	if (found_format == VK_FALSE)
-		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
-
-	if (found_color_space == VK_FALSE)
-		return OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED;
-
-	// swap chain
-	VkSwapchainCreateInfoKHR swapchain_info = {0};
-	swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	swapchain_info.surface = vulkan_surface;
-	swapchain_info.minImageCount = num_images;
-	swapchain_info.imageFormat = wanted_format;
-	swapchain_info.imageColorSpace = wanted_color_space;
-	swapchain_info.imageExtent = extent;
-	swapchain_info.imageArrayLayers = 1;
-	swapchain_info.imageUsage = vulkan_helperToImageUsage(desc->usage, desc->format.texture_format);
-	swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-	swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	swapchain_info.presentMode = wanted_present_mode;
-
-	vulkan_result = device_ptr->vk.vkCreateSwapchainKHR(vulkan_device, &swapchain_info, NULL, &vulkan_swapchain);
-	if (vulkan_result != VK_SUCCESS)
-		return OPAL_VULKAN_ERROR;
-
-	// images
-	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(VkImage) * num_images);
-
-	VkImage *vulkan_images = (VkImage *)device_ptr->bump.data;
-	device_ptr->vk.vkGetSwapchainImagesKHR(vulkan_device, vulkan_swapchain, &num_images, vulkan_images);
-	if (vulkan_result != VK_SUCCESS)
-	{
-		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
-		return OPAL_VULKAN_ERROR;
-	}
-
-	// semaphores & image views
-	VkSemaphore *vulkan_acquire_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_images);
-	memset(vulkan_acquire_semaphores, 0, sizeof(VkSemaphore) * num_images);
-
-	VkSemaphore *vulkan_present_semaphores = (VkSemaphore *)malloc(sizeof(VkSemaphore) * num_images);
-	memset(vulkan_present_semaphores, 0, sizeof(VkSemaphore) * num_images);
-
-	Opal_TextureView *texture_views = (Opal_TextureView *)malloc(sizeof(Opal_TextureView) * num_images);
-	memset(texture_views, OPAL_NULL_HANDLE, sizeof(Opal_TextureView) * num_images);
-
-	VkSemaphoreCreateInfo semaphore_info = {0};
-	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkBool32 success = VK_TRUE;
-	for (uint32_t i = 0; i < num_images; ++i)
-	{
-		vulkan_result = device_ptr->vk.vkCreateSemaphore(vulkan_device, &semaphore_info, NULL, &vulkan_acquire_semaphores[i]);
-		if (vulkan_result != VK_SUCCESS)
-		{
-			success = VK_FALSE;
-			break;
-		}
-
-		vulkan_result = device_ptr->vk.vkCreateSemaphore(vulkan_device, &semaphore_info, NULL, &vulkan_present_semaphores[i]);
-		if (vulkan_result != VK_SUCCESS)
-		{
-			success = VK_FALSE;
-			break;
-		}
-
-		VkImageView vulkan_image_view = VK_NULL_HANDLE;
-
-		VkImageViewCreateInfo image_view_info = {0};
-		image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		image_view_info.image = vulkan_images[i];
-		image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		image_view_info.format = wanted_format;
-		image_view_info.components.r = VK_COMPONENT_SWIZZLE_R;
-		image_view_info.components.g = VK_COMPONENT_SWIZZLE_G;
-		image_view_info.components.b = VK_COMPONENT_SWIZZLE_B;
-		image_view_info.components.a = VK_COMPONENT_SWIZZLE_A;
-		image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		image_view_info.subresourceRange.baseArrayLayer = 0;
-		image_view_info.subresourceRange.layerCount = 1;
-		image_view_info.subresourceRange.baseMipLevel = 0;
-		image_view_info.subresourceRange.levelCount = 1;
-
-		vulkan_result = device_ptr->vk.vkCreateImageView(vulkan_device, &image_view_info, NULL, &vulkan_image_view);
-		if (vulkan_result != VK_SUCCESS)
-		{
-			success = VK_FALSE;
-			break;
-		}
-
-		Vulkan_ImageView result = {0};
-		result.image_view = vulkan_image_view;
-		result.image = vulkan_images[i];
-		result.width = extent.width;
-		result.height = extent.height;
-		result.depth = 1;
-		result.base_mip = 0;
-		result.num_mips = 1;
-		result.base_layer = 0;
-		result.num_layers = 1;
-		result.aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-		result.usage = desc->usage;
-		result.format = desc->format.texture_format;
-
-		texture_views[i] = (Opal_TextureView)opal_poolAddElement(&device_ptr->image_views, &result);
-	}
-
-	if (success != VK_TRUE)
-	{
-		for (uint32_t i = 0; i < num_images; ++i)
-		{
-			device_ptr->vk.vkDestroySemaphore(vulkan_device, vulkan_acquire_semaphores[i], NULL);
-			device_ptr->vk.vkDestroySemaphore(vulkan_device, vulkan_present_semaphores[i], NULL);
-			vulkan_deviceDestroyTextureView(this, texture_views[i]);
-		}
-
-		free(vulkan_acquire_semaphores);
-		free(vulkan_present_semaphores);
-		free(texture_views);
-
-		device_ptr->vk.vkDestroySwapchainKHR(vulkan_device, vulkan_swapchain, NULL);
-		return OPAL_VULKAN_ERROR;
+		old_swapchain = old_swapchain_ptr->swapchain;
 	}
 
 	Vulkan_Swapchain result = {0};
-	result.swapchain = vulkan_swapchain;
-	result.present_queue = desc->queue;
-	result.texture_views = texture_views;
-	result.acquire_semaphores = vulkan_acquire_semaphores;
-	result.present_semaphores = vulkan_present_semaphores;
-	result.num_images = num_images;
-	result.current_image = 0;
-	result.current_semaphore = 0;
+	Opal_Result opal_result = vulkan_buildSwapchain(device_ptr, desc, old_swapchain, &result);
+
+	if (desc->old_swapchain != OPAL_NULL_HANDLE)
+		vulkan_deviceDestroySwapchain(this, desc->old_swapchain);
+
+	if (opal_result != OPAL_SUCCESS)
+		return opal_result;
 
 	*swapchain = (Opal_Swapchain)opal_poolAddElement(&device_ptr->swapchains, &result);
 	return OPAL_SUCCESS;
@@ -4206,6 +4243,9 @@ static Opal_Result vulkan_deviceAcquire(Opal_Device this, Opal_Swapchain swapcha
 	uint64_t timeout = 0;
 
 	VkResult result = device_ptr->vk.vkAcquireNextImageKHR(vulkan_device, swapchain_ptr->swapchain, timeout, vulkan_semaphore, VK_NULL_HANDLE, &swapchain_ptr->current_image);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		return OPAL_SWAPCHAIN_OUT_OF_DATE;
+
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 
@@ -4242,6 +4282,9 @@ static Opal_Result vulkan_devicePresent(Opal_Device this, Opal_Swapchain swapcha
 	present_info.pImageIndices = &swapchain_ptr->current_image;
 
 	VkResult result = device_ptr->vk.vkQueuePresentKHR(queue_ptr->queue, &present_info);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		return OPAL_SWAPCHAIN_OUT_OF_DATE;
+
 	if (result != VK_SUCCESS)
 		return OPAL_VULKAN_ERROR;
 

@@ -89,6 +89,7 @@ typedef enum Opal_Result_t
 	OPAL_SWAPCHAIN_PRESENT_MODE_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED,
 	OPAL_SWAPCHAIN_COLOR_SPACE_NOT_SUPPORTED,
+	OPAL_SWAPCHAIN_OUT_OF_DATE,
 	OPAL_BUFFER_USAGE_NOT_SUPPORTED,
 	OPAL_BUFFER_NONMAPPABLE,
 	OPAL_TEXTURE_FORMAT_NOT_SUPPORTED,
@@ -1393,6 +1394,7 @@ typedef struct Opal_SwapchainDesc_t
 	Opal_TextureUsageFlags usage;
 	Opal_Surface surface;
 	Opal_Queue queue;
+	Opal_Swapchain old_swapchain;
 } Opal_SwapchainDesc;
 
 typedef struct Opal_SubmitDesc_t

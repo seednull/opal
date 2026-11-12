@@ -7,6 +7,7 @@ static Opal_Result metal_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, v
 static Opal_Result metal_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
 static Opal_Result metal_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
 static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set, uint32_t num_entries, const Opal_DescriptorSetEntry *entries);
+static Opal_Result metal_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain);
 
 /*
  */
@@ -1643,6 +1644,9 @@ static Opal_Result metal_deviceCreateSwapchain(Opal_Device this, const Opal_Swap
 
 	CAMetalLayer *layer_ptr = surface_ptr->layer;
 	assert(layer_ptr);
+
+	if (desc->old_swapchain != OPAL_NULL_HANDLE)
+		metal_deviceDestroySwapchain(this, desc->old_swapchain);
 
 	@autoreleasepool
 	{

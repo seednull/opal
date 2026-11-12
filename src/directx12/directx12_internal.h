@@ -339,6 +339,10 @@ typedef struct DirectX12_Swapchain_t
 	UINT present_flags;
 	uint32_t current_index;
 	uint32_t num_textures;
+	Opal_PresentMode mode;
+	Opal_TextureUsageFlags usage;
+	Opal_Surface surface;
+	Opal_Queue queue;
 } DirectX12_Swapchain;
 
 typedef HRESULT (WINAPI* PFN_DXGI_CREATE_FACTORY)(REFIID, _COM_Outptr_ void **);

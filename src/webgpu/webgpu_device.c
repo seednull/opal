@@ -8,6 +8,8 @@
 
 /*
  */
+static Opal_Result webgpu_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain);
+
 typedef struct WebGPU_QueueSubmitRequest_t
 {
 	Opal_Device device;
@@ -1031,6 +1033,9 @@ static Opal_Result webgpu_deviceCreateSwapchain(Opal_Device this, const Opal_Swa
 	assert(this);
 	assert(desc);
 	assert(swapchain);
+
+	if (desc->old_swapchain != OPAL_NULL_HANDLE)
+		webgpu_deviceDestroySwapchain(this, desc->old_swapchain);
 
 	static Opal_TextureFormat supported_formats[] =
 	{

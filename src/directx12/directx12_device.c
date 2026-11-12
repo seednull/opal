@@ -7,6 +7,7 @@
 /*
  */
 static Opal_Result directx12_deviceDestroyTextureView(Opal_Device this, Opal_TextureView texture_view);
+static Opal_Result directx12_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain);
 static Opal_Result directx12_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, void **ptr);
 static Opal_Result directx12_deviceUnmapBuffer(Opal_Device this, Opal_Buffer buffer);
 static Opal_Result directx12_deviceFreeDescriptorSet(Opal_Device this, Opal_DescriptorSet descriptor_set);
@@ -547,7 +548,8 @@ static void directx12_destroySwapchain(DirectX12_Device *device_ptr, DirectX12_S
 
 	free(swapchain_ptr->texture_views);
 
-	IDXGISwapChain3_Release(swapchain_ptr->swapchain);
+	if (swapchain_ptr->swapchain)
+		IDXGISwapChain3_Release(swapchain_ptr->swapchain);
 }
 
 /*
@@ -2470,6 +2472,30 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 
 	IDXGIFactory2 *d3d12_factory = instance_ptr->factory;
 
+	// old swapchain
+	IDXGISwapChain3 *old_d3d12_swapchain = NULL;
+
+	if (desc->old_swapchain != OPAL_NULL_HANDLE)
+	{
+		DirectX12_Swapchain *old_swapchain_ptr = (DirectX12_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)desc->old_swapchain);
+		assert(old_swapchain_ptr);
+
+		uint32_t mode_mismatch = old_swapchain_ptr->mode != desc->mode;
+		uint32_t surface_mismatch = old_swapchain_ptr->surface != desc->surface;
+		uint32_t usage_mismatch = old_swapchain_ptr->usage != desc->usage;
+		uint32_t queue_mismatch = old_swapchain_ptr->queue != desc->queue;
+
+		old_d3d12_swapchain = old_swapchain_ptr->swapchain;
+		old_swapchain_ptr->swapchain = NULL;
+		directx12_deviceDestroySwapchain(this, desc->old_swapchain);
+
+		if (mode_mismatch || surface_mismatch || usage_mismatch || queue_mismatch)
+		{
+			IDXGISwapChain3_Release(old_d3d12_swapchain);
+			old_d3d12_swapchain = NULL;
+		}
+	}
+
 	// surface
 	DirectX12_Surface *surface_ptr = (DirectX12_Surface *)opal_poolGetElement(&instance_ptr->surfaces, (Opal_PoolHandle)desc->surface);
 	assert(surface_ptr);
@@ -2489,31 +2515,52 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	// surface format
 	DXGI_FORMAT format = directx12_helperToDXGITextureFormat(desc->format.texture_format);
 	if (format == DXGI_FORMAT_UNKNOWN)
+	{
+		if (old_d3d12_swapchain)
+			IDXGISwapChain3_Release(old_d3d12_swapchain);
+
 		return OPAL_SWAPCHAIN_FORMAT_NOT_SUPPORTED;
-
-	DXGI_SWAP_CHAIN_DESC1 swapchain_info = {0};
-	swapchain_info.Format = format;
-	swapchain_info.Stereo = FALSE;
-	swapchain_info.SampleDesc.Count = 1;
-	swapchain_info.SampleDesc.Quality = 0;
-	swapchain_info.BufferUsage = directx12_helperToDXGIUsage(desc->usage);
-	swapchain_info.BufferCount = num_textures;
-	swapchain_info.Scaling = DXGI_SCALING_STRETCH;
-	swapchain_info.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapchain_info.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	swapchain_info.Flags = flags;
-
-	IDXGISwapChain1 *d3d12_swapchain1 = NULL;
-	HRESULT hr = IDXGIFactory2_CreateSwapChainForHwnd(d3d12_factory, (IUnknown *)queue_ptr->queue, surface_ptr->handle, &swapchain_info, NULL, NULL, &d3d12_swapchain1);
-	if (!SUCCEEDED(hr))
-		return OPAL_DIRECTX12_ERROR;
+	}
 
 	IDXGISwapChain3 *d3d12_swapchain3 = NULL;
-	hr = IDXGISwapChain1_QueryInterface(d3d12_swapchain1, &IID_IDXGISwapChain3, &d3d12_swapchain3);
-	if (!SUCCEEDED(hr))
-		return OPAL_DIRECTX12_ERROR;
+	HRESULT hr = S_OK;
 
-	IDXGISwapChain1_Release(d3d12_swapchain1);
+	if (old_d3d12_swapchain)
+	{
+		hr = IDXGISwapChain3_ResizeBuffers(old_d3d12_swapchain, num_textures, 0, 0, format, flags);
+		if (!SUCCEEDED(hr))
+		{
+			IDXGISwapChain3_Release(old_d3d12_swapchain);
+			return OPAL_DIRECTX12_ERROR;
+		}
+
+		d3d12_swapchain3 = old_d3d12_swapchain;
+	}
+	else
+	{
+		DXGI_SWAP_CHAIN_DESC1 swapchain_info = {0};
+		swapchain_info.Format = format;
+		swapchain_info.Stereo = FALSE;
+		swapchain_info.SampleDesc.Count = 1;
+		swapchain_info.SampleDesc.Quality = 0;
+		swapchain_info.BufferUsage = directx12_helperToDXGIUsage(desc->usage);
+		swapchain_info.BufferCount = num_textures;
+		swapchain_info.Scaling = DXGI_SCALING_STRETCH;
+		swapchain_info.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapchain_info.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+		swapchain_info.Flags = flags;
+
+		IDXGISwapChain1 *d3d12_swapchain1 = NULL;
+		hr = IDXGIFactory2_CreateSwapChainForHwnd(d3d12_factory, (IUnknown *)queue_ptr->queue, surface_ptr->handle, &swapchain_info, NULL, NULL, &d3d12_swapchain1);
+		if (!SUCCEEDED(hr))
+			return OPAL_DIRECTX12_ERROR;
+
+		hr = IDXGISwapChain1_QueryInterface(d3d12_swapchain1, &IID_IDXGISwapChain3, &d3d12_swapchain3);
+		IDXGISwapChain1_Release(d3d12_swapchain1);
+
+		if (!SUCCEEDED(hr))
+			return OPAL_DIRECTX12_ERROR;
+	}
 
 	DXGI_COLOR_SPACE_TYPE color_space = directx12_helperToDXGIColorSpace(desc->format.color_space);
 	UINT color_space_support = 0;
@@ -2539,7 +2586,7 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	}
 
 	Opal_TextureView *texture_views = (Opal_TextureView *)malloc(sizeof(Opal_TextureView) * num_textures);
-	memset(texture_views, OPAL_NULL_HANDLE, sizeof(Opal_PoolHandle) * num_textures);
+	memset(texture_views, OPAL_NULL_HANDLE, sizeof(Opal_TextureView) * num_textures);
 
 	BOOL success = TRUE;
 	for (uint32_t i = 0; i < num_textures; ++i)
@@ -2580,7 +2627,12 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	if (success != TRUE)
 	{
 		for (uint32_t i = 0; i < num_textures; ++i)
+		{
+			if (texture_views[i] == OPAL_NULL_HANDLE)
+				continue;
+
 			directx12_deviceDestroyTextureView(this, texture_views[i]);
+		}
 
 		free(texture_views);
 		IDXGISwapChain3_Release(d3d12_swapchain3);
@@ -2593,6 +2645,10 @@ static Opal_Result directx12_deviceCreateSwapchain(Opal_Device this, const Opal_
 	result.texture_views = texture_views;
 	result.current_index = IDXGISwapChain3_GetCurrentBackBufferIndex(d3d12_swapchain3);
 	result.num_textures = num_textures;
+	result.mode = desc->mode;
+	result.usage = desc->usage;
+	result.surface = desc->surface;
+	result.queue = desc->queue;
 
 	if (desc->mode == OPAL_PRESENT_MODE_IMMEDIATE)
 		result.present_flags = DXGI_PRESENT_ALLOW_TEARING;
