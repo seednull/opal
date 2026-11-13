@@ -1909,16 +1909,13 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 		}
 
 		// map memory
-		uint8_t *block_ptr = NULL;
-		opal_result = vulkan_allocatorMapMemory(device_ptr, allocation, &block_ptr);
+		opal_result = vulkan_allocatorMapMemory(device_ptr, allocation, &buffer_ptr);
 		if (opal_result != OPAL_SUCCESS)
 		{
 			device_ptr->vk.vkDestroyBuffer(vulkan_device, vulkan_buffer, NULL);
 			vulkan_allocatorFreeMemory(device_ptr, allocation);
 			return opal_result;
 		}
-
-		buffer_ptr = block_ptr + allocation.offset;
 	}
 
 	// TODO: ideally, we should check buffer_device_address feature availability and skip this if it's not present
