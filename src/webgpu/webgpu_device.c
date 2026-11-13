@@ -751,7 +751,11 @@ static Opal_Result webgpu_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 
 			case OPAL_DESCRIPTOR_TYPE_MULTISAMPLED_TEXTURE_2D:
 			{
-				webgpu_bindings[i].texture.sampleType = webgpu_helperToBindingSampleType(format);
+				WGPUTextureSampleType sample_type = webgpu_helperToBindingSampleType(format);
+				if (sample_type == WGPUTextureSampleType_Float)
+					sample_type = WGPUTextureSampleType_UnfilterableFloat;
+
+				webgpu_bindings[i].texture.sampleType = sample_type;
 				webgpu_bindings[i].texture.viewDimension = WGPUTextureViewDimension_2D;
 				webgpu_bindings[i].texture.multisampled = 1;
 				num_resource_descriptors++;
