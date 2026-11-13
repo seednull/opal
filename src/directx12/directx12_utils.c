@@ -745,8 +745,9 @@ Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device 
 	info->limits.max_texture_dimension_3d = 2048;
 	info->limits.max_texture_array_layers = 2048;
 	// info->limits.max_buffer_size = ?;
-	info->limits.min_uniform_buffer_offset_alignment = 0xFFFF;
-	info->limits.min_storage_buffer_offset_alignment = 0xFFFF;
+
+	info->limits.min_uniform_buffer_offset_alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+	info->limits.min_storage_buffer_offset_alignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
 	info->limits.max_descriptor_sets = 32;
 
 	info->limits.max_dynamic_uniform_buffers = 32;
