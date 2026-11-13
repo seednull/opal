@@ -388,6 +388,8 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE directx12_helperToAcceleration
 DXGI_FORMAT directx12_helperToDXGIVertexFormat(Opal_VertexFormat format);
 DXGI_FORMAT directx12_helperToDXGITextureFormat(Opal_TextureFormat format);
 DXGI_FORMAT directx12_helperToDXGIIndexFormat(Opal_IndexFormat format);
+DXGI_FORMAT directx12_helperToDepthTypelessFormat(DXGI_FORMAT format);
+DXGI_FORMAT directx12_helperToDepthShaderResourceFormat(DXGI_FORMAT format);
 DXGI_USAGE directx12_helperToDXGIUsage(Opal_TextureUsageFlags usage);
 DXGI_COLOR_SPACE_TYPE directx12_helperToDXGIColorSpace(Opal_ColorSpace color_space);
 

@@ -982,6 +982,8 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	ID3D12Resource *d3d12_texture = NULL;
 	DirectX12_Allocation allocation = {0};
 
+	DXGI_FORMAT typed_format = directx12_helperToDXGITextureFormat(desc->format);
+
 	// fill texture info
 	D3D12_RESOURCE_DESC texture_info = {0};
 	texture_info.Dimension = directx12_helperToTextureDimension(desc->type);
@@ -990,10 +992,13 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	texture_info.Height = desc->height;
 	texture_info.DepthOrArraySize = (UINT16)((desc->type != OPAL_TEXTURE_TYPE_3D) ? desc->layer_count : desc->depth);
 	texture_info.MipLevels = (UINT16)desc->mip_count;
-	texture_info.Format = directx12_helperToDXGITextureFormat(desc->format);
+	texture_info.Format = typed_format;
 	texture_info.SampleDesc.Count = directx12_helperToSampleCount(desc->samples);
 	texture_info.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	texture_info.Flags = directx12_helperToTextureFlags(desc->format, desc->usage);
+
+	if (desc->usage & (OPAL_TEXTURE_USAGE_FRAGMENT_SHADER_SAMPLED | OPAL_TEXTURE_USAGE_NON_FRAGMENT_SHADER_SAMPLED))
+		texture_info.Format = directx12_helperToDepthTypelessFormat(texture_info.Format);
 
 	D3D12_RESOURCE_ALLOCATION_INFO allocation_info = {0};
 	ID3D12Device_GetResourceAllocationInfo(d3d12_device, &allocation_info, 0, 1, &texture_info);
@@ -1023,7 +1028,7 @@ static Opal_Result directx12_deviceCreateTexture(Opal_Device this, const Opal_Te
 	// create opal struct
 	DirectX12_Texture result = {0};
 	result.texture = d3d12_texture;
-	result.format = texture_info.Format;
+	result.format = typed_format;
 	result.width = texture_info.Width;
 	result.height = texture_info.Height;
 	result.depth = (desc->type != OPAL_TEXTURE_TYPE_3D) ? texture_info.DepthOrArraySize : 1;
@@ -1050,7 +1055,7 @@ static Opal_Result directx12_deviceCreateTextureView(Opal_Device this, const Opa
 	UINT samples = texture_ptr->samples;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {0};
-	srv_desc.Format = format;
+	srv_desc.Format = directx12_helperToDepthShaderResourceFormat(format);
 	srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {0};
