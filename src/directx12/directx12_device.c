@@ -5006,7 +5006,7 @@ static Opal_Result directx12_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal
 	dst_location.pResource = dst_buffer_ptr->buffer;
 	dst_location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 	dst_location.PlacedFootprint.Offset = dst.offset;
-	dst_location.PlacedFootprint.Footprint.Format = DXGI_FORMAT_UNKNOWN;
+	dst_location.PlacedFootprint.Footprint.Format = src_texture_view_ptr->format;
 	dst_location.PlacedFootprint.Footprint.Depth = (UINT)size.depth;
 	dst_location.PlacedFootprint.Footprint.Width = size.width;
 	dst_location.PlacedFootprint.Footprint.Height = size.height;
