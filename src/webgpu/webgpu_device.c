@@ -2232,9 +2232,13 @@ static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 		webgpu_depthstencil.depthLoadOp = webgpu_helperToLoadOp(opal_attachment->load_op);
 		webgpu_depthstencil.depthStoreOp = webgpu_helperToStoreOp(opal_attachment->store_op);
 		webgpu_depthstencil.depthClearValue = opal_attachment->clear_value.depth_stencil.depth;
-		webgpu_depthstencil.stencilLoadOp = webgpu_helperToLoadOp(opal_attachment->load_op);
-		webgpu_depthstencil.stencilStoreOp = webgpu_helperToStoreOp(opal_attachment->store_op);
-		webgpu_depthstencil.stencilClearValue = opal_attachment->clear_value.depth_stencil.stencil;
+
+		if (texture_view_ptr->aspect != WGPUTextureAspect_DepthOnly)
+		{
+			webgpu_depthstencil.stencilLoadOp = webgpu_helperToLoadOp(opal_attachment->load_op);
+			webgpu_depthstencil.stencilStoreOp = webgpu_helperToStoreOp(opal_attachment->store_op);
+			webgpu_depthstencil.stencilClearValue = opal_attachment->clear_value.depth_stencil.stencil;
+		}
 	}
 
 	WGPURenderPassDescriptor pass_info = {0};
