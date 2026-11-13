@@ -953,6 +953,8 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 		depthstencil_state.depthWriteEnabled = desc->depth_write;
 		depthstencil_state.depthCompare = webgpu_helperToCompareFunction(desc->depth_compare_op);
 	}
+	else
+		depthstencil_state.depthCompare = WGPUCompareFunction_Always;
 
 	if (desc->stencil_enable)
 	{
