@@ -268,7 +268,7 @@ static Opal_Result webgpu_instanceDestroy(Opal_Instance this)
 	while (head != OPAL_POOL_HANDLE_NULL)
 	{
 		WebGPU_Surface *surface_ptr = (WebGPU_Surface *)opal_poolGetElementByIndex(&ptr->surfaces, head);
-		wgpuSurfaceReference(surface_ptr->surface);
+		wgpuSurfaceRelease(surface_ptr->surface);
 
 		head = opal_poolGetNextIndex(&ptr->surfaces, head);
 	}
