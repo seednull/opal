@@ -1860,7 +1860,7 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 
 	VkBufferCreateInfo buffer_info = {0};
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.size = alignUpul(num_descriptors * device_ptr->max_descriptor_size, device_ptr->descriptor_buffer_properties.descriptorBufferOffsetAlignment);
+	buffer_info.size = num_descriptors * alignUpul(device_ptr->max_descriptor_size, device_ptr->descriptor_buffer_properties.descriptorBufferOffsetAlignment);
 	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	buffer_info.usage = 0;
 
