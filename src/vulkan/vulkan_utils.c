@@ -110,7 +110,7 @@ VkImageAspectFlags vulkan_helperToAspectMask(Opal_TextureFormat format)
 	{
 		VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-		if (format >= OPAL_TEXTURE_FORMAT_D16_UNORM_S8_UINT)
+		if (format >= OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT)
 			aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 		return aspect_flags;
@@ -212,7 +212,6 @@ VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format)
 		// depth_stencil formats
 		VK_FORMAT_D16_UNORM,
 		VK_FORMAT_D32_SFLOAT,
-		VK_FORMAT_D16_UNORM_S8_UINT,
 		VK_FORMAT_D24_UNORM_S8_UINT,
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
 	};
@@ -334,7 +333,6 @@ Opal_TextureFormat vulkan_helperFromImageFormat(VkFormat format)
 		// depth_stencil formats
 		case VK_FORMAT_D16_UNORM: return OPAL_TEXTURE_FORMAT_D16_UNORM;
 		case VK_FORMAT_D32_SFLOAT: return OPAL_TEXTURE_FORMAT_D32_SFLOAT;
-		case VK_FORMAT_D16_UNORM_S8_UINT: return OPAL_TEXTURE_FORMAT_D16_UNORM_S8_UINT;
 		case VK_FORMAT_D24_UNORM_S8_UINT: return OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT;
 		case VK_FORMAT_D32_SFLOAT_S8_UINT: return OPAL_TEXTURE_FORMAT_D32_SFLOAT_S8_UINT;
 
@@ -407,7 +405,7 @@ VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_TextureFormat format)
 	if (format >= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_BEGIN && format <= OPAL_TEXTURE_FORMAT_DEPTH_STENCIL_END)
 		result |= VK_IMAGE_ASPECT_DEPTH_BIT;
 
-	if (format == OPAL_TEXTURE_FORMAT_D16_UNORM_S8_UINT || format == OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT || format == OPAL_TEXTURE_FORMAT_D32_SFLOAT_S8_UINT)
+	if (format == OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT || format == OPAL_TEXTURE_FORMAT_D32_SFLOAT_S8_UINT)
 		result |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 	return result;

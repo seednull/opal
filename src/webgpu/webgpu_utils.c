@@ -186,7 +186,6 @@ WGPUTextureFormat webgpu_helperToTextureFormat(Opal_TextureFormat format)
 		// depth_stencil formats
 		WGPUTextureFormat_Depth16Unorm,
 		WGPUTextureFormat_Depth32Float,
-		WGPUTextureFormat_Undefined,
 		WGPUTextureFormat_Depth24PlusStencil8,
 		WGPUTextureFormat_Depth32FloatStencil8,
 	};

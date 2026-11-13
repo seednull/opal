@@ -178,7 +178,6 @@ MTLPixelFormat metal_helperToPixelFormat(Opal_TextureFormat format)
 
 		MTLPixelFormatDepth16Unorm,
 		MTLPixelFormatDepth32Float,
-		MTLPixelFormatInvalid,
 		MTLPixelFormatDepth24Unorm_Stencil8,
 		MTLPixelFormatDepth32Float_Stencil8,
 	};
