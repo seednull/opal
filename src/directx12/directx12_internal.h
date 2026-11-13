@@ -145,6 +145,7 @@ typedef struct DirectX12_Device_t
 	ID3D12InfoQueue *info_queue;
 	ID3D12InfoQueue1 *info_queue1;
 	DWORD info_queue1_cookie;
+	uint32_t max_dynamic_buffers;
 } DirectX12_Device;
 
 typedef struct DirectX12_Queue_t
@@ -278,11 +279,11 @@ typedef struct DirectX12_DescriptorInfo_t
 typedef struct DirectX12_DescriptorSetLayout_t
 {
 	DirectX12_DescriptorInfo *descriptors;
-	uint32_t num_table_cbv_descriptors;
-	uint32_t num_table_uav_descriptors;
-	uint32_t num_table_srv_descriptors;
-	uint32_t num_table_sampler_descriptors;
-	uint32_t num_inline_descriptors;
+	uint32_t num_cbv_descriptors;
+	uint32_t num_uav_descriptors;
+	uint32_t num_srv_descriptors;
+	uint32_t num_sampler_descriptors;
+	Opal_DescriptorSetLayoutCreationFlags flags;
 } DirectX12_DescriptorSetLayout;
 
 typedef struct DirectX12_DescriptorSet_t
@@ -293,9 +294,7 @@ typedef struct DirectX12_DescriptorSet_t
 	Opal_HeapAllocation sampler_allocation;
 	Opal_DescriptorSetLayout layout;
 	Opal_DescriptorHeap heap;
-	// TODO: think about using fixed array
-	uint32_t num_inline_descriptors;
-	Opal_DescriptorSetEntry *inline_descriptors;
+	Opal_DescriptorSetEntry *dynamic_entries;
 } DirectX12_DescriptorSet;
 
 typedef struct DirectX12_PipelineLayout_t
@@ -303,8 +302,8 @@ typedef struct DirectX12_PipelineLayout_t
 	ID3D12RootSignature *root_signature;
 	uint32_t num_layout_table_offsets;
 	uint32_t *layout_table_offsets;
-	uint32_t num_inline_descriptors;
-	uint32_t inline_offset;
+	uint32_t dynamic_offset;
+	uint32_t num_dynamic_descriptors;
 } DirectX12_PipelineLayout;
 
 typedef struct DirectX12_GraphicsPipeline_t

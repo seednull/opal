@@ -121,6 +121,7 @@ typedef struct Vulkan_Device_t
 	VkDevice device;
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytrace_properties;
 	VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptor_buffer_properties;
+	uint32_t max_dynamic_buffers;
 	size_t max_descriptor_size;
 	VkPipelineStageFlags supported_pipeline_stages;
 	Vulkan_DeviceEnginesInfo device_engines_info;
@@ -290,8 +291,7 @@ typedef struct Vulkan_DescriptorSetLayout_t
 	uint32_t num_entries;
 	VkDescriptorSetLayoutBinding *entries;
 	VkDeviceSize *offsets;
-	uint32_t num_static_descriptors;
-	uint32_t num_dynamic_descriptors;
+	Opal_DescriptorSetLayoutCreationFlags flags;
 } Vulkan_DescriptorSetLayout;
 
 typedef struct Vulkan_DescriptorSet_t
@@ -300,16 +300,13 @@ typedef struct Vulkan_DescriptorSet_t
 	Opal_DescriptorSetLayout layout;
 	Opal_DescriptorHeap heap;
 	Opal_HeapAllocation allocation;
-	// TODO: think about using fixed array
-	uint32_t num_static_descriptors;
-	uint32_t num_dynamic_descriptors;
-	Opal_DescriptorSetEntry *dynamic_descriptors;
+	Opal_DescriptorSetEntry *dynamic_entries;
 } Vulkan_DescriptorSet;
 
 typedef struct Vulkan_PipelineLayout_t
 {
 	VkPipelineLayout layout;
-	uint32_t num_dynamic_descriptors;
+	uint32_t dynamic_set_index;
 } Vulkan_PipelineLayout;
 
 typedef struct Vulkan_GraphicsPipeline_t

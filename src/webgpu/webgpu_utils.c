@@ -569,10 +569,7 @@ WGPUBufferBindingType webgpu_helperToBindingBufferType(Opal_DescriptorType type)
 	static WGPUBufferBindingType wgpu_buffer_binding_types[] =
 	{
 		WGPUBufferBindingType_Uniform,
-		WGPUBufferBindingType_Uniform,
 		WGPUBufferBindingType_Storage,
-		WGPUBufferBindingType_Storage,
-		WGPUBufferBindingType_ReadOnlyStorage,
 		WGPUBufferBindingType_ReadOnlyStorage,
 		WGPUBufferBindingType_Undefined,
 		WGPUBufferBindingType_Undefined,
@@ -701,9 +698,6 @@ WGPUTextureViewDimension webgpu_helperToBindingViewDimension(Opal_DescriptorType
 		WGPUTextureViewDimension_Undefined,
 		WGPUTextureViewDimension_Undefined,
 		WGPUTextureViewDimension_Undefined,
-		WGPUTextureViewDimension_Undefined,
-		WGPUTextureViewDimension_Undefined,
-		WGPUTextureViewDimension_Undefined,
 		WGPUTextureViewDimension_1D,
 		WGPUTextureViewDimension_2D,
 		WGPUTextureViewDimension_2DArray,
@@ -808,6 +802,11 @@ Opal_Result webgpu_helperFillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *in
 	info->limits.min_storage_buffer_offset_alignment = adapter_limits.limits.minStorageBufferOffsetAlignment;
 
 	info->limits.max_descriptor_sets = adapter_limits.limits.maxBindGroups;
+
+	info->limits.max_dynamic_uniform_buffers = adapter_limits.limits.maxDynamicUniformBuffersPerPipelineLayout;
+	info->limits.max_dynamic_storage_buffers = adapter_limits.limits.maxDynamicStorageBuffersPerPipelineLayout;
+	info->limits.max_dynamic_buffers = info->limits.max_dynamic_uniform_buffers + info->limits.max_dynamic_storage_buffers;
+
 	info->limits.max_uniform_buffer_binding_size = adapter_limits.limits.maxUniformBufferBindingSize;
 	info->limits.max_storage_buffer_binding_size = adapter_limits.limits.maxStorageBufferBindingSize;
 

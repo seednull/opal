@@ -84,7 +84,50 @@ static WGPUDevice webgpu_requestDeviceSync(WGPUAdapter adapter, WebGPU_Instance 
 
 	WebGPU_AsyncRequest request = {0};
 
+	WGPUSupportedLimits supported_limits = {0};
+	const WGPULimits *supported = &supported_limits.limits;
+
+	WGPURequiredLimits required_limits = {0};
+	WGPULimits *required = &required_limits.limits;
+
+	wgpuAdapterGetLimits(adapter, &supported_limits);
+
+	required->maxTextureDimension1D = supported->maxTextureDimension1D;
+	required->maxTextureDimension2D = supported->maxTextureDimension2D;
+	required->maxTextureDimension3D = supported->maxTextureDimension3D;
+	required->maxTextureArrayLayers = supported->maxTextureArrayLayers;
+	required->maxBindGroups = supported->maxBindGroups;
+	required->maxBindGroupsPlusVertexBuffers = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxBindingsPerBindGroup = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxDynamicUniformBuffersPerPipelineLayout = supported->maxDynamicUniformBuffersPerPipelineLayout;
+	required->maxDynamicStorageBuffersPerPipelineLayout = supported->maxDynamicStorageBuffersPerPipelineLayout;
+	required->maxSampledTexturesPerShaderStage = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxSamplersPerShaderStage = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxStorageBuffersPerShaderStage = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxStorageTexturesPerShaderStage = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxUniformBuffersPerShaderStage = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxUniformBufferBindingSize = supported->maxUniformBufferBindingSize;
+	required->maxStorageBufferBindingSize = supported->maxStorageBufferBindingSize;
+	required->minUniformBufferOffsetAlignment = supported->minUniformBufferOffsetAlignment;
+	required->minStorageBufferOffsetAlignment = supported->minStorageBufferOffsetAlignment;
+	required->maxVertexBuffers = supported->maxVertexBuffers;
+	required->maxBufferSize = supported->maxBufferSize;
+	required->maxVertexAttributes = supported->maxVertexAttributes;
+	required->maxVertexBufferArrayStride = supported->maxVertexBufferArrayStride;
+	required->maxInterStageShaderComponents = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxInterStageShaderVariables = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxColorAttachments = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxColorAttachmentBytesPerSample = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxComputeWorkgroupStorageSize = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxComputeInvocationsPerWorkgroup = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxComputeWorkgroupSizeX = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxComputeWorkgroupSizeY = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxComputeWorkgroupSizeZ = WGPU_LIMIT_U32_UNDEFINED;
+	required->maxComputeWorkgroupsPerDimension = WGPU_LIMIT_U32_UNDEFINED;
+
 	WGPUDeviceDescriptor device_desc = {0};
+	device_desc.requiredLimits = &required_limits;
+
 	wgpuAdapterRequestDevice(adapter, &device_desc, webgpu_deviceCallback, &request);
 
 	while (!request.finished)

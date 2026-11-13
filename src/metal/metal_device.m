@@ -11,6 +11,14 @@ static Opal_Result metal_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain
 
 /*
  */
+static int metal_compareDescriptorBindings(const void *d0, const void *d1)
+{
+	uint32_t b0 = ((const Metal_DescriptorInfo *)d0)->binding;
+	uint32_t b1 = ((const Metal_DescriptorInfo *)d1)->binding;
+
+	return (b0 > b1) - (b0 < b1);
+}
+
 static Opal_Result metal_deviceAllocateMemory(Metal_Device *device_ptr, const Metal_AllocationDesc *desc, Metal_Allocation *allocation)
 {
 	assert(device_ptr);
@@ -206,6 +214,55 @@ static void metal_cmdAccelerationStructurePassBarrier(Metal_Device *device_ptr, 
 	}
 }
 
+static Opal_Result metal_cmdSetDynamicDescriptorSet(Metal_Device *device_ptr, Metal_CommandBuffer *command_buffer_ptr, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets, int graphics)
+{
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+	assert(descriptor_set);
+	assert(num_dynamic_offsets == 0 || dynamic_offsets);
+
+	Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	Metal_DescriptorSet *descriptor_set_ptr = (Metal_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
+	assert(descriptor_set_ptr);
+
+	Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
+	assert(descriptor_set_layout_ptr);
+	assert((descriptor_set_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0);
+
+	OPAL_UNUSED(num_dynamic_offsets);
+	assert(num_dynamic_offsets == descriptor_set_layout_ptr->num_descriptors);
+
+	for (uint32_t i = 0; i < descriptor_set_layout_ptr->num_descriptors; ++i)
+	{
+		const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[i];
+		const Opal_DescriptorSetEntry *entry = &descriptor_set_ptr->dynamic_entries[i];
+
+		Opal_Buffer buffer = (info->opal_type == OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ? entry->data.buffer_view.buffer : entry->data.storage_buffer_view.buffer;
+		uint64_t buffer_offset = (info->opal_type == OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER) ? entry->data.buffer_view.offset : entry->data.storage_buffer_view.offset;
+		buffer_offset += dynamic_offsets[i];
+
+		Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
+		assert(buffer_ptr);
+
+		id<MTLBuffer> metal_buffer = buffer_ptr->buffer;
+		uint32_t buffer_binding = pipeline_layout_ptr->num_layouts + i;
+
+		if (graphics)
+		{
+			[command_buffer_ptr->graphics_pass_encoder setVertexBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
+			[command_buffer_ptr->graphics_pass_encoder setFragmentBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
+		}
+		else
+		{
+			[command_buffer_ptr->compute_pass_encoder setBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
+		}
+	}
+
+	return OPAL_SUCCESS;
+}
+
 /*
  */
 static void metal_destroyQueue(Metal_Device *device_ptr, Metal_Queue *queue_ptr)
@@ -382,25 +439,17 @@ static void metal_destroyDescriptorSet(Metal_Device *device_ptr, Metal_Descripto
 	assert(device_ptr);
 	assert(descriptor_set_ptr);
 
-	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-	assert(descriptor_heap_ptr);
+	free(descriptor_set_ptr->dynamic_entries);
+	descriptor_set_ptr->dynamic_entries = NULL;
 
-	if (descriptor_set_ptr->num_static_descriptors > 0)
+	if (descriptor_set_ptr->allocation.metadata != OPAL_NODE_INDEX_NULL)
 	{
+		Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+		assert(descriptor_heap_ptr);
+
 		Opal_Result opal_result = opal_heapFree(&descriptor_heap_ptr->heap, descriptor_set_ptr->allocation);
 		assert(opal_result == OPAL_SUCCESS);
-
 	}
-
-	if (descriptor_set_ptr->dynamic_descriptors)
-	{
-		assert(descriptor_set_ptr->num_dynamic_descriptors > 0);
-		free(descriptor_set_ptr->dynamic_descriptors);
-	}
-
-	descriptor_set_ptr->dynamic_descriptors = NULL;
-	descriptor_set_ptr->num_static_descriptors = 0;
-	descriptor_set_ptr->num_dynamic_descriptors = 0;
 }
 
 static void metal_destroyPipelineLayout(Metal_Device *device_ptr, Metal_PipelineLayout *pipeline_layout_ptr)
@@ -416,15 +465,9 @@ static void metal_destroyPipelineLayout(Metal_Device *device_ptr, Metal_Pipeline
 		free(pipeline_layout_ptr->layouts);
 	}
 
-	if (pipeline_layout_ptr->dynamic_binding_offsets)
-	{
-		assert(pipeline_layout_ptr->num_layouts > 0);
-		free(pipeline_layout_ptr->dynamic_binding_offsets);
-	}
-
 	pipeline_layout_ptr->layouts = NULL;
-	pipeline_layout_ptr->dynamic_binding_offsets = NULL;
 	pipeline_layout_ptr->num_layouts = 0;
+	pipeline_layout_ptr->num_dynamic_descriptors = 0;
 }
 
 static void metal_destroyGraphicsPipeline(Metal_Device *device_ptr, Metal_GraphicsPipeline *pipeline_ptr)
@@ -1226,165 +1269,139 @@ static Opal_Result metal_deviceCreateDescriptorHeap(Opal_Device this, const Opal
 	return opal_result;
 }
 
-static Opal_Result metal_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
+static Opal_Result metal_deviceCreateDescriptorSetLayout(Opal_Device this, const Opal_DescriptorSetLayoutDesc *desc, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_entries == 0 || entries);
+	assert(desc);
+	assert(desc->num_entries > 0);
+	assert(desc->entries);
 	assert(descriptor_set_layout);
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	id<MTLDevice> metal_device = device_ptr->device;
 
-	id<MTLArgumentEncoder> metal_encoder = nil;
+	uint32_t num_entries = desc->num_entries;
+	const Opal_DescriptorSetLayoutEntry *entries = desc->entries;
 
-	uint32_t num_static_entries = 0;
-	uint32_t num_dynamic_entries = 0;
-	uint32_t num_blocks = 0;
+	uint32_t dynamic = (desc->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0;
 
-	@autoreleasepool
+	if (dynamic)
 	{
-		NSMutableArray<MTLArgumentDescriptor*>* args = [NSMutableArray arrayWithCapacity: num_entries];
+		uint32_t num_uniform_buffers = 0;
+		uint32_t num_storage_buffers = 0;
 
 		for (uint32_t i = 0; i < num_entries; ++i)
 		{
-			const Opal_DescriptorSetLayoutEntry *entry = &entries[i];
+			Opal_DescriptorType type = entries[i].type;
 
-			switch (entry->type)
-			{
-				case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
-				{
-					num_dynamic_entries++;
-				}
-				break;
-
-				default:
-				{
-					MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
-					arg.dataType = metal_helperToArgumentDataType(entry->type);
-					arg.access = MTLBindingAccessReadWrite;
-					arg.index = entry->binding;
-					arg.arrayLength = 1;
-					arg.textureType = MTLTextureTypeCubeArray;
-
-					[args addObject: arg];
-
-					num_static_entries++;
-				}
-				break;
-			}
+			if (type == OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+				num_uniform_buffers++;
+			else if (type == OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER || type == OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY)
+				num_storage_buffers++;
+			else
+				return OPAL_NOT_SUPPORTED;
 		}
 
-		assert([args count] == num_static_entries);
-		assert(num_static_entries + num_dynamic_entries == num_entries);
-
-		if (num_static_entries > 0)
-		{
-			NSSortDescriptor *argument_sort_desc = [[NSSortDescriptor alloc] initWithKey:@"index" ascending:YES];
-			NSArray *sorted_args = [args sortedArrayUsingDescriptors:@[argument_sort_desc]];
-
-			metal_encoder = [metal_device newArgumentEncoderWithArguments: sorted_args];
-
-			if (metal_encoder == nil)
-				return OPAL_METAL_ERROR;
-
-			num_blocks = alignUpul(metal_encoder.encodedLength, 256) / 256;
-		}
+		if (num_uniform_buffers > device_ptr->max_dynamic_uniform_buffers || num_storage_buffers > device_ptr->max_dynamic_storage_buffers)
+			return OPAL_NOT_SUPPORTED;
 	}
 
-	Metal_DescriptorInfo *metal_entries = NULL;
-	if (num_entries > 0)
-	{
-		metal_entries = (Metal_DescriptorInfo *)malloc(sizeof(Metal_DescriptorInfo) * num_entries);
-		memset(metal_entries, 0, sizeof(Metal_DescriptorInfo) * num_entries);
-	}
+	Metal_DescriptorInfo *metal_entries = (Metal_DescriptorInfo *)malloc(sizeof(Metal_DescriptorInfo) * num_entries);
+	memset(metal_entries, 0, sizeof(Metal_DescriptorInfo) * num_entries);
 
-	uint32_t static_entry_index = 0;
-	uint32_t dynamic_entry_index = 0;
 	for (uint32_t i = 0; i < num_entries; ++i)
 	{
 		const Opal_DescriptorSetLayoutEntry *entry = &entries[i];
-		Metal_DescriptorInfo *metal_entry = NULL;
-
-		switch (entry->type)
-		{
-			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
-			{
-				metal_entry = &metal_entries[num_static_entries + dynamic_entry_index];
-				dynamic_entry_index++;
-			}
-			break;
-
-			default:
-			{
-				metal_entry = &metal_entries[static_entry_index++];
-			}
-			break;
-		}
+		Metal_DescriptorInfo *metal_entry = &metal_entries[i];
 
 		metal_entry->binding = entry->binding;
 		metal_entry->opal_type = entry->type;
 		metal_entry->api_type = metal_helperToArgumentDataType(entry->type);
 	}
 
+	qsort(metal_entries, num_entries, sizeof(Metal_DescriptorInfo), metal_compareDescriptorBindings);
+
+	id<MTLArgumentEncoder> metal_encoder = nil;
+	uint32_t num_blocks = 0;
+
+	if (!dynamic)
+	{
+		@autoreleasepool
+		{
+			NSMutableArray<MTLArgumentDescriptor*>* args = [NSMutableArray arrayWithCapacity: num_entries];
+
+			for (uint32_t i = 0; i < num_entries; ++i)
+			{
+				MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
+				arg.dataType = metal_entries[i].api_type;
+				arg.access = MTLBindingAccessReadWrite;
+				arg.index = metal_entries[i].binding;
+				arg.arrayLength = 1;
+				arg.textureType = MTLTextureTypeCubeArray;
+
+				[args addObject: arg];
+			}
+
+			metal_encoder = [metal_device newArgumentEncoderWithArguments: args];
+
+			if (metal_encoder == nil)
+			{
+				free(metal_entries);
+				return OPAL_METAL_ERROR;
+			}
+
+			num_blocks = alignUpul(metal_encoder.encodedLength, 256) / 256;
+		}
+	}
+
 	Metal_DescriptorSetLayout result = {0};
 	result.encoder = metal_encoder;
 	result.num_blocks = num_blocks;
-	result.num_static_descriptors = num_static_entries;
-	result.num_dynamic_descriptors = num_dynamic_entries;
 	result.num_descriptors = num_entries;
+	result.flags = desc->flags;
 	result.descriptors = metal_entries;
 
 	*descriptor_set_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->descriptor_set_layouts, &result);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
+static Opal_Result metal_deviceCreatePipelineLayout(Opal_Device this, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout)
 {
 	assert(this);
-	assert(num_descriptor_set_layouts == 0 || descriptor_set_layouts);
+	assert(desc);
+	assert(desc->num_descriptor_set_layouts == 0 || desc->descriptor_set_layouts);
 	assert(pipeline_layout);
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 
 	Metal_PipelineLayout result = {0};
-	result.num_layouts = num_descriptor_set_layouts;
 
-	if (result.num_layouts > 0)
+	for (uint32_t i = 0; i < desc->num_descriptor_set_layouts; ++i)
 	{
-		result.layouts = (Opal_DescriptorSetLayout *)malloc(sizeof(Opal_DescriptorSetLayout) * result.num_layouts);
-		memcpy(result.layouts, descriptor_set_layouts, sizeof(Opal_DescriptorSetLayout) * result.num_layouts);
+		const Metal_DescriptorSetLayout *layout_ptr = (const Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)desc->descriptor_set_layouts[i]);
+		assert(layout_ptr);
+		assert((layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) == 0);
 
-		result.dynamic_binding_offsets = (uint32_t *)malloc(sizeof(uint32_t) * result.num_layouts);
-		memset(result.dynamic_binding_offsets, 0, sizeof(uint32_t) * result.num_layouts);
-
-		uint32_t offset = 0;
-		for (uint32_t i = 0; i < result.num_layouts; ++i)
-		{
-			Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
-			assert(descriptor_set_layout_ptr);
-
-			if (descriptor_set_layout_ptr->num_static_descriptors > 0)
-				offset++;
-		};
-
-		for (uint32_t i = 0; i < result.num_layouts; ++i)
-		{
-			Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
-			assert(descriptor_set_layout_ptr);
-
-			if (descriptor_set_layout_ptr->num_dynamic_descriptors > 0)
-			{
-				result.dynamic_binding_offsets[i] = offset;
-				offset += descriptor_set_layout_ptr->num_dynamic_descriptors;
-			}
-		}
-
-		result.vertex_binding_offset = offset;
+		OPAL_UNUSED(layout_ptr);
 	}
+
+	if (desc->dynamic_descriptor_set_layout != OPAL_NULL_HANDLE)
+	{
+		const Metal_DescriptorSetLayout *layout_ptr = (const Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)desc->dynamic_descriptor_set_layout);
+		assert(layout_ptr);
+		assert((layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0);
+
+		result.num_dynamic_descriptors = layout_ptr->num_descriptors;
+	}
+
+	if (desc->num_descriptor_set_layouts > 0)
+	{
+		result.num_layouts = desc->num_descriptor_set_layouts;
+		result.layouts = (Opal_DescriptorSetLayout *)malloc(sizeof(Opal_DescriptorSetLayout) * result.num_layouts);
+		memcpy(result.layouts, desc->descriptor_set_layouts, sizeof(Opal_DescriptorSetLayout) * result.num_layouts);
+	}
+
+	result.vertex_binding_offset = result.num_layouts + result.num_dynamic_descriptors;
 
 	*pipeline_layout = (Opal_PipelineLayout)opal_poolAddElement(&device_ptr->pipeline_layouts, &result);
 	return OPAL_SUCCESS;
@@ -2336,18 +2353,25 @@ static Opal_Result metal_deviceAllocateDescriptorSet(Opal_Device this, const Opa
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	id<MTLDevice> metal_device = device_ptr->device;
 
-	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->heap);
-	assert(descriptor_heap_ptr);
-
 	Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)desc->layout);
 	assert(descriptor_set_layout_ptr);
 
 	Metal_DescriptorSet result = {0};
+	result.allocation.metadata = OPAL_NODE_INDEX_NULL;
 
-	uint32_t num_static_descriptors = descriptor_set_layout_ptr->num_static_descriptors;
-	if (num_static_descriptors > 0)
+	uint32_t dynamic = (descriptor_set_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0;
+
+	if (dynamic)
 	{
-		result.num_static_descriptors = num_static_descriptors;
+		assert(desc->num_entries <= descriptor_set_layout_ptr->num_descriptors);
+
+		result.dynamic_entries = (Opal_DescriptorSetEntry *)malloc(sizeof(Opal_DescriptorSetEntry) * descriptor_set_layout_ptr->num_descriptors);
+		memset(result.dynamic_entries, 0, sizeof(Opal_DescriptorSetEntry) * descriptor_set_layout_ptr->num_descriptors);
+	}
+	else
+	{
+		Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->heap);
+		assert(descriptor_heap_ptr);
 
 		Opal_Result opal_result = opal_heapAlloc(&descriptor_heap_ptr->heap, descriptor_set_layout_ptr->num_blocks, &result.allocation);
 		if (opal_result != OPAL_SUCCESS)
@@ -2355,13 +2379,6 @@ static Opal_Result metal_deviceAllocateDescriptorSet(Opal_Device this, const Opa
 
 		uint32_t block_alignment = 256;
 		result.buffer_offset = result.allocation.offset * block_alignment;
-	}
-
-	uint32_t num_dynamic_descriptors = descriptor_set_layout_ptr->num_dynamic_descriptors;
-	if (num_dynamic_descriptors > 0)
-	{
-		result.num_dynamic_descriptors = num_dynamic_descriptors;
-		result.dynamic_descriptors = (Opal_DescriptorSetEntry *)malloc(sizeof(Opal_DescriptorSetEntry) * num_dynamic_descriptors);
 	}
 
 	result.layout = desc->layout;
@@ -2463,9 +2480,6 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 	Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
 	assert(descriptor_set_layout_ptr);
 
-	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-	assert(descriptor_heap_ptr);
-
 	typedef struct DescriptorIndices_t
 	{
 		uint32_t layout;
@@ -2473,13 +2487,10 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 	} DescriptorIndices;
 
 	opal_bumpReset(&device_ptr->bump);
-	uint32_t static_indices_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
-	uint32_t dynamic_indices_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
+	opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices) * num_entries);
 
-	uint32_t num_static_indices = 0;
-	uint32_t num_dynamic_indices = 0;
-	DescriptorIndices *static_layout_indices = (DescriptorIndices *)(device_ptr->bump.data + static_indices_ptr_offset);
-	DescriptorIndices *dynamic_layout_indices = (DescriptorIndices *)(device_ptr->bump.data + dynamic_indices_ptr_offset);
+	uint32_t num_indices = 0;
+	DescriptorIndices *layout_indices = (DescriptorIndices *)device_ptr->bump.data;
 
 	// TODO: replace naive O(N) layout <-> binding search loop by O(1) hashmap lookup
 	for (uint32_t i = 0; i < num_entries; ++i)
@@ -2498,25 +2509,38 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 		}
 
 		assert(index != UINT32_MAX);
-		if (index < descriptor_set_layout_ptr->num_static_descriptors)
-		{
-			static_layout_indices[num_static_indices].entry = i;
-			static_layout_indices[num_static_indices].layout = index;
-			num_static_indices++;
-		}
-		else
-		{
-			dynamic_layout_indices[num_dynamic_indices].entry = i;
-			dynamic_layout_indices[num_dynamic_indices].layout = index;
-			num_dynamic_indices++;
-		}
+
+		layout_indices[num_indices].entry = i;
+		layout_indices[num_indices].layout = index;
+		num_indices++;
 	}
+
+	uint32_t dynamic = (descriptor_set_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0;
+
+	if (dynamic)
+	{
+		for (uint32_t i = 0; i < num_indices; ++i)
+		{
+			uint32_t layout_index = layout_indices[i].layout;
+			uint32_t entry_index = layout_indices[i].entry;
+
+			Opal_DescriptorSetEntry *dst_entry = &descriptor_set_ptr->dynamic_entries[layout_index];
+			const Opal_DescriptorSetEntry *src_entry = &entries[entry_index];
+
+			memcpy(dst_entry, src_entry, sizeof(Opal_DescriptorSetEntry));
+		}
+
+		return OPAL_SUCCESS;
+	}
+
+	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(descriptor_heap_ptr);
 
 	@autoreleasepool
 	{
 		id<MTLArgumentEncoder> metal_encoder = descriptor_set_layout_ptr->encoder;
 
-		if (num_static_indices > 0)
+		if (num_indices > 0)
 		{
 			if (metal_encoder == nil)
 				return OPAL_METAL_ERROR;
@@ -2524,10 +2548,10 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 			[metal_encoder setArgumentBuffer: descriptor_heap_ptr->buffer offset: descriptor_set_ptr->buffer_offset];
 		}
 
-		for (uint32_t i = 0; i < num_static_indices; ++i)
+		for (uint32_t i = 0; i < num_indices; ++i)
 		{
-			uint32_t layout_index = static_layout_indices[i].layout;
-			uint32_t entry_index = static_layout_indices[i].entry;
+			uint32_t layout_index = layout_indices[i].layout;
+			uint32_t entry_index = layout_indices[i].entry;
 
 			const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
 			assert(info->api_type != MTLDataTypeNone);
@@ -2597,20 +2621,6 @@ static Opal_Result metal_deviceUpdateDescriptorSet(Opal_Device this, Opal_Descri
 
 				default: assert(0); return OPAL_METAL_ERROR;
 			}
-		}
-
-		for (uint32_t i = 0; i < num_dynamic_indices; ++i)
-		{
-			uint32_t layout_index = dynamic_layout_indices[i].layout;
-			uint32_t entry_index = dynamic_layout_indices[i].entry;
-
-			const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
-			assert(info->api_type == MTLDataTypeNone);
-
-			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
-			assert(info->binding == entry->binding);
-
-			memcpy(&descriptor_set_ptr->dynamic_descriptors[i], entry, sizeof(Opal_DescriptorSetEntry));
 		}
 	}
 
@@ -3089,7 +3099,7 @@ static Opal_Result metal_deviceCmdGraphicsSetPipeline(Opal_Device this, Opal_Com
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result metal_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3109,84 +3119,35 @@ static Opal_Result metal_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opa
 	Metal_DescriptorSet *descriptor_set_ptr = (Metal_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
 
-	uint32_t static_descriptors = descriptor_set_ptr->num_static_descriptors;
-	uint32_t dynamic_descriptors = descriptor_set_ptr->num_dynamic_descriptors;
+	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(descriptor_heap_ptr);
 
-	if (static_descriptors > 0)
-	{
-		Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-		assert(descriptor_heap_ptr);
+	id<MTLBuffer> heap_buffer = descriptor_heap_ptr->buffer;
+	uint64_t heap_offset = descriptor_set_ptr->buffer_offset;
 
-		id<MTLBuffer> heap_buffer = descriptor_heap_ptr->buffer;
-		uint64_t heap_offset = descriptor_set_ptr->buffer_offset;
-
-		[command_buffer_ptr->graphics_pass_encoder setVertexBuffer: heap_buffer offset: heap_offset atIndex: index];
-		[command_buffer_ptr->graphics_pass_encoder setFragmentBuffer: heap_buffer offset: heap_offset atIndex: index];
-	}
-
-	if (num_dynamic_offsets > 0)
-	{
-		Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
-		assert(pipeline_layout_ptr);
-		assert(index < pipeline_layout_ptr->num_layouts);
-
-		Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
-		assert(descriptor_set_layout_ptr);
-
-		assert(dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_dynamic_descriptors == num_dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_dynamic_descriptors == descriptor_set_ptr->num_dynamic_descriptors);
-
-		uint32_t info_offset = descriptor_set_layout_ptr->num_static_descriptors;
-		uint32_t binding_offset = pipeline_layout_ptr->dynamic_binding_offsets[index];
-
-		for (uint32_t i = 0; i < num_dynamic_offsets; ++i)
-		{
-			const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[info_offset + i];
-			const Opal_DescriptorSetEntry *data = &descriptor_set_ptr->dynamic_descriptors[i];
-
-			assert(info->api_type == MTLDataTypeNone);
-
-			id<MTLBuffer> metal_buffer = nil;
-			uint64_t buffer_offset = 0;
-			uint32_t buffer_binding = binding_offset + i;
-
-			switch (info->opal_type)
-			{
-				case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-				{
-					Opal_BufferView buffer_view = data->data.buffer_view;
-					Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					metal_buffer = buffer_ptr->buffer;
-					buffer_offset = buffer_view.offset + dynamic_offsets[i];
-				}
-				break;
-
-				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					metal_buffer = buffer_ptr->buffer;
-					buffer_offset = buffer_view.offset + dynamic_offsets[i];
-				}
-				break;
-
-				default: assert(0); return OPAL_METAL_ERROR;
-			}
-
-			assert(metal_buffer != nil);
-
-			[command_buffer_ptr->graphics_pass_encoder setVertexBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
-			[command_buffer_ptr->graphics_pass_encoder setFragmentBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
-		}
-	}
+	[command_buffer_ptr->graphics_pass_encoder setVertexBuffer: heap_buffer offset: heap_offset atIndex: index];
+	[command_buffer_ptr->graphics_pass_encoder setFragmentBuffer: heap_buffer offset: heap_offset atIndex: index];
 
 	return OPAL_SUCCESS;
+}
+
+static Opal_Result metal_deviceCmdGraphicsSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
+
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder != nil);
+	assert(command_buffer_ptr->compute_pass_encoder == nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+	assert(command_buffer_ptr->acceleration_structure_pass_encoder == nil);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
+
+	return metal_cmdSetDynamicDescriptorSet(device_ptr, command_buffer_ptr, descriptor_set, num_dynamic_offsets, dynamic_offsets, 1);
 }
 
 static Opal_Result metal_deviceCmdGraphicsSetVertexBuffers(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t first_index, uint32_t num_vertex_buffers, const Opal_VertexBufferView *vertex_buffers)
@@ -3469,7 +3430,7 @@ static Opal_Result metal_deviceCmdComputeSetPipeline(Opal_Device this, Opal_Comm
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result metal_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result metal_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	assert(this);
 	assert(command_buffer);
@@ -3489,82 +3450,34 @@ static Opal_Result metal_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal
 	Metal_DescriptorSet *descriptor_set_ptr = (Metal_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
 	assert(descriptor_set_ptr);
 
-	uint32_t static_descriptors = descriptor_set_ptr->num_static_descriptors;
-	uint32_t dynamic_descriptors = descriptor_set_ptr->num_dynamic_descriptors;
+	Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(descriptor_heap_ptr);
 
-	if (static_descriptors > 0)
-	{
-		Metal_DescriptorHeap *descriptor_heap_ptr = (Metal_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-		assert(descriptor_heap_ptr);
+	id<MTLBuffer> heap_buffer = descriptor_heap_ptr->buffer;
+	uint64_t heap_offset = descriptor_set_ptr->buffer_offset;
 
-		id<MTLBuffer> heap_buffer = descriptor_heap_ptr->buffer;
-		uint64_t heap_offset = descriptor_set_ptr->buffer_offset;
-
-		[command_buffer_ptr->compute_pass_encoder setBuffer: heap_buffer offset: heap_offset atIndex: index];
-	}
-
-	if (num_dynamic_offsets > 0)
-	{
-		Metal_PipelineLayout *pipeline_layout_ptr = (Metal_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
-		assert(pipeline_layout_ptr);
-		assert(index < pipeline_layout_ptr->num_layouts);
-
-		Metal_DescriptorSetLayout *descriptor_set_layout_ptr = (Metal_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
-		assert(descriptor_set_layout_ptr);
-
-		assert(dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_dynamic_descriptors == num_dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_dynamic_descriptors == descriptor_set_ptr->num_dynamic_descriptors);
-
-		uint32_t info_offset = descriptor_set_layout_ptr->num_static_descriptors;
-		uint32_t binding_offset = pipeline_layout_ptr->dynamic_binding_offsets[index];
-
-		for (uint32_t i = 0; i < num_dynamic_offsets; ++i)
-		{
-			const Metal_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[info_offset + i];
-			const Opal_DescriptorSetEntry *data = &descriptor_set_ptr->dynamic_descriptors[i];
-
-			assert(info->api_type == MTLDataTypeNone);
-
-			id<MTLBuffer> metal_buffer = nil;
-			uint64_t buffer_offset = 0;
-			uint32_t buffer_binding = binding_offset + i;
-
-			switch (info->opal_type)
-			{
-				case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-				{
-					Opal_BufferView buffer_view = data->data.buffer_view;
-					Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					metal_buffer = buffer_ptr->buffer;
-					buffer_offset = buffer_view.offset + dynamic_offsets[i];
-				}
-				break;
-
-				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-				case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					Metal_Buffer *buffer_ptr = (Metal_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					metal_buffer = buffer_ptr->buffer;
-					buffer_offset = buffer_view.offset + dynamic_offsets[i];
-				}
-				break;
-
-				default: assert(0); return OPAL_METAL_ERROR;
-			}
-
-			assert(metal_buffer != nil);
-
-			[command_buffer_ptr->compute_pass_encoder setBuffer: metal_buffer offset: buffer_offset atIndex: buffer_binding];
-		}
-	}
+	[command_buffer_ptr->compute_pass_encoder setBuffer: heap_buffer offset: heap_offset atIndex: index];
 
 	return OPAL_SUCCESS;
+}
+
+static Opal_Result metal_deviceCmdComputeSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
+
+	Metal_Device *device_ptr = (Metal_Device *)this;
+
+	Metal_CommandBuffer *command_buffer_ptr = (Metal_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->command_buffer);
+	assert(command_buffer_ptr->graphics_pass_encoder == nil);
+	assert(command_buffer_ptr->compute_pass_encoder != nil);
+	assert(command_buffer_ptr->copy_pass_encoder == nil);
+	assert(command_buffer_ptr->acceleration_structure_pass_encoder == nil);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
+
+	return metal_cmdSetDynamicDescriptorSet(device_ptr, command_buffer_ptr, descriptor_set, num_dynamic_offsets, dynamic_offsets, 0);
 }
 
 static Opal_Result metal_deviceCmdComputeMemoryBarrier(Opal_Device this, Opal_CommandBuffer command_buffer, const Opal_MemoryBarrierDesc *barriers)
@@ -3695,7 +3608,17 @@ static Opal_Result metal_deviceCmdRaytraceSetPipeline(Opal_Device this, Opal_Com
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result metal_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result metal_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
+	OPAL_UNUSED(index);
+	OPAL_UNUSED(descriptor_set);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result metal_deviceCmdRaytraceSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
@@ -4264,6 +4187,7 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCmdGraphicsSetPipelineLayout,
 	metal_deviceCmdGraphicsSetPipeline,
 	metal_deviceCmdGraphicsSetDescriptorSet,
+	metal_deviceCmdGraphicsSetDynamicDescriptorSet,
 	metal_deviceCmdGraphicsSetVertexBuffers,
 	metal_deviceCmdGraphicsSetIndexBuffer,
 	metal_deviceCmdGraphicsSetViewport,
@@ -4277,6 +4201,7 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCmdComputeSetPipelineLayout,
 	metal_deviceCmdComputeSetPipeline,
 	metal_deviceCmdComputeSetDescriptorSet,
+	metal_deviceCmdComputeSetDynamicDescriptorSet,
 	metal_deviceCmdComputeMemoryBarrier,
 	metal_deviceCmdComputeDispatch,
 	metal_deviceCmdEndComputePass,
@@ -4285,6 +4210,7 @@ static Opal_DeviceTable device_vtbl =
 	metal_deviceCmdRaytraceSetPipelineLayout,
 	metal_deviceCmdRaytraceSetPipeline,
 	metal_deviceCmdRaytraceSetDescriptorSet,
+	metal_deviceCmdRaytraceSetDynamicDescriptorSet,
 	metal_deviceCmdRaytraceSetShaderBindingTable,
 	metal_deviceCmdRaytraceMemoryBarrier,
 	metal_deviceCmdRaytraceDispatch,
@@ -4316,6 +4242,13 @@ Opal_Result metal_deviceInitialize(Metal_Device *device_ptr, Metal_Instance *ins
 	// data
 	device_ptr->instance = instance_ptr;
 	device_ptr->device = metal_device;
+
+	// max dynamic descriptors
+	Opal_DeviceInfo info = {0};
+	metal_helperFillDeviceInfo(metal_device, &info);
+
+	device_ptr->max_dynamic_uniform_buffers = info.limits.max_dynamic_uniform_buffers;
+	device_ptr->max_dynamic_storage_buffers = info.limits.max_dynamic_storage_buffers;
 
 	// allocator
 	Opal_Result result = metal_allocatorInitialize(device_ptr, instance_ptr->heap_size, instance_ptr->max_heap_allocations, instance_ptr->max_heaps);

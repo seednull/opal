@@ -567,9 +567,6 @@ VkDescriptorType vulkan_helperToDescriptorType(Opal_DescriptorType type)
 	static VkDescriptorType vk_descriptor_types[] =
 	{
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 		VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -1332,6 +1329,7 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	VkBool32 has_meshlet = VK_FALSE;
 	VkBool32 has_timeline_semaphores = VK_FALSE;
 	VkBool32 has_descriptor_buffer = VK_FALSE;
+	VkBool32 has_push_descriptor = VK_FALSE;
 
 	for (uint32_t i = 0; i < num_device_extensions; ++i)
 	{
@@ -1360,6 +1358,9 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 
 		if (strcmp(device_extension_name, VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME) == 0)
 			has_descriptor_buffer = descriptor_buffer_features.descriptorBuffer;
+
+		if (strcmp(device_extension_name, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0)
+			has_push_descriptor = VK_TRUE;
 	}
 
 	free(device_extensions);
@@ -1461,12 +1462,16 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	if (has_descriptor_buffer == VK_TRUE)
 	{
 		extensions[num_extensions++] = VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME;
-		extensions[num_extensions++] = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME;
 
 		paravozik->next = &descriptor_buffer_features;
 
 		paravozik = (VkParavozikKHR *)&descriptor_buffer_features;
 		paravozik->next = NULL;
+	}
+
+	if (has_push_descriptor == VK_TRUE)
+	{
+		extensions[num_extensions++] = VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME;
 	}
 
 	// get physical device queues
@@ -1522,8 +1527,16 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	assert(info);
 
 	// get properties
+	VkPhysicalDevicePushDescriptorPropertiesKHR push_descriptor_properties = {0};
+	push_descriptor_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR;
+
+	VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptor_buffer_properties = {0};
+	descriptor_buffer_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
+	descriptor_buffer_properties.pNext = &push_descriptor_properties;
+
 	VkPhysicalDeviceMaintenance3Properties maintenance = {0};
 	maintenance.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+	maintenance.pNext = &descriptor_buffer_properties;
 
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {0};
 	raytracing_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
@@ -1539,18 +1552,22 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	VkPhysicalDeviceFeatures2 features = {0};
 	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
+	VkPhysicalDeviceDescriptorBufferFeaturesEXT descriptor_buffer_features = {0};
+	descriptor_buffer_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {0};
 	acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+	acceleration_structure_features.pNext = &descriptor_buffer_features;
 
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {0};
 	raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+	raytracing_features.pNext = &acceleration_structure_features;
 
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_features = {0};
 	mesh_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+	mesh_features.pNext = &raytracing_features;
 
-	mesh_features.pNext = &acceleration_structure_features;
-	raytracing_features.pNext = &mesh_features;
-	features.pNext = &raytracing_features;
+	features.pNext = &mesh_features;
 
 	vkGetPhysicalDeviceFeatures2(device, &features);
 
@@ -1571,6 +1588,7 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	VkBool32 has_acceleration_structure = VK_FALSE;
 	VkBool32 has_raytracing = VK_FALSE;
 	VkBool32 has_meshlet = VK_FALSE;
+	VkBool32 has_push_descriptor = VK_FALSE;
 
 	for (uint32_t i = 0; i < num_device_extensions; ++i)
 	{
@@ -1584,6 +1602,9 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 
 		if (strcmp(device_extension_name, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
 			has_meshlet = mesh_features.meshShader && mesh_features.taskShader;
+
+		if (strcmp(device_extension_name, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0)
+			has_push_descriptor = descriptor_buffer_features.descriptorBufferPushDescriptors && descriptor_buffer_properties.bufferlessPushDescriptors;
 	}
 
 	free(device_extensions);
@@ -1633,6 +1654,14 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 	info->limits.min_storage_buffer_offset_alignment = properties.properties.limits.minStorageBufferOffsetAlignment;
 
 	info->limits.max_descriptor_sets = properties.properties.limits.maxBoundDescriptorSets;
+
+	if (has_push_descriptor == VK_TRUE)
+	{
+		info->limits.max_dynamic_uniform_buffers = push_descriptor_properties.maxPushDescriptors;
+		info->limits.max_dynamic_storage_buffers = push_descriptor_properties.maxPushDescriptors;
+		info->limits.max_dynamic_buffers = push_descriptor_properties.maxPushDescriptors;
+	}
+
 	info->limits.max_uniform_buffer_binding_size = properties.properties.limits.maxUniformBufferRange;
 	info->limits.max_storage_buffer_binding_size = properties.properties.limits.maxStorageBufferRange;
 

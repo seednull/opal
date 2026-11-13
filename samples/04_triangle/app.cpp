@@ -251,7 +251,8 @@ void Application::init(void *handle, uint32_t w, uint32_t h)
 	assert(loaded == true);
 
 	// pipeline
-	result = opalCreatePipelineLayout(device, 0, nullptr, &pipeline_layout);
+	Opal_PipelineLayoutDesc pipeline_layout_desc = {};
+	result = opalCreatePipelineLayout(device, &pipeline_layout_desc, &pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
 	Opal_VertexAttribute vertex_attributes[] =

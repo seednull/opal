@@ -504,7 +504,7 @@ void Application::render()
 	result = opalCmdComputeSetPipelineLayout(device, command_buffer, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, NULL);
+	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdComputeSetPipeline(device, command_buffer, compute_pipeline);
@@ -522,7 +522,7 @@ void Application::render()
 	result = opalCmdRaytraceSetPipelineLayout(device, command_buffer, pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdRaytraceSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set, 0, NULL);
+	result = opalCmdRaytraceSetDescriptorSet(device, command_buffer, 0, frame_descriptor_set);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdRaytraceSetPipeline(device, command_buffer, raytrace_pipeline);
@@ -613,7 +613,8 @@ void Application::buildPipelineLayout()
 		{2, OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D, OPAL_SHADER_STAGE_ALL_RAYTRACE, OPAL_TEXTURE_FORMAT_BGRA8_UNORM},
 	};
 
-	Opal_Result result = opalCreateDescriptorSetLayout(device, 3, layout_entries, &descriptor_set_layout);
+	Opal_DescriptorSetLayoutDesc descriptor_set_layout_desc = {3, layout_entries, (Opal_DescriptorSetLayoutCreationFlags)0};
+	Opal_Result result = opalCreateDescriptorSetLayout(device, &descriptor_set_layout_desc, &descriptor_set_layout);
 	assert(result == OPAL_SUCCESS);
 
 	// descriptor heap
@@ -627,7 +628,8 @@ void Application::buildPipelineLayout()
 	assert(result == OPAL_SUCCESS);
 
 	// pipeline layout
-	result = opalCreatePipelineLayout(device, 1, &descriptor_set_layout, &pipeline_layout);
+	Opal_PipelineLayoutDesc pipeline_layout_desc = {1, &descriptor_set_layout, OPAL_NULL_HANDLE};
+	result = opalCreatePipelineLayout(device, &pipeline_layout_desc, &pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 }
 

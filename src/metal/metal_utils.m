@@ -10,11 +10,8 @@ MTLDataType metal_helperToArgumentDataType(Opal_DescriptorType type)
 	static MTLDataType metal_types[] =
 	{
 		MTLDataTypePointer,
-		MTLDataTypeNone,
 		MTLDataTypePointer,
-		MTLDataTypeNone,
 		MTLDataTypePointer,
-		MTLDataTypeNone,
 		MTLDataTypeTexture,
 		MTLDataTypeTexture,
 		MTLDataTypeTexture,
@@ -780,6 +777,11 @@ Opal_Result metal_helperFillDeviceInfo(id<MTLDevice> metal_device, Opal_DeviceIn
 	info->limits.min_uniform_buffer_offset_alignment = 256;
 	info->limits.min_storage_buffer_offset_alignment = 256;
 	info->limits.max_descriptor_sets = 0;
+
+	info->limits.max_dynamic_uniform_buffers = 8;
+	info->limits.max_dynamic_storage_buffers = 8;
+	info->limits.max_dynamic_buffers = info->limits.max_dynamic_uniform_buffers + info->limits.max_dynamic_storage_buffers;
+
 	info->limits.max_uniform_buffer_binding_size = 0xFFFFFFFF;
 	info->limits.max_storage_buffer_binding_size = 0xFFFFFFFF;
 	info->limits.max_vertex_buffers = 0;

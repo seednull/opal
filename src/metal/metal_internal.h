@@ -79,6 +79,9 @@ typedef struct Metal_Device_t
 	Metal_Instance *instance;
 	id<MTLDevice> device;
 
+	uint32_t max_dynamic_uniform_buffers;
+	uint32_t max_dynamic_storage_buffers;
+
 	Metal_DeviceEnginesInfo device_engines_info;
 	Opal_Queue *queue_handles[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 	Opal_Bump bump;
@@ -203,10 +206,9 @@ typedef struct Metal_DescriptorSetLayout_t
 {
 	id<MTLArgumentEncoder> encoder;
 	uint32_t num_blocks;
-	uint32_t num_static_descriptors;
-	uint32_t num_dynamic_descriptors;
 	uint32_t num_descriptors;
 	Metal_DescriptorInfo *descriptors;
+	Opal_DescriptorSetLayoutCreationFlags flags;
 } Metal_DescriptorSetLayout;
 
 typedef struct Metal_DescriptorSet_t
@@ -215,17 +217,14 @@ typedef struct Metal_DescriptorSet_t
 	Opal_DescriptorHeap heap;
 	Opal_HeapAllocation allocation;
 	uint64_t buffer_offset;
-	// TODO: think about using fixed array
-	uint32_t num_static_descriptors;
-	uint32_t num_dynamic_descriptors;
-	Opal_DescriptorSetEntry *dynamic_descriptors;
+	Opal_DescriptorSetEntry *dynamic_entries;
 } Metal_DescriptorSet;
 
 typedef struct Metal_PipelineLayout_t
 {
 	Opal_DescriptorSetLayout *layouts;
-	uint32_t *dynamic_binding_offsets;
 	uint32_t num_layouts;
+	uint32_t num_dynamic_descriptors;
 	uint32_t vertex_binding_offset;
 } Metal_PipelineLayout;
 

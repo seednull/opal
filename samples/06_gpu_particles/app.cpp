@@ -577,10 +577,10 @@ void Application::render()
 	result = opalCmdComputeSetPipelineLayout(device, command_buffer, compute_pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, render_descriptor_set, 0, NULL);
+	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 0, render_descriptor_set);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 1, compute_descriptor_set, 0, NULL);
+	result = opalCmdComputeSetDescriptorSet(device, command_buffer, 1, compute_descriptor_set);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdComputeSetPipeline(device, command_buffer, emit_pipeline);
@@ -654,7 +654,7 @@ void Application::render()
 	result = opalCmdGraphicsSetPipelineLayout(device, command_buffer, render_pipeline_layout);
 	assert(result == OPAL_SUCCESS);
 
-	result = opalCmdGraphicsSetDescriptorSet(device, command_buffer, 0, render_descriptor_set, 0, NULL);
+	result = opalCmdGraphicsSetDescriptorSet(device, command_buffer, 0, render_descriptor_set);
 	assert(result == OPAL_SUCCESS);
 
 	result = opalCmdGraphicsSetPipeline(device, command_buffer, render_pipeline);
@@ -745,10 +745,12 @@ void Application::buildLayout()
 			1, OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER, OPAL_SHADER_STAGE_ALL, OPAL_TEXTURE_FORMAT_UNDEFINED, // camera
 		};
 
-		Opal_Result result = opalCreateDescriptorSetLayout(device, 2, layout_bindings, &render_descriptor_set_layout);
+		Opal_DescriptorSetLayoutDesc descriptor_set_layout_desc = {2, layout_bindings, (Opal_DescriptorSetLayoutCreationFlags)0};
+		Opal_Result result = opalCreateDescriptorSetLayout(device, &descriptor_set_layout_desc, &render_descriptor_set_layout);
 		assert(result == OPAL_SUCCESS);
 
-		result = opalCreatePipelineLayout(device, 1, &render_descriptor_set_layout, &render_pipeline_layout);
+		Opal_PipelineLayoutDesc pipeline_layout_desc = {1, &render_descriptor_set_layout, OPAL_NULL_HANDLE};
+		result = opalCreatePipelineLayout(device, &pipeline_layout_desc, &render_pipeline_layout);
 		assert(result == OPAL_SUCCESS);
 	}
 
@@ -765,12 +767,14 @@ void Application::buildLayout()
 			6, OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, OPAL_SHADER_STAGE_COMPUTE, OPAL_TEXTURE_FORMAT_UNDEFINED, // mesh indices
 		};
 
-		Opal_Result result = opalCreateDescriptorSetLayout(device, 7, layout_bindings, &compute_descriptor_set_layout);
+		Opal_DescriptorSetLayoutDesc descriptor_set_layout_desc = {7, layout_bindings, (Opal_DescriptorSetLayoutCreationFlags)0};
+		Opal_Result result = opalCreateDescriptorSetLayout(device, &descriptor_set_layout_desc, &compute_descriptor_set_layout);
 		assert(result == OPAL_SUCCESS);
 
 		Opal_DescriptorSetLayout layouts[] = { render_descriptor_set_layout, compute_descriptor_set_layout };
 
-		result = opalCreatePipelineLayout(device, 2, layouts, &compute_pipeline_layout);
+		Opal_PipelineLayoutDesc pipeline_layout_desc = {2, layouts, OPAL_NULL_HANDLE};
+		result = opalCreatePipelineLayout(device, &pipeline_layout_desc, &compute_pipeline_layout);
 		assert(result == OPAL_SUCCESS);
 	}
 }

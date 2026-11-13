@@ -181,21 +181,19 @@ static Opal_Result null_deviceCreateDescriptorHeap(Opal_Device this, const Opal_
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
+static Opal_Result null_deviceCreateDescriptorSetLayout(Opal_Device this, const Opal_DescriptorSetLayoutDesc *desc, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_entries);
-	OPAL_UNUSED(entries);
+	OPAL_UNUSED(desc);
 	OPAL_UNUSED(descriptor_set_layout);
 
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
+static Opal_Result null_deviceCreatePipelineLayout(Opal_Device this, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout)
 {
 	OPAL_UNUSED(this);
-	OPAL_UNUSED(num_descriptor_set_layouts);
-	OPAL_UNUSED(descriptor_set_layouts);
+	OPAL_UNUSED(desc);
 	OPAL_UNUSED(pipeline_layout);
 
 	return OPAL_NOT_SUPPORTED;
@@ -602,11 +600,20 @@ static Opal_Result null_deviceCmdGraphicsSetPipeline(Opal_Device this, Opal_Comm
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result null_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(index);
+	OPAL_UNUSED(descriptor_set);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdGraphicsSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(descriptor_set);
 	OPAL_UNUSED(num_dynamic_offsets);
 	OPAL_UNUSED(dynamic_offsets);
@@ -727,11 +734,20 @@ static Opal_Result null_deviceCmdComputeSetPipeline(Opal_Device this, Opal_Comma
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result null_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(index);
+	OPAL_UNUSED(descriptor_set);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdComputeSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(descriptor_set);
 	OPAL_UNUSED(num_dynamic_offsets);
 	OPAL_UNUSED(dynamic_offsets);
@@ -795,11 +811,20 @@ static Opal_Result null_deviceCmdRaytraceSetPipeline(Opal_Device this, Opal_Comm
 	return OPAL_NOT_SUPPORTED;
 }
 
-static Opal_Result null_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result null_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	OPAL_UNUSED(this);
 	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(index);
+	OPAL_UNUSED(descriptor_set);
+
+	return OPAL_NOT_SUPPORTED;
+}
+
+static Opal_Result null_deviceCmdRaytraceSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	OPAL_UNUSED(this);
+	OPAL_UNUSED(command_buffer);
 	OPAL_UNUSED(descriptor_set);
 	OPAL_UNUSED(num_dynamic_offsets);
 	OPAL_UNUSED(dynamic_offsets);
@@ -1023,6 +1048,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdGraphicsSetPipelineLayout,
 	null_deviceCmdGraphicsSetPipeline,
 	null_deviceCmdGraphicsSetDescriptorSet,
+	null_deviceCmdGraphicsSetDynamicDescriptorSet,
 	null_deviceCmdGraphicsSetVertexBuffers,
 	null_deviceCmdGraphicsSetIndexBuffer,
 	null_deviceCmdGraphicsSetViewport,
@@ -1036,6 +1062,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdComputeSetPipelineLayout,
 	null_deviceCmdComputeSetPipeline,
 	null_deviceCmdComputeSetDescriptorSet,
+	null_deviceCmdComputeSetDynamicDescriptorSet,
 	null_deviceCmdComputeMemoryBarrier,
 	null_deviceCmdComputeDispatch,
 	null_deviceCmdEndComputePass,
@@ -1044,6 +1071,7 @@ static Opal_DeviceTable device_vtbl =
 	null_deviceCmdRaytraceSetPipelineLayout,
 	null_deviceCmdRaytraceSetPipeline,
 	null_deviceCmdRaytraceSetDescriptorSet,
+	null_deviceCmdRaytraceSetDynamicDescriptorSet,
 	null_deviceCmdRaytraceSetShaderBindingTable,
 	null_deviceCmdRaytraceMemoryBarrier,
 	null_deviceCmdRaytraceDispatch,

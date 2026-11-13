@@ -15,6 +15,14 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 /*
  */
+static int directx12_compareDescriptorBindings(const void *d0, const void *d1)
+{
+	UINT b0 = ((const DirectX12_DescriptorInfo *)d0)->binding;
+	UINT b1 = ((const DirectX12_DescriptorInfo *)d1)->binding;
+
+	return (b0 > b1) - (b0 < b1);
+}
+
 static void __stdcall directx12_debugMessageCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void *context)
 {
 	OPAL_UNUSED(category);
@@ -290,12 +298,114 @@ static void directx12_cmdMemoryBarrier(DirectX12_Device *device_ptr, DirectX12_C
 		ID3D12GraphicsCommandList6_ResourceBarrier(command_buffer_ptr->list, num_barriers, d3d12_barriers);
 }
 
-static int directx12_compareInlineDescriptors(const void *d0, const void *d1)
+static void directx12_cmdSetDescriptorSet(DirectX12_Device *device_ptr, DirectX12_CommandBuffer *command_buffer_ptr, uint32_t index, Opal_DescriptorSet descriptor_set, int compute)
 {
-	UINT b0 = ((const DirectX12_DescriptorInfo *)d0)->binding;
-	UINT b1 = ((const DirectX12_DescriptorInfo *)d1)->binding;
+	assert(device_ptr);
+	assert(command_buffer_ptr);
 
-	return (b0 > b1) - (b0 < b1);
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
+	assert(pipeline_layout_ptr);
+	assert(index * 2 < pipeline_layout_ptr->num_layout_table_offsets);
+
+	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
+	assert(descriptor_set_ptr);
+
+	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
+
+	// CBV SRV UAV descriptor table
+	if (descriptor_set_ptr->resource_handle.ptr > 0)
+	{
+		uint32_t table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 0];
+		assert(table_index != UINT32_MAX);
+
+		if (compute)
+			ID3D12GraphicsCommandList6_SetComputeRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->resource_handle);
+		else
+			ID3D12GraphicsCommandList6_SetGraphicsRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->resource_handle);
+	}
+
+	// sampler descriptor table
+	if (descriptor_set_ptr->sampler_handle.ptr > 0)
+	{
+		uint32_t table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 1];
+		assert(table_index != UINT32_MAX);
+
+		if (compute)
+			ID3D12GraphicsCommandList6_SetComputeRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->sampler_handle);
+		else
+			ID3D12GraphicsCommandList6_SetGraphicsRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->sampler_handle);
+	}
+}
+
+static void directx12_cmdSetDynamicDescriptorSet(DirectX12_Device *device_ptr, DirectX12_CommandBuffer *command_buffer_ptr, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets, int compute)
+{
+	assert(device_ptr);
+	assert(command_buffer_ptr);
+	assert(descriptor_set);
+	assert(num_dynamic_offsets == 0 || dynamic_offsets);
+
+	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
+	assert(pipeline_layout_ptr);
+
+	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
+	assert(descriptor_set_ptr);
+
+	DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
+	assert(descriptor_set_layout_ptr);
+	assert((descriptor_set_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0);
+
+	OPAL_UNUSED(num_dynamic_offsets);
+	assert(num_dynamic_offsets == pipeline_layout_ptr->num_dynamic_descriptors);
+
+	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
+
+	for (uint32_t i = 0; i < pipeline_layout_ptr->num_dynamic_descriptors; ++i)
+	{
+		const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[i];
+		const Opal_DescriptorSetEntry *entry = &descriptor_set_ptr->dynamic_entries[i];
+
+		UINT parameter_index = pipeline_layout_ptr->dynamic_offset + i;
+
+		Opal_Buffer buffer = (info->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_CBV) ? entry->data.buffer_view.buffer : entry->data.storage_buffer_view.buffer;
+		uint64_t offset = (info->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_CBV) ? entry->data.buffer_view.offset : entry->data.storage_buffer_view.offset;
+
+		DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer);
+		assert(buffer_ptr);
+
+		D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + offset + dynamic_offsets[i];
+
+		switch (info->api_type)
+		{
+			case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+			{
+				if (compute)
+					ID3D12GraphicsCommandList6_SetComputeRootConstantBufferView(d3d12_list, parameter_index, address);
+				else
+					ID3D12GraphicsCommandList6_SetGraphicsRootConstantBufferView(d3d12_list, parameter_index, address);
+			}
+			break;
+
+			case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+			{
+				if (compute)
+					ID3D12GraphicsCommandList6_SetComputeRootShaderResourceView(d3d12_list, parameter_index, address);
+				else
+					ID3D12GraphicsCommandList6_SetGraphicsRootShaderResourceView(d3d12_list, parameter_index, address);
+			}
+			break;
+
+			case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+			{
+				if (compute)
+					ID3D12GraphicsCommandList6_SetComputeRootUnorderedAccessView(d3d12_list, parameter_index, address);
+				else
+					ID3D12GraphicsCommandList6_SetGraphicsRootUnorderedAccessView(d3d12_list, parameter_index, address);
+			}
+			break;
+
+			default: assert(0); break;
+		}
+	}
 }
 
 /*
@@ -465,6 +575,12 @@ static void directx12_destroyDescriptorSet(DirectX12_Device *device_ptr, DirectX
 	OPAL_UNUSED(device_ptr);
 	assert(descriptor_set_ptr);
 
+	free(descriptor_set_ptr->dynamic_entries);
+	descriptor_set_ptr->dynamic_entries = NULL;
+
+	if (descriptor_set_ptr->resource_handle.ptr == 0 && descriptor_set_ptr->sampler_handle.ptr == 0)
+		return;
+
 	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
 	assert(heap_ptr);
 	
@@ -478,13 +594,6 @@ static void directx12_destroyDescriptorSet(DirectX12_Device *device_ptr, DirectX
 	{
 		Opal_Result opal_result = opal_heapFree(&heap_ptr->sampler_heap, descriptor_set_ptr->sampler_allocation);
 		assert(opal_result == OPAL_SUCCESS);
-	}
-
-	if (descriptor_set_ptr->num_inline_descriptors > 0)
-	{
-		free(descriptor_set_ptr->inline_descriptors);
-		descriptor_set_ptr->inline_descriptors = NULL;
-		descriptor_set_ptr->num_inline_descriptors = 0;
 	}
 }
 
@@ -1321,14 +1430,36 @@ static Opal_Result directx12_deviceCreateDescriptorHeap(Opal_Device this, const 
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, uint32_t num_entries, const Opal_DescriptorSetLayoutEntry *entries, Opal_DescriptorSetLayout *descriptor_set_layout)
+static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, const Opal_DescriptorSetLayoutDesc *desc, Opal_DescriptorSetLayout *descriptor_set_layout)
 {
 	assert(this);
-	assert(num_entries == 0 || entries);
+	assert(desc);
+	assert(desc->num_entries > 0);
+	assert(desc->entries);
 	assert(descriptor_set_layout);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+
 	DirectX12_DescriptorSetLayout result = {0};
+	result.flags = desc->flags;
+
+	uint32_t num_entries = desc->num_entries;
+	const Opal_DescriptorSetLayoutEntry *entries = desc->entries;
+
+	uint32_t dynamic = (desc->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0;
+
+	if (dynamic)
+	{
+		if (num_entries > device_ptr->max_dynamic_buffers)
+			return OPAL_NOT_SUPPORTED;
+
+		for (uint32_t i = 0; i < num_entries; ++i)
+		{
+			Opal_DescriptorType type = entries[i].type;
+			if (type != OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER && type != OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER && type != OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY)
+				return OPAL_NOT_SUPPORTED;
+		}
+	}
 
 	for (uint32_t i = 0; i < num_entries; ++i)
 	{
@@ -1336,7 +1467,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 		{
 			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 			{
-				result.num_table_cbv_descriptors++;
+				result.num_cbv_descriptors++;
 			}
 			break;
 
@@ -1350,7 +1481,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			case OPAL_DESCRIPTOR_TYPE_MULTISAMPLED_TEXTURE_2D:
 			case OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
 			{
-				result.num_table_srv_descriptors++;
+				result.num_srv_descriptors++;
 			}
 			break;
 
@@ -1360,22 +1491,14 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D_ARRAY:
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_3D:
 			{
-				result.num_table_uav_descriptors++;
+				result.num_uav_descriptors++;
 			}
 			break;
 
 			case OPAL_DESCRIPTOR_TYPE_SAMPLER:
 			case OPAL_DESCRIPTOR_TYPE_COMPARE_SAMPLER:
 			{
-				result.num_table_sampler_descriptors++;
-			}
-			break;
-
-			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-			{
-				result.num_inline_descriptors++;
+				result.num_sampler_descriptors++;
 			}
 			break;
 
@@ -1383,21 +1506,12 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 		}
 	}
 
-	uint32_t table_cbv_descriptor_offset = 0;
-	uint32_t table_srv_descriptor_offset = table_cbv_descriptor_offset + result.num_table_cbv_descriptors;
-	uint32_t table_uav_descriptor_offset = table_srv_descriptor_offset + result.num_table_srv_descriptors;
-	uint32_t table_sampler_descriptor_offset = table_uav_descriptor_offset + result.num_table_uav_descriptors;
+	uint32_t cbv_descriptor_offset = 0;
+	uint32_t srv_descriptor_offset = cbv_descriptor_offset + result.num_cbv_descriptors;
+	uint32_t uav_descriptor_offset = srv_descriptor_offset + result.num_srv_descriptors;
+	uint32_t sampler_descriptor_offset = uav_descriptor_offset + result.num_uav_descriptors;
 
-	uint32_t inline_descriptor_offset = table_sampler_descriptor_offset + result.num_table_sampler_descriptors;
-
-	result.descriptors = NULL;
-	DirectX12_DescriptorInfo *inline_descriptors = NULL;
-
-	if (num_entries > 0)
-	{
-		result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_entries * sizeof(DirectX12_DescriptorInfo));
-		inline_descriptors = result.descriptors + inline_descriptor_offset;
-	}
+	result.descriptors = (DirectX12_DescriptorInfo *)malloc(num_entries * sizeof(DirectX12_DescriptorInfo));
 
 	for (uint32_t i = 0; i < num_entries; ++i)
 	{
@@ -1409,7 +1523,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 		{
 			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 			{
-				index = table_cbv_descriptor_offset++;
+				index = cbv_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 			}
 			break;
@@ -1424,7 +1538,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			case OPAL_DESCRIPTOR_TYPE_MULTISAMPLED_TEXTURE_2D:
 			case OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
 			{
-				index = table_srv_descriptor_offset++;
+				index = srv_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 			}
 			break;
@@ -1435,7 +1549,7 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D_ARRAY:
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_3D:
 			{
-				index = table_uav_descriptor_offset++;
+				index = uav_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 			}
 			break;
@@ -1443,32 +1557,8 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 			case OPAL_DESCRIPTOR_TYPE_SAMPLER:
 			case OPAL_DESCRIPTOR_TYPE_COMPARE_SAMPLER:
 			{
-				index = table_sampler_descriptor_offset++;
+				index = sampler_descriptor_offset++;
 				type = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-			}
-			break;
-
-			case OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-			{
-				index = inline_descriptor_offset++;
-				type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-				root_type = D3D12_ROOT_PARAMETER_TYPE_CBV;
-			}
-			break;
-
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY_DYNAMIC:
-			{
-				index = inline_descriptor_offset++;
-				type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-				root_type = D3D12_ROOT_PARAMETER_TYPE_SRV;
-			}
-			break;
-
-			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-			{
-				index = inline_descriptor_offset++;
-				type = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-				root_type = D3D12_ROOT_PARAMETER_TYPE_UAV;
 			}
 			break;
 
@@ -1481,244 +1571,213 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, u
 		result.descriptors[index].binding = entries[i].binding;
 	}
 
-	if (result.num_inline_descriptors > 0)
-		qsort(inline_descriptors, result.num_inline_descriptors, sizeof(DirectX12_DescriptorInfo), directx12_compareInlineDescriptors);
+	if (dynamic)
+		qsort(result.descriptors, num_entries, sizeof(DirectX12_DescriptorInfo), directx12_compareDescriptorBindings);
 
 	*descriptor_set_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->descriptor_set_layouts, &result);
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32_t num_descriptor_set_layouts, const Opal_DescriptorSetLayout *descriptor_set_layouts, Opal_PipelineLayout *pipeline_layout)
+static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, const Opal_PipelineLayoutDesc *desc, Opal_PipelineLayout *pipeline_layout)
 {
 	assert(this);
+	assert(desc);
+	assert(desc->num_descriptor_set_layouts == 0 || desc->descriptor_set_layouts);
 	assert(pipeline_layout);
-	assert(num_descriptor_set_layouts == 0 || descriptor_set_layouts);
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 	ID3D12Device *d3d12_device = device_ptr->device;
 
-	D3D12_ROOT_PARAMETER *parameters = NULL;
-	D3D12_DESCRIPTOR_RANGE *ranges = NULL;
+	uint32_t num_descriptor_set_layouts = desc->num_descriptor_set_layouts;
+	const Opal_DescriptorSetLayout *descriptor_set_layouts = desc->descriptor_set_layouts;
+
+	uint32_t dynamic_set_index = UINT32_MAX;
+	uint32_t num_dynamic_descriptors = 0;
+
 	uint32_t num_resource_descriptors = 0;
 	uint32_t num_resource_tables = 0;
 
 	uint32_t num_sampler_descriptors = 0;
 	uint32_t num_sampler_tables = 0;
 
-	uint32_t num_inline_descriptors = 0;
-
 	uint32_t *layout_table_offsets = NULL;
+	const DirectX12_DescriptorSetLayout *dynamic_layout_ptr = NULL;
 
 	if (num_descriptor_set_layouts > 0)
 	{
 		layout_table_offsets = (uint32_t *)malloc(sizeof(uint32_t) * num_descriptor_set_layouts * 2);
 		memset(layout_table_offsets, UINT32_MAX, sizeof(uint32_t) * num_descriptor_set_layouts * 2);
+	}
 
-		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+	for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+	{
+		DirectX12_DescriptorSetLayout *layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
+		assert(layout_ptr);
+		assert((layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) == 0);
+
+		uint32_t num_set_resource_descriptors = 0;
+		num_set_resource_descriptors += layout_ptr->num_cbv_descriptors;
+		num_set_resource_descriptors += layout_ptr->num_srv_descriptors;
+		num_set_resource_descriptors += layout_ptr->num_uav_descriptors;
+
+		uint32_t num_set_sampler_descriptors = layout_ptr->num_sampler_descriptors;
+
+		if (num_set_resource_descriptors > 0)
 		{
-			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
-			assert(descriptor_set_layout_ptr);
-
-			uint32_t num_set_resource_descriptors = 0;
-			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_srv_descriptors;
-			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_uav_descriptors;
-
-			uint32_t num_set_sampler_descriptors = descriptor_set_layout_ptr->num_table_sampler_descriptors;
-			uint32_t num_set_inline_descriptors = descriptor_set_layout_ptr->num_inline_descriptors;
-
-			if (num_set_resource_descriptors > 0)
-			{
-				layout_table_offsets[i * 2 + 0] = i;
-				num_resource_tables++;
-			}
-
-			if (num_set_sampler_descriptors > 0)
-			{
-				layout_table_offsets[i * 2 + 1] = i;
-				num_sampler_tables++;
-			}
-
-			num_resource_descriptors += num_set_resource_descriptors;
-			num_sampler_descriptors += num_set_sampler_descriptors;
-			num_inline_descriptors += num_set_inline_descriptors;
+			layout_table_offsets[i * 2 + 0] = i;
+			num_resource_tables++;
 		}
 
-		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+		if (num_set_sampler_descriptors > 0)
 		{
-			uint32_t index = i * 2 + 1;
-			uint32_t offset = layout_table_offsets[index];
-
-			if (offset != UINT32_MAX)
-				layout_table_offsets[index] += num_resource_tables;
+			layout_table_offsets[i * 2 + 1] = i;
+			num_sampler_tables++;
 		}
 
+		num_resource_descriptors += num_set_resource_descriptors;
+		num_sampler_descriptors += num_set_sampler_descriptors;
+	}
+
+	for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+	{
+		uint32_t index = i * 2 + 1;
+		uint32_t offset = layout_table_offsets[index];
+
+		if (offset != UINT32_MAX)
+			layout_table_offsets[index] += num_resource_tables;
+	}
+
+	if (desc->dynamic_descriptor_set_layout != OPAL_NULL_HANDLE)
+	{
+		dynamic_layout_ptr = (const DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)desc->dynamic_descriptor_set_layout);
+		assert(dynamic_layout_ptr);
+		assert((dynamic_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0);
+
+		dynamic_set_index = num_descriptor_set_layouts;
+
+		num_dynamic_descriptors += dynamic_layout_ptr->num_cbv_descriptors;
+		num_dynamic_descriptors += dynamic_layout_ptr->num_srv_descriptors;
+		num_dynamic_descriptors += dynamic_layout_ptr->num_uav_descriptors;
+	}
+
+	uint32_t num_parameters = num_resource_tables + num_sampler_tables + num_dynamic_descriptors;
+
+	D3D12_ROOT_PARAMETER *parameters = NULL;
+	D3D12_DESCRIPTOR_RANGE *ranges = NULL;
+
+	if (num_parameters > 0)
+	{
 		opal_bumpReset(&device_ptr->bump);
-		uint32_t parameters_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_ROOT_PARAMETER) * (num_resource_tables + num_sampler_tables + num_inline_descriptors));
+		uint32_t parameters_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_ROOT_PARAMETER) * num_parameters);
 		uint32_t ranges_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(D3D12_DESCRIPTOR_RANGE) * (num_resource_descriptors + num_sampler_descriptors));
 
 		parameters = (D3D12_ROOT_PARAMETER *)(device_ptr->bump.data + parameters_offset);
 		ranges = (D3D12_DESCRIPTOR_RANGE *)(device_ptr->bump.data + ranges_offset);
+	}
 
-		D3D12_ROOT_PARAMETER *current_parameter = parameters;
-		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+	D3D12_ROOT_PARAMETER *current_parameter = parameters;
+	for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+	{
+		DirectX12_DescriptorSetLayout *layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
+		assert(layout_ptr);
+
+		uint32_t num_set_resource_descriptors = 0;
+		num_set_resource_descriptors += layout_ptr->num_cbv_descriptors;
+		num_set_resource_descriptors += layout_ptr->num_srv_descriptors;
+		num_set_resource_descriptors += layout_ptr->num_uav_descriptors;
+
+		if (num_set_resource_descriptors == 0)
+			continue;
+
+		assert(layout_ptr->descriptors);
+		const DirectX12_DescriptorInfo *current_descriptor = layout_ptr->descriptors;
+
+		for (uint32_t j = 0; j < num_set_resource_descriptors; ++j)
 		{
-			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
-			assert(descriptor_set_layout_ptr);
+			assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 
-			uint32_t num_set_resource_descriptors = 0;
-			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_srv_descriptors;
-			num_set_resource_descriptors += descriptor_set_layout_ptr->num_table_uav_descriptors;
+			D3D12_DESCRIPTOR_RANGE *current_range = &ranges[j];
+			current_range->RangeType = current_descriptor->api_type;
+			current_range->NumDescriptors = 1;
+			current_range->BaseShaderRegister = current_descriptor->binding;
+			current_range->RegisterSpace = i;
+			current_range->OffsetInDescriptorsFromTableStart = j;
 
-			if (num_set_resource_descriptors == 0)
-				continue;
-
-			assert(descriptor_set_layout_ptr->descriptors);
-			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors;
-
-			uint32_t num_ranges = 0;
-
-			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_cbv_descriptors; ++j)
-			{
-				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_CBV);
-
-				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
-				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-				current_range->NumDescriptors = 1;
-				current_range->BaseShaderRegister = current_descriptor->binding;
-				current_range->RegisterSpace = i;
-				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
-
-				num_ranges++;
-				current_descriptor++;
-			}
-
-			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_srv_descriptors; ++j)
-			{
-				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_SRV);
-
-				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
-				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-				current_range->NumDescriptors = 1;
-				current_range->BaseShaderRegister = current_descriptor->binding;
-				current_range->RegisterSpace = i;
-				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
-
-				num_ranges++;
-				current_descriptor++;
-			}
-
-			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_uav_descriptors; ++j)
-			{
-				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
-
-				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
-				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-				current_range->NumDescriptors = 1;
-				current_range->BaseShaderRegister = current_descriptor->binding;
-				current_range->RegisterSpace = i;
-				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
-
-				num_ranges++;
-				current_descriptor++;
-			}
-
-			current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-			current_parameter->DescriptorTable.NumDescriptorRanges = num_ranges;
-			current_parameter->DescriptorTable.pDescriptorRanges = ranges;
-
-			current_parameter++;
-			ranges += num_ranges;
+			current_descriptor++;
 		}
 
-		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+		current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		current_parameter->DescriptorTable.NumDescriptorRanges = num_set_resource_descriptors;
+		current_parameter->DescriptorTable.pDescriptorRanges = ranges;
+
+		current_parameter++;
+		ranges += num_set_resource_descriptors;
+	}
+
+	for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+	{
+		DirectX12_DescriptorSetLayout *layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
+		assert(layout_ptr);
+
+		uint32_t num_set_sampler_descriptors = layout_ptr->num_sampler_descriptors;
+
+		if (num_set_sampler_descriptors == 0)
+			continue;
+
+		uint32_t offset = 0;
+		offset += layout_ptr->num_cbv_descriptors;
+		offset += layout_ptr->num_srv_descriptors;
+		offset += layout_ptr->num_uav_descriptors;
+
+		assert(layout_ptr->descriptors);
+		const DirectX12_DescriptorInfo *current_descriptor = layout_ptr->descriptors + offset;
+
+		for (uint32_t j = 0; j < num_set_sampler_descriptors; ++j)
 		{
-			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
-			assert(descriptor_set_layout_ptr);
+			assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+			assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
 
-			uint32_t num_set_sampler_descriptors = 0;
-			num_set_sampler_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
+			D3D12_DESCRIPTOR_RANGE *current_range = &ranges[j];
+			current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+			current_range->NumDescriptors = 1;
+			current_range->BaseShaderRegister = current_descriptor->binding;
+			current_range->RegisterSpace = i;
+			current_range->OffsetInDescriptorsFromTableStart = j;
 
-			if (num_set_sampler_descriptors == 0)
-				continue;
-
-			uint32_t offset = 0;
-			offset += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-			offset += descriptor_set_layout_ptr->num_table_srv_descriptors;
-			offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
-
-			assert(descriptor_set_layout_ptr->descriptors);
-			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors + offset;
-
-			uint32_t num_ranges = 0;
-
-			for (uint32_t j = 0; j < descriptor_set_layout_ptr->num_table_sampler_descriptors; ++j)
-			{
-				assert(current_descriptor->root_type == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-				assert(current_descriptor->api_type == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
-
-				D3D12_DESCRIPTOR_RANGE *current_range = &ranges[num_ranges];
-				current_range->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-				current_range->NumDescriptors = 1;
-				current_range->BaseShaderRegister = current_descriptor->binding;
-				current_range->RegisterSpace = i;
-				current_range->OffsetInDescriptorsFromTableStart = num_ranges;
-
-				num_ranges++;
-				current_descriptor++;
-			}
-
-			current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-			current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-			current_parameter->DescriptorTable.NumDescriptorRanges = num_ranges;
-			current_parameter->DescriptorTable.pDescriptorRanges = ranges;
-
-			current_parameter++;
-			ranges += num_ranges;
+			current_descriptor++;
 		}
 
-		for (uint32_t i = 0; i < num_descriptor_set_layouts; ++i)
+		current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		current_parameter->DescriptorTable.NumDescriptorRanges = num_set_sampler_descriptors;
+		current_parameter->DescriptorTable.pDescriptorRanges = ranges;
+
+		current_parameter++;
+		ranges += num_set_sampler_descriptors;
+	}
+
+	for (uint32_t i = 0; i < num_dynamic_descriptors; ++i)
+	{
+		const DirectX12_DescriptorInfo *current_descriptor = &dynamic_layout_ptr->descriptors[i];
+
+		switch (current_descriptor->api_type)
 		{
-			DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_layouts[i]);
-			assert(descriptor_set_layout_ptr);
-
-			uint32_t num_set_inline_descriptors = descriptor_set_layout_ptr->num_inline_descriptors;
-
-			if (num_set_inline_descriptors == 0)
-				continue;
-
-			uint32_t offset = 0;
-			offset += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-			offset += descriptor_set_layout_ptr->num_table_srv_descriptors;
-			offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
-			offset += descriptor_set_layout_ptr->num_table_sampler_descriptors;
-
-			assert(descriptor_set_layout_ptr->descriptors);
-			DirectX12_DescriptorInfo *current_descriptor = descriptor_set_layout_ptr->descriptors + offset;
-
-			for (uint32_t j = 0; j < num_set_inline_descriptors; ++j)
-			{
-				assert(current_descriptor->root_type != D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-				assert(current_descriptor->root_type != D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
-
-				current_parameter->ParameterType = current_descriptor->root_type;
-				current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				current_parameter->Descriptor.RegisterSpace = i;
-				current_parameter->Descriptor.ShaderRegister = current_descriptor->binding;
-
-				current_parameter++;
-				current_descriptor++;
-			}
+			case D3D12_DESCRIPTOR_RANGE_TYPE_CBV: current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; break;
+			case D3D12_DESCRIPTOR_RANGE_TYPE_SRV: current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV; break;
+			case D3D12_DESCRIPTOR_RANGE_TYPE_UAV: current_parameter->ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV; break;
+			default: assert(0); break;
 		}
+
+		current_parameter->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		current_parameter->Descriptor.RegisterSpace = dynamic_set_index;
+		current_parameter->Descriptor.ShaderRegister = current_descriptor->binding;
+
+		current_parameter++;
 	}
 
 	D3D12_ROOT_SIGNATURE_DESC layout_info = {0};
-	layout_info.NumParameters = num_resource_tables + num_sampler_tables + num_inline_descriptors;
+	layout_info.NumParameters = num_parameters;
 	layout_info.pParameters = parameters;
 	layout_info.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
@@ -1726,7 +1785,10 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 	HRESULT hr = opal_d3d12SerializeRootSignature(&layout_info, D3D_ROOT_SIGNATURE_VERSION_1_0, &blob, NULL);
 
 	if (!SUCCEEDED(hr))
+	{
+		free(layout_table_offsets);
 		return OPAL_DIRECTX12_ERROR;
+	}
 
 	const void *data = ID3D10Blob_GetBufferPointer(blob);
 	SIZE_T size = ID3D10Blob_GetBufferSize(blob);
@@ -1737,7 +1799,10 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 	ID3D10Blob_Release(blob);
 
 	if (!SUCCEEDED(hr))
+	{
+		free(layout_table_offsets);
 		return OPAL_DIRECTX12_ERROR;
+	}
 
 	DirectX12_PipelineLayout result = {0};
 	result.root_signature = d3d12_root_signature;
@@ -1748,8 +1813,8 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, uint32
 		result.layout_table_offsets = layout_table_offsets;
 	}
 
-	result.num_inline_descriptors = num_inline_descriptors;
-	result.inline_offset = num_resource_tables + num_sampler_tables;
+	result.dynamic_offset = num_resource_tables + num_sampler_tables;
+	result.num_dynamic_descriptors = num_dynamic_descriptors;
 
 	*pipeline_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipeline_layouts, &result);
 	return OPAL_SUCCESS;
@@ -3472,17 +3537,32 @@ static Opal_Result directx12_deviceAllocateDescriptorSet(Opal_Device this, const
 	assert(descriptor_set_layout_ptr);
 
 	uint32_t num_resource_descriptors = 0;
-	num_resource_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-	num_resource_descriptors += descriptor_set_layout_ptr->num_table_srv_descriptors;
-	num_resource_descriptors += descriptor_set_layout_ptr->num_table_uav_descriptors;
+	num_resource_descriptors += descriptor_set_layout_ptr->num_cbv_descriptors;
+	num_resource_descriptors += descriptor_set_layout_ptr->num_srv_descriptors;
+	num_resource_descriptors += descriptor_set_layout_ptr->num_uav_descriptors;
 
-	uint32_t num_sampler_descriptors = descriptor_set_layout_ptr->num_table_sampler_descriptors;
-	uint32_t num_inline_descriptors = descriptor_set_layout_ptr->num_inline_descriptors;
+	uint32_t num_sampler_descriptors = descriptor_set_layout_ptr->num_sampler_descriptors;
 
 	DirectX12_DescriptorSet result = {0};
 
-	DirectX12_DescriptorHeap *heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->heap);
-	assert(heap_ptr);
+	uint32_t dynamic = (descriptor_set_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0;
+	if (dynamic)
+	{
+		assert(num_sampler_descriptors == 0);
+		assert(desc->num_entries <= num_resource_descriptors);
+
+		result.dynamic_entries = (Opal_DescriptorSetEntry *)malloc(sizeof(Opal_DescriptorSetEntry) * num_resource_descriptors);
+		memset(result.dynamic_entries, 0, sizeof(Opal_DescriptorSetEntry) * num_resource_descriptors);
+
+		num_resource_descriptors = 0;
+	}
+
+	DirectX12_DescriptorHeap *heap_ptr = NULL;
+	if (num_resource_descriptors > 0 || num_sampler_descriptors > 0)
+	{
+		heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)desc->heap);
+		assert(heap_ptr);
+	}
 
 	if (num_resource_descriptors > 0)
 	{
@@ -3506,13 +3586,6 @@ static Opal_Result directx12_deviceAllocateDescriptorSet(Opal_Device this, const
 
 		ID3D12DescriptorHeap_GetGPUDescriptorHandleForHeapStart(heap_ptr->sampler_memory, &result.sampler_handle);
 		result.sampler_handle.ptr += stride * result.sampler_allocation.offset;
-	}
-
-
-	if (num_inline_descriptors > 0)
-	{
-		result.num_inline_descriptors = num_inline_descriptors;
-		result.inline_descriptors = (Opal_DescriptorSetEntry *)malloc(sizeof(Opal_DescriptorSetEntry) * num_inline_descriptors);
 	}
 
 	result.layout = desc->layout;
@@ -3616,19 +3689,13 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 	DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
 	assert(descriptor_set_layout_ptr);
 
-	DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
-	assert(descriptor_heap_ptr);
-
 	uint32_t num_descriptors = 0;
-	num_descriptors += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-	num_descriptors += descriptor_set_layout_ptr->num_table_srv_descriptors;
-	num_descriptors += descriptor_set_layout_ptr->num_table_uav_descriptors;
+	num_descriptors += descriptor_set_layout_ptr->num_cbv_descriptors;
+	num_descriptors += descriptor_set_layout_ptr->num_srv_descriptors;
+	num_descriptors += descriptor_set_layout_ptr->num_uav_descriptors;
 
 	uint32_t table_sampler_offset = num_descriptors;
-	num_descriptors += descriptor_set_layout_ptr->num_table_sampler_descriptors;
-
-	uint32_t inline_offset = num_descriptors;
-	num_descriptors += descriptor_set_layout_ptr->num_inline_descriptors;
+	num_descriptors += descriptor_set_layout_ptr->num_sampler_descriptors;
 
 	typedef struct DescriptorIndices_t
 	{
@@ -3637,16 +3704,13 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 	} DescriptorIndices;
 
 	opal_bumpReset(&device_ptr->bump);
-	uint32_t resources_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
-	uint32_t samplers_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
-	uint32_t inline_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices *) * num_entries);
+	uint32_t resources_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices) * num_entries);
+	uint32_t samplers_ptr_offset = opal_bumpAlloc(&device_ptr->bump, sizeof(DescriptorIndices) * num_entries);
 
 	uint32_t num_resources = 0;
 	uint32_t num_samplers = 0;
-	uint32_t num_inlines = 0;
 	DescriptorIndices *layout_resource_indices = (DescriptorIndices *)(device_ptr->bump.data + resources_ptr_offset);
 	DescriptorIndices *layout_sampler_indices = (DescriptorIndices *)(device_ptr->bump.data + samplers_ptr_offset);
-	DescriptorIndices *layout_inline_indices = (DescriptorIndices *)(device_ptr->bump.data + inline_ptr_offset);
 
 	// TODO: replace naive O(N) layout <-> binding search loop by O(1) hashmap lookup
 	for (uint32_t i = 0; i < num_entries; ++i)
@@ -3671,19 +3735,36 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 			layout_resource_indices[num_resources].layout = index;
 			num_resources++;
 		}
-		else if (index < inline_offset)
+		else
 		{
 			layout_sampler_indices[num_samplers].entry = i;
 			layout_sampler_indices[num_samplers].layout = index;
 			num_samplers++;
 		}
-		else
-		{
-			layout_inline_indices[num_inlines].entry = i;
-			layout_inline_indices[num_inlines].layout = index;
-			num_inlines++;
-		}
 	}
+
+	uint32_t dynamic = (descriptor_set_layout_ptr->flags & OPAL_DESCRIPTOR_SET_LAYOUT_CREATION_FLAGS_DYNAMIC) != 0;
+
+	if (dynamic)
+	{
+		assert(num_samplers == 0);
+
+		for (uint32_t i = 0; i < num_resources; ++i)
+		{
+			uint32_t layout_index = layout_resource_indices[i].layout;
+			uint32_t entry_index = layout_resource_indices[i].entry;
+
+			Opal_DescriptorSetEntry *dst_entry = &descriptor_set_ptr->dynamic_entries[layout_index];
+			const Opal_DescriptorSetEntry *src_entry = &entries[entry_index];
+
+			memcpy(dst_entry, src_entry, sizeof(Opal_DescriptorSetEntry));
+		}
+
+		return OPAL_SUCCESS;
+	}
+
+	DirectX12_DescriptorHeap *descriptor_heap_ptr = (DirectX12_DescriptorHeap *)opal_poolGetElement(&device_ptr->descriptor_heaps, (Opal_PoolHandle)descriptor_set_ptr->heap);
+	assert(descriptor_heap_ptr);
 
 	if (num_resources > 0)
 	{
@@ -3837,18 +3918,6 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 
 			ID3D12Device_CreateSampler(device_ptr->device, &sampler_ptr->desc, dst_handle);
 		}
-	}
-
-	for (uint32_t i = 0; i < num_inlines; ++i)
-	{
-		uint32_t layout_index = layout_inline_indices[i].layout;
-		uint32_t entry_index = layout_inline_indices[i].entry;
-
-		const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
-		const Opal_DescriptorSetEntry *entry = &entries[entry_index];
-		assert(info->binding == entry->binding);
-
-		memcpy(&descriptor_set_ptr->inline_descriptors[i], entry, sizeof(Opal_DescriptorSetEntry));
 	}
 
 	return OPAL_SUCCESS;
@@ -4285,7 +4354,7 @@ static Opal_Result directx12_deviceCmdGraphicsSetPipeline(Opal_Device this, Opal
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result directx12_deviceCmdGraphicsSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4296,95 +4365,22 @@ static Opal_Result directx12_deviceCmdGraphicsSetDescriptorSet(Opal_Device this,
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_GRAPHICS);
 	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
-	assert(pipeline_layout_ptr);
+	directx12_cmdSetDescriptorSet(device_ptr, command_buffer_ptr, index, descriptor_set, FALSE);
+	return OPAL_SUCCESS;
+}
 
-	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
-	assert(descriptor_set_ptr);
+static Opal_Result directx12_deviceCmdGraphicsSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
 
-	DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
-	assert(descriptor_set_layout_ptr);
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_GRAPHICS);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
-
-	// CBV SRV UAV descriptor table
-	if (descriptor_set_ptr->resource_handle.ptr > 0)
-	{
-		int table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 0];
-		assert(table_index != UINT32_MAX);
-
-		ID3D12GraphicsCommandList6_SetGraphicsRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->resource_handle);
-	}
-
-	// sampler descriptor table
-	if (descriptor_set_ptr->sampler_handle.ptr > 0)
-	{
-		int table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 1];
-		assert(table_index != UINT32_MAX);
-
-		ID3D12GraphicsCommandList6_SetGraphicsRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->sampler_handle);
-	}
-
-	// inline descriptors
-	if (num_dynamic_offsets > 0)
-	{
-		assert(dynamic_offsets);
-		assert(pipeline_layout_ptr->num_inline_descriptors == num_dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_inline_descriptors == descriptor_set_ptr->num_inline_descriptors);
-
-		uint32_t offset = 0;
-		offset += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_srv_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_sampler_descriptors;
-
-		for (uint32_t i = 0; i < num_dynamic_offsets; ++i)
-		{
-			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[offset + i];
-			const Opal_DescriptorSetEntry *data = &descriptor_set_ptr->inline_descriptors[i];
-
-			int parameter_index = pipeline_layout_ptr->inline_offset + i;
-
-			switch (info->api_type)
-			{
-				case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
-				{
-					Opal_BufferView buffer_view = data->data.buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetGraphicsRootConstantBufferView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetGraphicsRootShaderResourceView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetGraphicsRootUnorderedAccessView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				default: assert(0); break;
-			}
-		}
-	}
-
+	directx12_cmdSetDynamicDescriptorSet(device_ptr, command_buffer_ptr, descriptor_set, num_dynamic_offsets, dynamic_offsets, FALSE);
 	return OPAL_SUCCESS;
 }
 
@@ -4614,7 +4610,7 @@ static Opal_Result directx12_deviceCmdComputeSetPipeline(Opal_Device this, Opal_
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result directx12_deviceCmdComputeSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4625,95 +4621,22 @@ static Opal_Result directx12_deviceCmdComputeSetDescriptorSet(Opal_Device this, 
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_COMPUTE);
 	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
-	assert(pipeline_layout_ptr);
+	directx12_cmdSetDescriptorSet(device_ptr, command_buffer_ptr, index, descriptor_set, TRUE);
+	return OPAL_SUCCESS;
+}
 
-	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
-	assert(descriptor_set_ptr);
+static Opal_Result directx12_deviceCmdComputeSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
 
-	DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
-	assert(descriptor_set_layout_ptr);
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_COMPUTE);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
-
-	// CBV SRV UAV descriptor table
-	if (descriptor_set_ptr->resource_handle.ptr > 0)
-	{
-		int table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 0];
-		assert(table_index != UINT32_MAX);
-
-		ID3D12GraphicsCommandList6_SetComputeRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->resource_handle);
-	}
-
-	// sampler descriptor table
-	if (descriptor_set_ptr->sampler_handle.ptr > 0)
-	{
-		int table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 1];
-		assert(table_index != UINT32_MAX);
-
-		ID3D12GraphicsCommandList6_SetComputeRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->sampler_handle);
-	}
-
-	// inline descriptors
-	if (num_dynamic_offsets > 0)
-	{
-		assert(dynamic_offsets);
-		assert(pipeline_layout_ptr->num_inline_descriptors == num_dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_inline_descriptors == descriptor_set_ptr->num_inline_descriptors);
-
-		uint32_t offset = 0;
-		offset += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_srv_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_sampler_descriptors;
-
-		for (uint32_t i = 0; i < num_dynamic_offsets; ++i)
-		{
-			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[offset + i];
-			const Opal_DescriptorSetEntry *data = &descriptor_set_ptr->inline_descriptors[i];
-
-			int parameter_index = pipeline_layout_ptr->inline_offset + i;
-
-			switch (info->api_type)
-			{
-				case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
-				{
-					Opal_BufferView buffer_view = data->data.buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetComputeRootConstantBufferView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetComputeRootShaderResourceView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetComputeRootUnorderedAccessView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				default: assert(0); break;
-			}
-		}
-	}
-
+	directx12_cmdSetDynamicDescriptorSet(device_ptr, command_buffer_ptr, descriptor_set, num_dynamic_offsets, dynamic_offsets, TRUE);
 	return OPAL_SUCCESS;
 }
 
@@ -4827,7 +4750,7 @@ static Opal_Result directx12_deviceCmdRaytraceSetPipeline(Opal_Device this, Opal
 	return OPAL_SUCCESS;
 }
 
-static Opal_Result directx12_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+static Opal_Result directx12_deviceCmdRaytraceSetDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, uint32_t index, Opal_DescriptorSet descriptor_set)
 {
 	assert(this);
 	assert(command_buffer);
@@ -4838,95 +4761,22 @@ static Opal_Result directx12_deviceCmdRaytraceSetDescriptorSet(Opal_Device this,
 	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_RAYTRACE);
 	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	DirectX12_PipelineLayout *pipeline_layout_ptr = (DirectX12_PipelineLayout *)opal_poolGetElement(&device_ptr->pipeline_layouts, (Opal_PoolHandle)command_buffer_ptr->pipeline_layout);
-	assert(pipeline_layout_ptr);
+	directx12_cmdSetDescriptorSet(device_ptr, command_buffer_ptr, index, descriptor_set, TRUE);
+	return OPAL_SUCCESS;
+}
 
-	DirectX12_DescriptorSet *descriptor_set_ptr = (DirectX12_DescriptorSet *)opal_poolGetElement(&device_ptr->descriptor_sets, (Opal_PoolHandle)descriptor_set);
-	assert(descriptor_set_ptr);
+static Opal_Result directx12_deviceCmdRaytraceSetDynamicDescriptorSet(Opal_Device this, Opal_CommandBuffer command_buffer, Opal_DescriptorSet descriptor_set, uint32_t num_dynamic_offsets, const uint32_t *dynamic_offsets)
+{
+	assert(this);
+	assert(command_buffer);
 
-	DirectX12_DescriptorSetLayout *descriptor_set_layout_ptr = (DirectX12_DescriptorSetLayout *)opal_poolGetElement(&device_ptr->descriptor_set_layouts, (Opal_PoolHandle)descriptor_set_ptr->layout);
-	assert(descriptor_set_layout_ptr);
+	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
+	DirectX12_CommandBuffer *command_buffer_ptr = (DirectX12_CommandBuffer *)opal_poolGetElement(&device_ptr->command_buffers, (Opal_PoolHandle)command_buffer);
+	assert(command_buffer_ptr);
+	assert(command_buffer_ptr->pass == DIRECTX12_PASS_TYPE_RAYTRACE);
+	assert(command_buffer_ptr->pipeline_layout != OPAL_NULL_HANDLE);
 
-	ID3D12GraphicsCommandList6 *d3d12_list = command_buffer_ptr->list;
-
-	// CBV SRV UAV descriptor table
-	if (descriptor_set_ptr->resource_handle.ptr > 0)
-	{
-		int table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 0];
-		assert(table_index != UINT32_MAX);
-
-		ID3D12GraphicsCommandList6_SetComputeRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->resource_handle);
-	}
-
-	// sampler descriptor table
-	if (descriptor_set_ptr->sampler_handle.ptr > 0)
-	{
-		int table_index = pipeline_layout_ptr->layout_table_offsets[index * 2 + 1];
-		assert(table_index != UINT32_MAX);
-
-		ID3D12GraphicsCommandList6_SetComputeRootDescriptorTable(d3d12_list, table_index, descriptor_set_ptr->sampler_handle);
-	}
-
-	// inline descriptors
-	if (num_dynamic_offsets > 0)
-	{
-		assert(dynamic_offsets);
-		assert(pipeline_layout_ptr->num_inline_descriptors == num_dynamic_offsets);
-		assert(descriptor_set_layout_ptr->num_inline_descriptors == descriptor_set_ptr->num_inline_descriptors);
-
-		uint32_t offset = 0;
-		offset += descriptor_set_layout_ptr->num_table_cbv_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_uav_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_srv_descriptors;
-		offset += descriptor_set_layout_ptr->num_table_sampler_descriptors;
-
-		for (uint32_t i = 0; i < num_dynamic_offsets; ++i)
-		{
-			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[offset + i];
-			const Opal_DescriptorSetEntry *data = &descriptor_set_ptr->inline_descriptors[i];
-
-			int parameter_index = pipeline_layout_ptr->inline_offset + i;
-
-			switch (info->api_type)
-			{
-				case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
-				{
-					Opal_BufferView buffer_view = data->data.buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetComputeRootConstantBufferView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetComputeRootShaderResourceView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
-				{
-					Opal_StorageBufferView buffer_view = data->data.storage_buffer_view;
-					DirectX12_Buffer *buffer_ptr = (DirectX12_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)buffer_view.buffer);
-					assert(buffer_ptr);
-
-					D3D12_GPU_VIRTUAL_ADDRESS address = buffer_ptr->address + buffer_view.offset + dynamic_offsets[i];
-					ID3D12GraphicsCommandList6_SetComputeRootUnorderedAccessView(d3d12_list, parameter_index, address);
-				}
-				break;
-
-				default: assert(0); break;
-			}
-		}
-	}
-
+	directx12_cmdSetDynamicDescriptorSet(device_ptr, command_buffer_ptr, descriptor_set, num_dynamic_offsets, dynamic_offsets, TRUE);
 	return OPAL_SUCCESS;
 }
 
@@ -5486,6 +5336,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdGraphicsSetPipelineLayout,
 	directx12_deviceCmdGraphicsSetPipeline,
 	directx12_deviceCmdGraphicsSetDescriptorSet,
+	directx12_deviceCmdGraphicsSetDynamicDescriptorSet,
 	directx12_deviceCmdGraphicsSetVertexBuffers,
 	directx12_deviceCmdGraphicsSetIndexBuffer,
 	directx12_deviceCmdGraphicsSetViewport,
@@ -5499,6 +5350,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdComputeSetPipelineLayout,
 	directx12_deviceCmdComputeSetPipeline,
 	directx12_deviceCmdComputeSetDescriptorSet,
+	directx12_deviceCmdComputeSetDynamicDescriptorSet,
 	directx12_deviceCmdComputeMemoryBarrier,
 	directx12_deviceCmdComputeDispatch,
 	directx12_deviceCmdEndComputePass,
@@ -5507,6 +5359,7 @@ static Opal_DeviceTable device_vtbl =
 	directx12_deviceCmdRaytraceSetPipelineLayout,
 	directx12_deviceCmdRaytraceSetPipeline,
 	directx12_deviceCmdRaytraceSetDescriptorSet,
+	directx12_deviceCmdRaytraceSetDynamicDescriptorSet,
 	directx12_deviceCmdRaytraceSetShaderBindingTable,
 	directx12_deviceCmdRaytraceMemoryBarrier,
 	directx12_deviceCmdRaytraceDispatch,
@@ -5547,6 +5400,13 @@ Opal_Result directx12_deviceInitialize(DirectX12_Device *device_ptr, DirectX12_I
 	device_ptr->info_queue1 = NULL;
 	device_ptr->info_queue1_cookie = 0;
 
+	// max dynamic descriptors
+	Opal_DeviceInfo info = {0};
+	directx12_helperFillDeviceInfo(adapter, device, &info);
+
+	device_ptr->max_dynamic_buffers = info.limits.max_dynamic_buffers;
+
+	// info queue
 	if (instance_ptr->debug != NULL)
 	{
 		ID3D12Device_QueryInterface(device, &IID_ID3D12InfoQueue, (void **)&device_ptr->info_queue);

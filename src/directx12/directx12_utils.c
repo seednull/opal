@@ -748,6 +748,11 @@ Opal_Result directx12_helperFillDeviceInfo(IDXGIAdapter1 *adapter, ID3D12Device 
 	info->limits.min_uniform_buffer_offset_alignment = 0xFFFF;
 	info->limits.min_storage_buffer_offset_alignment = 0xFFFF;
 	info->limits.max_descriptor_sets = 32;
+
+	info->limits.max_dynamic_uniform_buffers = 32;
+	info->limits.max_dynamic_storage_buffers = 32;
+	info->limits.max_dynamic_buffers = 32;
+
 	info->limits.max_uniform_buffer_binding_size = 0xFFFFFFFF;
 	info->limits.max_storage_buffer_binding_size = 0xFFFFFFFF;
 	info->limits.max_vertex_buffers = 32;

@@ -34,6 +34,7 @@ typedef struct WebGPU_Device_t
 
 	WGPUAdapter adapter;
 	WGPUDevice device;
+	WGPULimits limits;
 	Opal_Queue queue;
 
 	Opal_Bump bump;
@@ -122,6 +123,7 @@ typedef struct WebGPU_CommandBuffer_t
 	WGPUCommandBuffer command_buffer;
 	WebGPU_PassType pass;
 	Opal_CommandAllocator command_allocator;
+	Opal_PipelineLayout pipeline_layout;
 } WebGPU_CommandBuffer;
 
 typedef struct WebGPU_Shader_t
@@ -142,6 +144,7 @@ typedef struct WebGPU_DescriptorSetLayout_t
 	uint32_t num_sampler_descriptors;
 	uint32_t num_bindings;
 	WebGPU_DescriptorSetLayoutBinding *bindings;
+	Opal_DescriptorSetLayoutCreationFlags flags;
 } WebGPU_DescriptorSetLayout;
 
 typedef struct WebGPU_DescriptorHeap_t
@@ -162,6 +165,7 @@ typedef struct WebGPU_DescriptorSet_t
 typedef struct WebGPU_PipelineLayout_t
 {
 	WGPUPipelineLayout layout;
+	uint32_t dynamic_set_index;
 } WebGPU_PipelineLayout;
 
 typedef struct WebGPU_GraphicsPipeline_t
