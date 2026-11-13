@@ -125,8 +125,25 @@ static WGPUDevice webgpu_requestDeviceSync(WGPUAdapter adapter, WebGPU_Instance 
 	required->maxComputeWorkgroupSizeZ = WGPU_LIMIT_U32_UNDEFINED;
 	required->maxComputeWorkgroupsPerDimension = WGPU_LIMIT_U32_UNDEFINED;
 
+	WGPUFeatureName optional_features[] =
+	{
+		WGPUFeatureName_Depth32FloatStencil8,
+		WGPUFeatureName_TextureCompressionBC,
+		WGPUFeatureName_TextureCompressionETC2,
+		WGPUFeatureName_TextureCompressionASTC,
+	};
+
+	WGPUFeatureName supported_features[sizeof(optional_features) / sizeof(optional_features[0])];
+	uint32_t num_supported_features = 0;
+
+	for (uint32_t i = 0; i < sizeof(optional_features) / sizeof(optional_features[0]); ++i)
+		if (wgpuAdapterHasFeature(adapter, optional_features[i]))
+			supported_features[num_supported_features++] = optional_features[i];
+
 	WGPUDeviceDescriptor device_desc = {0};
 	device_desc.requiredLimits = &required_limits;
+	device_desc.requiredFeatureCount = num_supported_features;
+	device_desc.requiredFeatures = supported_features;
 
 	wgpuAdapterRequestDevice(adapter, &device_desc, webgpu_deviceCallback, &request);
 
