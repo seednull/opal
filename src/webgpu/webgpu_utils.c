@@ -682,7 +682,6 @@ WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_TextureFormat format
 		// depth_stencil formats
 		WGPUTextureSampleType_Depth,
 		WGPUTextureSampleType_Depth,
-		WGPUTextureSampleType_Undefined,
 		WGPUTextureSampleType_Depth,
 		WGPUTextureSampleType_Depth,
 	};
