@@ -2152,8 +2152,6 @@ static Opal_Result vulkan_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	assert(desc);
 	assert(desc->vertex_function.shader);
 	assert(desc->vertex_function.name);
-	assert(desc->fragment_function.shader);
-	assert(desc->fragment_function.name);
 	assert(desc->pipeline_layout);
 	assert(pipeline);
 
