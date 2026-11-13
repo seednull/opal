@@ -2034,6 +2034,8 @@ static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 		vulkan_entry->stageFlags = vulkan_helperToShaderStageFlags(entry->visibility);
 	}
 
+	qsort(vulkan_entries, num_entries, sizeof(VkDescriptorSetLayoutBinding), vulkan_compareBindings);
+
 	set_layout_info.pBindings = vulkan_entries;
 	set_layout_info.bindingCount = num_entries;
 
@@ -2069,8 +2071,6 @@ static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 	result.entries = vulkan_entries;
 	result.offsets = vulkan_offsets;
 	result.flags = desc->flags;
-
-	qsort(vulkan_entries, num_entries, sizeof(VkDescriptorSetLayoutBinding), vulkan_compareBindings);
 
 	*descriptor_set_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->descriptor_set_layouts, &result);
 	return OPAL_SUCCESS;
