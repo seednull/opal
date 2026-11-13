@@ -3139,7 +3139,7 @@ Opal_Result webgpu_deviceInitialize(WebGPU_Device *device_ptr, WebGPU_Instance *
 	opal_poolInitialize(&device_ptr->fences, sizeof(WebGPU_Fence), 32);
 	opal_poolInitialize(&device_ptr->buffers, sizeof(WebGPU_Buffer), 32);
 	opal_poolInitialize(&device_ptr->textures, sizeof(WebGPU_Texture), 32);
-	opal_poolInitialize(&device_ptr->texture_views, sizeof(WebGPU_Texture), 32);
+	opal_poolInitialize(&device_ptr->texture_views, sizeof(WebGPU_TextureView), 32);
 	opal_poolInitialize(&device_ptr->samplers, sizeof(WebGPU_Sampler), 32);
 	opal_poolInitialize(&device_ptr->command_allocators, sizeof(WebGPU_CommandAllocator), 32);
 	opal_poolInitialize(&device_ptr->command_buffers, sizeof(WebGPU_CommandBuffer), 32);
