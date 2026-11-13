@@ -4255,11 +4255,10 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 	if (framebuffer->depth_stencil_attachment)
 	{
 		const Opal_FramebufferAttachment *opal_attachment = framebuffer->depth_stencil_attachment;
+		assert(opal_attachment->resolve_texture_view == OPAL_NULL_HANDLE);
 
 		const DirectX12_TextureView *texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
-
-		const DirectX12_TextureView *resolve_texture_view_ptr = (DirectX12_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
 
 		// descriptor
 		ID3D12DescriptorHeap_GetCPUDescriptorHandleForHeapStart(device_ptr->framebuffer_descriptor_heap.dsv_heap, &depth_stencil_target.cpuDescriptor);
@@ -4277,33 +4276,6 @@ static Opal_Result directx12_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_C
 		// ending access
 		depth_stencil_target.DepthEndingAccess.Type = directx12_helperToEndingAccessType(opal_attachment->store_op);
 		depth_stencil_target.StencilEndingAccess.Type = directx12_helperToStencilEndingAccessType(opal_attachment->store_op, texture_view_ptr->dsv_desc.Format);
-
-		if (resolve_texture_view_ptr)
-		{
-			assert(num_resolve_parameters < 9);
-			D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS *resolve_parameters = &command_buffer_ptr->resolve_parameters[num_resolve_parameters++];
-
-			depth_stencil_target.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
-			depth_stencil_target.DepthEndingAccess.Resolve.pSrcResource = texture_view_ptr->texture;
-			depth_stencil_target.DepthEndingAccess.Resolve.pDstResource = resolve_texture_view_ptr->texture;
-			depth_stencil_target.DepthEndingAccess.Resolve.SubresourceCount = 1;
-			depth_stencil_target.DepthEndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
-			depth_stencil_target.DepthEndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
-			depth_stencil_target.DepthEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-			depth_stencil_target.DepthEndingAccess.Resolve.PreserveResolveSource = (opal_attachment->store_op == OPAL_STORE_OP_STORE);
-
-			if (depth_stencil_target.StencilEndingAccess.Type != D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS)
-			{
-				depth_stencil_target.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
-				depth_stencil_target.StencilEndingAccess.Resolve.pSrcResource = texture_view_ptr->texture;
-				depth_stencil_target.StencilEndingAccess.Resolve.pDstResource = resolve_texture_view_ptr->texture;
-				depth_stencil_target.StencilEndingAccess.Resolve.SubresourceCount = 1;
-				depth_stencil_target.StencilEndingAccess.Resolve.pSubresourceParameters = resolve_parameters;
-				depth_stencil_target.StencilEndingAccess.Resolve.Format = resolve_texture_view_ptr->rtv_desc.Format;
-				depth_stencil_target.StencilEndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
-				depth_stencil_target.StencilEndingAccess.Resolve.PreserveResolveSource = (opal_attachment->store_op == OPAL_STORE_OP_STORE);
-			}
-		}
 
 		depth_stencil_ptr = &depth_stencil_target;
 	}

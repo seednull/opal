@@ -2214,6 +2214,7 @@ static Opal_Result webgpu_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 	if (framebuffer->depth_stencil_attachment)
 	{
 		const Opal_FramebufferAttachment *opal_attachment = framebuffer->depth_stencil_attachment;
+		assert(opal_attachment->resolve_texture_view == OPAL_NULL_HANDLE);
 
 		WebGPU_TextureView *texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);

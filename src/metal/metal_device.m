@@ -2995,14 +2995,13 @@ static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comma
 	if (framebuffer->depth_stencil_attachment)
 	{
 		const Opal_FramebufferAttachment *opal_attachment = framebuffer->depth_stencil_attachment;
+		assert(opal_attachment->resolve_texture_view == OPAL_NULL_HANDLE);
 
 		Metal_TextureView *texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(texture_view_ptr);
 
-		Metal_TextureView *resolve_texture_view_ptr = (Metal_TextureView *)opal_poolGetElement(&device_ptr->texture_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
-
 		MTLLoadAction load_action = metal_helperToLoadAction(opal_attachment->load_op);
-		MTLStoreAction store_action = metal_helperToStoreAction(opal_attachment->store_op, resolve_texture_view_ptr != NULL);
+		MTLStoreAction store_action = metal_helperToStoreAction(opal_attachment->store_op, 0);
 
 		info.depthAttachment.texture = texture_view_ptr->texture_view;
 		info.depthAttachment.level = texture_view_ptr->base_mip;
@@ -3017,17 +3016,6 @@ static Opal_Result metal_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comma
 		info.stencilAttachment.clearStencil = opal_attachment->clear_value.depth_stencil.stencil;
 		info.stencilAttachment.loadAction = load_action;
 		info.stencilAttachment.storeAction = store_action;
-
-		if (resolve_texture_view_ptr)
-		{
-			info.depthAttachment.resolveTexture = resolve_texture_view_ptr->texture_view;
-			info.depthAttachment.resolveLevel = resolve_texture_view_ptr->base_mip;
-			info.depthAttachment.resolveSlice = resolve_texture_view_ptr->base_layer;
-
-			info.stencilAttachment.resolveTexture = resolve_texture_view_ptr->texture_view;
-			info.stencilAttachment.resolveLevel = resolve_texture_view_ptr->base_mip;
-			info.stencilAttachment.resolveSlice = resolve_texture_view_ptr->base_layer;
-		}
 	}
 
 	id<MTLRenderCommandEncoder> metal_pass_encoder = [command_buffer_ptr->command_buffer renderCommandEncoderWithDescriptor: info];

@@ -4429,6 +4429,7 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 	if (framebuffer->depth_stencil_attachment)
 	{
 		const Opal_FramebufferAttachment *opal_attachment = framebuffer->depth_stencil_attachment;
+		assert(opal_attachment->resolve_texture_view == OPAL_NULL_HANDLE);
 
 		vulkan_depth_stencil_attachment = (VkRenderingAttachmentInfo *)(device_ptr->bump.data + depth_stencil_offset);
 		memset(vulkan_depth_stencil_attachment, 0, sizeof(VkRenderingAttachmentInfo));
@@ -4437,8 +4438,6 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 		Vulkan_ImageView *image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)opal_attachment->texture_view);
 		assert(image_view_ptr);
 
-		Vulkan_ImageView *resolve_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)opal_attachment->resolve_texture_view);
-
 		width = max(width, image_view_ptr->width);
 		height = max(height, image_view_ptr->height);
 		depth_stencil_aspect_mask = image_view_ptr->aspect_mask;
@@ -4446,13 +4445,6 @@ static Opal_Result vulkan_deviceCmdBeginGraphicsPass(Opal_Device this, Opal_Comm
 		vulkan_depth_stencil_attachment->sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		vulkan_depth_stencil_attachment->imageView = image_view_ptr->image_view;
 		vulkan_depth_stencil_attachment->imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		if (resolve_image_view_ptr)
-		{
-			vulkan_depth_stencil_attachment->resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
-			vulkan_depth_stencil_attachment->resolveImageView = resolve_image_view_ptr->image_view;
-			vulkan_depth_stencil_attachment->resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		}
 
 		vulkan_depth_stencil_attachment->loadOp = vulkan_helperToLoadOp(opal_attachment->load_op);
 		vulkan_depth_stencil_attachment->storeOp = vulkan_helperToStoreOp(opal_attachment->store_op);
