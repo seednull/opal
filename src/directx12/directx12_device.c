@@ -1233,7 +1233,7 @@ static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_Sa
 
 	// create opal struct
 	DirectX12_Sampler result = {0};
-	result.desc.Filter = directx12_helperToSamplerFilter(desc->min_filter, desc->mag_filter, desc->mip_filter);
+	result.desc.Filter = directx12_helperToSamplerFilter(desc->min_filter, desc->mag_filter, desc->mip_filter, desc->max_anisotropy, desc->compare_enable);
 	result.desc.AddressU = directx12_helperToSamplerAddressMode(desc->address_mode_u);
 	result.desc.AddressV = directx12_helperToSamplerAddressMode(desc->address_mode_v);
 	result.desc.AddressW = directx12_helperToSamplerAddressMode(desc->address_mode_w);

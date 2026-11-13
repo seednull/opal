@@ -155,22 +155,16 @@ DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFl
 	return (samples != OPAL_SAMPLES_1) ? DIRECTX12_RESOURCE_TYPE_MSAA_NON_DS_RT_TEXTURE : DIRECTX12_RESOURCE_TYPE_NON_DS_RT_TEXTURE;
 }
 
-D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip)
+D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip, uint32_t max_anisotropy, uint32_t compare_enable)
 {
-	static D3D12_FILTER d3d12_filters[] =
-	{
-		D3D12_FILTER_MIN_MAG_MIP_POINT,
-		D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT,
-		D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
-		D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR,
-		D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR,
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-	};
+	D3D12_FILTER_REDUCTION_TYPE reduction = compare_enable ? D3D12_FILTER_REDUCTION_TYPE_COMPARISON : D3D12_FILTER_REDUCTION_TYPE_STANDARD;
 
-	return d3d12_filters[min + mag * 2 + mip * 4];
+	if (max_anisotropy > 1)
+		return D3D12_ENCODE_ANISOTROPIC_FILTER(reduction);
+
+	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, reduction);
 }
+
 D3D12_TEXTURE_ADDRESS_MODE directx12_helperToSamplerAddressMode(Opal_SamplerAddressMode mode)
 {
 	static D3D12_TEXTURE_ADDRESS_MODE d3d12_address_modes[] =

@@ -362,7 +362,7 @@ D3D12_RESOURCE_FLAGS directx12_helperToTextureFlags(Opal_TextureFormat format, O
 
 D3D12_RESOURCE_DIMENSION directx12_helperToTextureDimension(Opal_TextureType type);
 DirectX12_ResourceType directx12_helperToTextureResourceType(Opal_TextureUsageFlags flags, Opal_Samples samples);
-D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip);
+D3D12_FILTER directx12_helperToSamplerFilter(Opal_SamplerFilterMode min, Opal_SamplerFilterMode mag, Opal_SamplerFilterMode mip, uint32_t max_anisotropy, uint32_t compare_enable);
 D3D12_TEXTURE_ADDRESS_MODE directx12_helperToSamplerAddressMode(Opal_SamplerAddressMode mode);
 D3D12_STENCIL_OP directx12_helperToStencilOp(Opal_StencilOp op);
 D3D12_COMPARISON_FUNC directx12_helperToComparisonFunc(Opal_CompareOp op);
