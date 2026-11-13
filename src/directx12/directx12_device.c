@@ -3903,15 +3903,15 @@ static Opal_Result directx12_deviceUpdateDescriptorSet(Opal_Device this, Opal_De
 			uint32_t layout_index = layout_sampler_indices[i].layout;
 			uint32_t entry_index = layout_sampler_indices[i].entry;
 
-			assert(layout_index >= num_resources);
+			assert(layout_index >= table_sampler_offset);
 
 			const DirectX12_DescriptorInfo *info = &descriptor_set_layout_ptr->descriptors[layout_index];
 			const Opal_DescriptorSetEntry *entry = &entries[entry_index];
 			assert(info->binding == entry->binding);
-			assert(info->opal_type == OPAL_DESCRIPTOR_TYPE_SAMPLER);
+			assert(info->opal_type == OPAL_DESCRIPTOR_TYPE_SAMPLER || info->opal_type == OPAL_DESCRIPTOR_TYPE_COMPARE_SAMPLER);
 			
 			D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = {0};
-			dst_handle.ptr = dst_start.ptr + stride * (layout_index - num_resources);
+			dst_handle.ptr = dst_start.ptr + stride * (layout_index - table_sampler_offset);
 
 			Opal_Sampler sampler = entry->data.sampler;
 			DirectX12_Sampler *sampler_ptr = (DirectX12_Sampler *)opal_poolGetElement(&device_ptr->samplers, (Opal_PoolHandle)sampler);
