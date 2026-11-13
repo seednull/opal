@@ -923,7 +923,6 @@ static void vulkan_destroyDescriptorHeap(Vulkan_Device *device_ptr, Vulkan_Descr
 #if OPAL_HAS_VMA
 	if (device_ptr->use_vma)
 	{
-		vmaUnmapMemory(device_ptr->vma_allocator, descriptor_heap_ptr->vma_allocation);
 		vmaDestroyBuffer(device_ptr->vma_allocator, descriptor_heap_ptr->buffer, descriptor_heap_ptr->vma_allocation);
 		return;
 	}
