@@ -903,8 +903,12 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 	WebGPU_Shader *vertex_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->vertex_function.shader);
 	assert(vertex_shader_ptr);
 
-	WebGPU_Shader *fragment_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->fragment_function.shader);
-	assert(fragment_shader_ptr);
+	WebGPU_Shader *fragment_shader_ptr = NULL;
+	if (desc->fragment_function.shader != OPAL_NULL_HANDLE)
+	{
+		fragment_shader_ptr = (WebGPU_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)desc->fragment_function.shader);
+		assert(fragment_shader_ptr);
+	}
 
 	uint32_t num_vertex_streams = desc->num_vertex_streams;
 	uint32_t num_total_vertex_attributes = 0;
@@ -989,18 +993,23 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	}
 
-	WGPUFragmentState fragment_state = {0};
-	fragment_state.module = fragment_shader_ptr->shader;
-	fragment_state.entryPoint = desc->fragment_function.name;
-	fragment_state.targetCount = desc->num_color_attachments;
-	fragment_state.targets = color_targets;
-
 	WGPURenderPipelineDescriptor pipeline_info = {0};
 	pipeline_info.layout = layout_ptr->layout;
 	pipeline_info.vertex.module = vertex_shader_ptr->shader;
 	pipeline_info.vertex.entryPoint = desc->vertex_function.name;
 	pipeline_info.vertex.bufferCount = desc->num_vertex_streams;
 	pipeline_info.vertex.buffers = vertex_buffers;
+
+	WGPUFragmentState fragment_state = {0};
+	if (fragment_shader_ptr)
+	{
+		fragment_state.module = fragment_shader_ptr->shader;
+		fragment_state.entryPoint = desc->fragment_function.name;
+		fragment_state.targetCount = desc->num_color_attachments;
+		fragment_state.targets = color_targets;
+
+		pipeline_info.fragment = &fragment_state;
+	}
 
 	pipeline_info.primitive.topology = webgpu_helperToPrimitiveTopology(desc->primitive_type);
 	pipeline_info.primitive.frontFace = webgpu_helperToFrontFace(desc->front_face);
@@ -1014,8 +1023,6 @@ static Opal_Result webgpu_deviceCreateGraphicsPipeline(Opal_Device this, const O
 
 	if (desc->depth_stencil_attachment_format)
 		pipeline_info.depthStencil = &depthstencil_state;
-
-	pipeline_info.fragment = &fragment_state;
 
 	WGPURenderPipeline webgpu_pipeline = wgpuDeviceCreateRenderPipeline(webgpu_device, &pipeline_info);
 	if (webgpu_pipeline == NULL)
