@@ -1269,41 +1269,44 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 	assert(device);
 
 	// get physical device features
-	VkPhysicalDeviceFeatures2 features = {0};
-	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-
 	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features = {0};
 	dynamic_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
 
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {0};
 	acceleration_structure_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+	acceleration_structure_features.pNext = &dynamic_rendering_features;
 
 	VkPhysicalDeviceBufferDeviceAddressFeaturesKHR buffer_device_address_features = {0};
 	buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+	buffer_device_address_features.pNext = &acceleration_structure_features;
 
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {0};
 	raytracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+	raytracing_features.pNext = &buffer_device_address_features;
 
 	VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR raytracing_maintenance_features = {0};
 	raytracing_maintenance_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
+	raytracing_maintenance_features.pNext = &raytracing_features;
 
 	VkPhysicalDeviceMeshShaderFeaturesEXT mesh_features = {0};
 	mesh_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+	mesh_features.pNext = &raytracing_maintenance_features;
 
 	VkPhysicalDeviceTimelineSemaphoreFeaturesKHR timeline_semaphore_features = {0};
 	timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
+	timeline_semaphore_features.pNext = &mesh_features;
 
 	VkPhysicalDeviceDescriptorBufferFeaturesEXT descriptor_buffer_features = {0};
 	descriptor_buffer_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_FEATURES_EXT;
+	descriptor_buffer_features.pNext = &timeline_semaphore_features;
 
-	features.pNext = &dynamic_rendering_features;
-	dynamic_rendering_features.pNext = &acceleration_structure_features;
-	acceleration_structure_features.pNext = &buffer_device_address_features;
-	buffer_device_address_features.pNext = &raytracing_features;
-	raytracing_features.pNext = &raytracing_maintenance_features;
-	raytracing_maintenance_features.pNext = &mesh_features;
-	mesh_features.pNext = &timeline_semaphore_features;
-	timeline_semaphore_features.pNext = &descriptor_buffer_features;
+	VkPhysicalDeviceShaderDrawParametersFeatures draw_parameters_features = {0};
+	draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+	draw_parameters_features.pNext = &descriptor_buffer_features;
+
+	VkPhysicalDeviceFeatures2 features = {0};
+	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	features.pNext = &draw_parameters_features;
 
 	vkGetPhysicalDeviceFeatures2(physical_device, &features);
 
@@ -1379,6 +1382,14 @@ Opal_Result vulkan_helperCreateDevice(VkPhysicalDevice physical_device, Vulkan_D
 
 	VkParavozikKHR *paravozik = (VkParavozikKHR *)&features;
 	paravozik->next = NULL;
+
+	if (draw_parameters_features.shaderDrawParameters == VK_TRUE)
+	{
+		paravozik->next = &draw_parameters_features;
+
+		paravozik = (VkParavozikKHR *)&draw_parameters_features;
+		paravozik->next = NULL;
+	}
 
 	if (has_dynamic_rendering == VK_TRUE)
 	{
