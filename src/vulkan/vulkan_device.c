@@ -1645,7 +1645,7 @@ static Opal_Result vulkan_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	sampler_info.addressModeU = vulkan_helperToSamplerAddressMode(desc->address_mode_u);
 	sampler_info.addressModeV = vulkan_helperToSamplerAddressMode(desc->address_mode_v);
 	sampler_info.addressModeW = vulkan_helperToSamplerAddressMode(desc->address_mode_w);
-	sampler_info.anisotropyEnable = desc->max_anisotropy > 0;
+	sampler_info.anisotropyEnable = desc->max_anisotropy > 1;
 	sampler_info.maxAnisotropy = (float)desc->max_anisotropy;
 	sampler_info.compareEnable = desc->compare_enable;
 	sampler_info.compareOp = vulkan_helperToCompareOp(desc->compare_op);
