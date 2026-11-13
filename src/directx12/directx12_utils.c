@@ -361,6 +361,22 @@ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE directx12_helperToEndingAccessType(Opal_Sto
 	return d3d12_ops[op];
 }
 
+D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE directx12_helperToStencilBeginningAccessType(Opal_LoadOp op, DXGI_FORMAT format)
+{
+	if (format != DXGI_FORMAT_D24_UNORM_S8_UINT && format != DXGI_FORMAT_D32_FLOAT_S8X24_UINT)
+		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+
+	return directx12_helperToBeginningAccessType(op);
+}
+
+D3D12_RENDER_PASS_ENDING_ACCESS_TYPE directx12_helperToStencilEndingAccessType(Opal_StoreOp op, DXGI_FORMAT format)
+{
+	if (format != DXGI_FORMAT_D24_UNORM_S8_UINT && format != DXGI_FORMAT_D32_FLOAT_S8X24_UINT)
+		return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+
+	return directx12_helperToEndingAccessType(op);
+}
+
 D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE directx12_helperToAccelerationStructureType(Opal_AccelerationStructureType type)
 {
 	static D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE d3d12_types[] =
