@@ -1242,6 +1242,12 @@ Opal_Result vulkan_helperFindBestMemoryType(const VkPhysicalDeviceMemoryProperti
 		if ((~vulkan_memory_type.propertyFlags & required_flags) != 0)
 			continue;
 
+		// NOTE: AMD lists device coherent twins of its usual types; allocating them needs the
+		// deviceCoherentMemory feature. Equal scores pick the last type, so without this check
+		// the twin would win
+		if (vulkan_memory_type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD)
+			continue;
+
 		uint32_t preferred_cost_bits = ~vulkan_memory_type.propertyFlags & preferred_flags;
 		uint32_t not_preferred_cost_bits = vulkan_memory_type.propertyFlags & not_preferred_flags;
 
