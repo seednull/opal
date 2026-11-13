@@ -1855,7 +1855,8 @@ static Opal_Result directx12_deviceCreateGraphicsPipeline(Opal_Device this, cons
 		&pipeline_info.PS,
 	};
 
-	for (uint32_t i = 0; i < 5; ++i)
+	uint32_t num_shaders = sizeof(shaders) / sizeof(shaders[0]);
+	for (uint32_t i = 0; i < num_shaders; ++i)
 	{
 		DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
 		if (shader_ptr == NULL)
@@ -1994,7 +1995,8 @@ static Opal_Result directx12_deviceCreateMeshletPipeline(Opal_Device this, const
 
 	D3D12_SHADER_BYTECODE shader_bytecodes[3] = {0};
 
-	for (uint32_t i = 0; i < 5; ++i)
+	uint32_t num_shaders = sizeof(shaders) / sizeof(shaders[0]);
+	for (uint32_t i = 0; i < num_shaders; ++i)
 	{
 		DirectX12_Shader *shader_ptr = (DirectX12_Shader *)opal_poolGetElement(&device_ptr->shaders, (Opal_PoolHandle)shaders[i]);
 		if (shader_ptr == NULL)
