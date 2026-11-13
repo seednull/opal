@@ -2032,6 +2032,9 @@ static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 		vulkan_entry->descriptorType = vulkan_helperToDescriptorType(entry->type);
 		vulkan_entry->pImmutableSamplers = NULL;
 		vulkan_entry->stageFlags = vulkan_helperToShaderStageFlags(entry->visibility);
+
+		assert(vulkan_entry->descriptorType != VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || entry->texture_format != OPAL_TEXTURE_FORMAT_UNDEFINED);
+		assert(vulkan_entry->descriptorType != VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || entry->texture_format != OPAL_TEXTURE_FORMAT_UNDEFINED);
 	}
 
 	qsort(vulkan_entries, num_entries, sizeof(VkDescriptorSetLayoutBinding), vulkan_compareBindings);

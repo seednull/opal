@@ -1477,6 +1477,12 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, c
 			break;
 
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY:
+			case OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
+			{
+				result.num_srv_descriptors++;
+			}
+			break;
+
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_1D:
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_2D:
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_2D_ARRAY:
@@ -1484,18 +1490,24 @@ static Opal_Result directx12_deviceCreateDescriptorSetLayout(Opal_Device this, c
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY:
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_3D:
 			case OPAL_DESCRIPTOR_TYPE_MULTISAMPLED_TEXTURE_2D:
-			case OPAL_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE:
 			{
+				assert(entries[i].texture_format != OPAL_TEXTURE_FORMAT_UNDEFINED);
 				result.num_srv_descriptors++;
 			}
 			break;
 
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+			{
+				result.num_uav_descriptors++;
+			}
+			break;
+
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_1D:
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D:
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D_ARRAY:
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_3D:
 			{
+				assert(entries[i].texture_format != OPAL_TEXTURE_FORMAT_UNDEFINED);
 				result.num_uav_descriptors++;
 			}
 			break;

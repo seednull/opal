@@ -743,6 +743,8 @@ static Opal_Result webgpu_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_CUBE_ARRAY:
 			case OPAL_DESCRIPTOR_TYPE_SAMPLED_TEXTURE_3D:
 			{
+				assert(format != OPAL_TEXTURE_FORMAT_UNDEFINED);
+
 				webgpu_bindings[i].texture.sampleType = webgpu_helperToBindingSampleType(format);
 				webgpu_bindings[i].texture.viewDimension = webgpu_helperToBindingViewDimension(type);
 				num_resource_descriptors++;
@@ -751,6 +753,8 @@ static Opal_Result webgpu_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 
 			case OPAL_DESCRIPTOR_TYPE_MULTISAMPLED_TEXTURE_2D:
 			{
+				assert(format != OPAL_TEXTURE_FORMAT_UNDEFINED);
+
 				WGPUTextureSampleType sample_type = webgpu_helperToBindingSampleType(format);
 				if (sample_type == WGPUTextureSampleType_Float)
 					sample_type = WGPUTextureSampleType_UnfilterableFloat;
@@ -767,6 +771,8 @@ static Opal_Result webgpu_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_2D_ARRAY:
 			case OPAL_DESCRIPTOR_TYPE_STORAGE_TEXTURE_3D:
 			{
+				assert(format != OPAL_TEXTURE_FORMAT_UNDEFINED);
+
 				webgpu_bindings[i].storageTexture.access = WGPUStorageTextureAccess_ReadWrite;
 				webgpu_bindings[i].storageTexture.format = webgpu_helperToTextureFormat(format);
 				webgpu_bindings[i].storageTexture.viewDimension = webgpu_helperToBindingViewDimension(type);

@@ -1286,6 +1286,8 @@ static Opal_Result metal_deviceCreateDescriptorSetLayout(Opal_Device this, const
 		metal_entry->binding = entry->binding;
 		metal_entry->opal_type = entry->type;
 		metal_entry->api_type = metal_helperToArgumentDataType(entry->type);
+
+		assert(metal_entry->api_type != MTLDataTypeTexture || entry->texture_format != OPAL_TEXTURE_FORMAT_UNDEFINED);
 	}
 
 	qsort(metal_entries, num_entries, sizeof(Metal_DescriptorInfo), metal_compareDescriptorBindings);
