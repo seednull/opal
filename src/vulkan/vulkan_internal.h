@@ -121,6 +121,8 @@ typedef struct Vulkan_Device_t
 	VkDevice device;
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytrace_properties;
 	VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptor_buffer_properties;
+	uint32_t max_dynamic_uniform_buffers;
+	uint32_t max_dynamic_storage_buffers;
 	uint32_t max_dynamic_buffers;
 	size_t max_descriptor_size;
 	VkPipelineStageFlags supported_pipeline_stages;

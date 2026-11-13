@@ -2001,12 +2001,26 @@ static Opal_Result vulkan_deviceCreateDescriptorSetLayout(Opal_Device this, cons
 		if (num_entries > device_ptr->max_dynamic_buffers)
 			return OPAL_NOT_SUPPORTED;
 
+		uint32_t num_uniform_buffers = 0;
+		uint32_t num_storage_buffers = 0;
+
 		for (uint32_t i = 0; i < num_entries; ++i)
 		{
 			Opal_DescriptorType type = entries[i].type;
-			if (type != OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER && type != OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER && type != OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY)
+
+			if (type == OPAL_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+				num_uniform_buffers++;
+			else if (type == OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER || type == OPAL_DESCRIPTOR_TYPE_STORAGE_BUFFER_READONLY)
+				num_storage_buffers++;
+			else
 				return OPAL_NOT_SUPPORTED;
 		}
+
+		if (num_uniform_buffers > device_ptr->max_dynamic_uniform_buffers)
+			return OPAL_NOT_SUPPORTED;
+
+		if (num_storage_buffers > device_ptr->max_dynamic_storage_buffers)
+			return OPAL_NOT_SUPPORTED;
 	}
 
 	VkDescriptorSetLayout vulkan_set_layout = VK_NULL_HANDLE;
@@ -5622,6 +5636,8 @@ Opal_Result vulkan_deviceInitialize(Vulkan_Device *device_ptr, Vulkan_Instance *
 		device_ptr->supported_pipeline_stages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
 
 	// max dynamic descriptors
+	device_ptr->max_dynamic_uniform_buffers = info.limits.max_dynamic_uniform_buffers;
+	device_ptr->max_dynamic_storage_buffers = info.limits.max_dynamic_storage_buffers;
 	device_ptr->max_dynamic_buffers = info.limits.max_dynamic_buffers;
 
 	// allocator

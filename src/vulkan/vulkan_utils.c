@@ -1666,8 +1666,11 @@ Opal_Result vulkan_helperFillDeviceInfo(VkPhysicalDevice device, Opal_DeviceInfo
 
 	if (has_push_descriptor == VK_TRUE)
 	{
-		info->limits.max_dynamic_uniform_buffers = push_descriptor_properties.maxPushDescriptors;
-		info->limits.max_dynamic_storage_buffers = push_descriptor_properties.maxPushDescriptors;
+		uint32_t max_uniform_buffers = min(properties.properties.limits.maxPerStageDescriptorUniformBuffers, properties.properties.limits.maxDescriptorSetUniformBuffers);
+		uint32_t max_storage_buffers = min(properties.properties.limits.maxPerStageDescriptorStorageBuffers, properties.properties.limits.maxDescriptorSetStorageBuffers);
+
+		info->limits.max_dynamic_uniform_buffers = min(push_descriptor_properties.maxPushDescriptors, max_uniform_buffers);
+		info->limits.max_dynamic_storage_buffers = min(push_descriptor_properties.maxPushDescriptors, max_storage_buffers);
 		info->limits.max_dynamic_buffers = push_descriptor_properties.maxPushDescriptors;
 	}
 
