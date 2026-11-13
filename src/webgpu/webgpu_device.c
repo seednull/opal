@@ -1,5 +1,4 @@
 #include "webgpu_internal.h"
-#include "common/intrinsics.h"
 
 #include <emscripten.h>
 
@@ -519,6 +518,8 @@ static Opal_Result webgpu_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	assert(this);
 	assert(desc);
 	assert(sampler);
+	assert(desc->max_anisotropy >= 1 && desc->max_anisotropy <= 16);
+	assert(desc->max_anisotropy == 1 || (desc->min_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR && desc->mag_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR && desc->mip_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR));
 
 	WebGPU_Device *device_ptr = (WebGPU_Device *)this;
 	WGPUDevice webgpu_device = device_ptr->device;
@@ -534,7 +535,7 @@ static Opal_Result webgpu_deviceCreateSampler(Opal_Device this, const Opal_Sampl
 	sampler_info.lodMaxClamp = desc->max_lod;
 	if (desc->compare_enable)
 		sampler_info.compare = webgpu_helperToCompareFunction(desc->compare_op);
-	sampler_info.maxAnisotropy = (uint16_t)max(1, desc->max_anisotropy);
+	sampler_info.maxAnisotropy = (uint16_t)desc->max_anisotropy;
 
 	WGPUSampler webgpu_sampler = wgpuDeviceCreateSampler(webgpu_device, &sampler_info);
 	if (webgpu_sampler == NULL)

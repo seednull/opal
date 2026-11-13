@@ -1228,6 +1228,8 @@ static Opal_Result directx12_deviceCreateSampler(Opal_Device this, const Opal_Sa
 	assert(this);
 	assert(desc);
 	assert(sampler);
+	assert(desc->max_anisotropy >= 1 && desc->max_anisotropy <= 16);
+	assert(desc->max_anisotropy == 1 || (desc->min_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR && desc->mag_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR && desc->mip_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR));
 
 	DirectX12_Device *device_ptr = (DirectX12_Device *)this;
 

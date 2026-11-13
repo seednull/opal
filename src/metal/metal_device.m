@@ -1007,6 +1007,8 @@ static Opal_Result metal_deviceCreateSampler(Opal_Device this, const Opal_Sample
 	assert(this);
 	assert(desc);
 	assert(sampler);
+	assert(desc->max_anisotropy >= 1 && desc->max_anisotropy <= 16);
+	assert(desc->max_anisotropy == 1 || (desc->min_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR && desc->mag_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR && desc->mip_filter == OPAL_SAMPLER_FILTER_MODE_LINEAR));
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
 	id<MTLDevice> metal_device = device_ptr->device;
