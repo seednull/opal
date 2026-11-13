@@ -1187,50 +1187,19 @@ static Opal_Result metal_deviceCreateDescriptorHeap(Opal_Device this, const Opal
 	assert(descriptor_heap);
 
 	Metal_Device *device_ptr = (Metal_Device *)this;
-	id<MTLDevice> metal_device = device_ptr->device;
 
 	id<MTLBuffer> metal_buffer = nil;
 	Metal_Allocation allocation = {0};
 	MTLSizeAndAlign allocation_info = {0};
 
+	// TODO: check if there's a better estimation, i.e. maybe it's possible to calculate descriptor set overhead (MoltenVK does that)
+	uint32_t num_descriptors = desc->num_resource_descriptors + desc->num_sampler_descriptors;
+
+	allocation_info.align = 256;
+	allocation_info.size = num_descriptors * allocation_info.align;
+
 	@autoreleasepool
 	{
-		// estimate argument buffer size
-		MTLDataType types[] =
-		{
-			MTLDataTypePointer,
-			MTLDataTypeSampler,
-		};
-
-		uint32_t counts[] =
-		{
-			desc->num_resource_descriptors,
-			desc->num_sampler_descriptors,
-		};
-
-		// TODO: check if there's a better estimation, i.e. maybe it's possible to calculate descriptor set overhead (MoltenVK does that)
-		allocation_info.align = 256;
-
-		for (uint32_t i = 0; i < 2; ++i)
-		{
-			MTLArgumentDescriptor *arg = [MTLArgumentDescriptor argumentDescriptor];
-			arg.dataType = types[i];
-			arg.access = MTLBindingAccessReadWrite;
-			arg.index = 0;
-			arg.arrayLength = counts[i];
-			arg.textureType = MTLTextureTypeCubeArray;
-
-			NSArray *args = @[arg];
-			id<MTLArgumentEncoder> metal_encoder = [metal_device newArgumentEncoderWithArguments: args];
-
-			if (metal_encoder == nil)
-				return OPAL_METAL_ERROR;
-
-			allocation_info.size += metal_encoder.encodedLength;
-		}
-
-		allocation_info.size = alignUpul(allocation_info.size, allocation_info.align);
-
 		// fill allocation info
 		Metal_AllocationDesc allocation_desc = {0};
 		allocation_desc.size = allocation_info.size;
