@@ -10,9 +10,9 @@
 static uint32_t vulkan_memory_required_flags[] =
 {
 	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 };
 
 static uint32_t vulkan_memory_preferred_flags[] =
@@ -1885,7 +1885,7 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 	{
 		VmaAllocationCreateInfo allocation_info = {0};
 		allocation_info.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-		allocation_info.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		allocation_info.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		VkResult result = vmaCreateBuffer(device_ptr->vma_allocator, &buffer_info, &allocation_info, &vulkan_buffer, &vma_allocation, NULL);
 		if (result != VK_SUCCESS)
@@ -1923,7 +1923,7 @@ static Opal_Result vulkan_deviceCreateDescriptorHeap(Opal_Device this, const Opa
 		allocation_desc.size = memory_requirements.memoryRequirements.size;
 		allocation_desc.alignment = memory_requirements.memoryRequirements.alignment;
 		allocation_desc.memory_type_bits = memory_requirements.memoryRequirements.memoryTypeBits;
-		allocation_desc.required_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		allocation_desc.required_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		allocation_desc.preferred_flags = 0;
 		allocation_desc.not_preferred_flags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 		allocation_desc.resource_type = VULKAN_RESOURCE_TYPE_LINEAR;
@@ -3537,7 +3537,7 @@ static Opal_Result vulkan_deviceBuildShaderBindingTable(Opal_Device this, Opal_S
 		if (device_ptr->use_vma > 0)
 		{
 			VmaAllocationCreateInfo allocation_info = {0};
-			allocation_info.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+			allocation_info.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 			VkResult result = vmaCreateBuffer(device_ptr->vma_allocator, &buffer_info, &allocation_info, &shader_binding_table_ptr->buffer, &shader_binding_table_ptr->vma_allocation, NULL);
 			if (result != VK_SUCCESS)
