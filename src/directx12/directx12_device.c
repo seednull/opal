@@ -1623,16 +1623,10 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, const 
 		uint32_t num_set_sampler_descriptors = layout_ptr->num_sampler_descriptors;
 
 		if (num_set_resource_descriptors > 0)
-		{
-			layout_table_offsets[i * 2 + 0] = i;
-			num_resource_tables++;
-		}
+			layout_table_offsets[i * 2 + 0] = num_resource_tables++;
 
 		if (num_set_sampler_descriptors > 0)
-		{
-			layout_table_offsets[i * 2 + 1] = i;
-			num_sampler_tables++;
-		}
+			layout_table_offsets[i * 2 + 1] = num_sampler_tables++;
 
 		num_resource_descriptors += num_set_resource_descriptors;
 		num_sampler_descriptors += num_set_sampler_descriptors;
@@ -1816,7 +1810,7 @@ static Opal_Result directx12_deviceCreatePipelineLayout(Opal_Device this, const 
 	result.dynamic_offset = num_resource_tables + num_sampler_tables;
 	result.num_dynamic_descriptors = num_dynamic_descriptors;
 
-	*pipeline_layout = (Opal_DescriptorSetLayout)opal_poolAddElement(&device_ptr->pipeline_layouts, &result);
+	*pipeline_layout = (Opal_PipelineLayout)opal_poolAddElement(&device_ptr->pipeline_layouts, &result);
 	return OPAL_SUCCESS;
 }
 
