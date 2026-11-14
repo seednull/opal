@@ -181,6 +181,7 @@ typedef struct WebGPU_ComputePipeline_t
 typedef struct WebGPU_Swapchain_t
 {
 	WGPUSwapChain swapchain;
+	WGPUTexture current_texture;
 	Opal_TextureView current_texture_view;
 	uint64_t semaphore_value;
 	uint64_t wait_value;

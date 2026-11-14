@@ -8,14 +8,19 @@
 
 /*
  */
-static Opal_Result webgpu_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain);
-
 typedef struct WebGPU_QueueSubmitRequest_t
 {
 	Opal_Device device;
 	Opal_Queue queue;
 } WebGPU_QueueSubmitRequest;
 
+/*
+ */
+static Opal_Result webgpu_deviceDestroySwapchain(Opal_Device this, Opal_Swapchain swapchain);
+static void webgpu_destroyTextureView(WebGPU_TextureView *texture_view_ptr);
+
+/*
+ */
 static void webgpu_deviceOnSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus status, void *user_data)
 {
 	assert(user_data);
@@ -71,6 +76,30 @@ static void webgpu_deviceOnSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus sta
 static void webgpu_deviceOnBufferMapCallback(WGPUBufferMapAsyncStatus status, void *userdata)
 {
 
+}
+
+static void webgpu_releaseSwapchainTexture(WebGPU_Device *device_ptr, WebGPU_Swapchain *swapchain_ptr)
+{
+	assert(device_ptr);
+	assert(swapchain_ptr);
+
+	if (swapchain_ptr->current_texture_view != OPAL_NULL_HANDLE)
+	{
+		Opal_PoolHandle handle = (Opal_PoolHandle)swapchain_ptr->current_texture_view;
+
+		WebGPU_TextureView *texture_view_ptr = (WebGPU_TextureView *)opal_poolGetElement(&device_ptr->texture_views, handle);
+		assert(texture_view_ptr);
+
+		webgpu_destroyTextureView(texture_view_ptr);
+		opal_poolRemoveElement(&device_ptr->texture_views, handle);
+		swapchain_ptr->current_texture_view = OPAL_NULL_HANDLE;
+	}
+
+	if (swapchain_ptr->current_texture != NULL)
+	{
+		wgpuTextureRelease(swapchain_ptr->current_texture);
+		swapchain_ptr->current_texture = NULL;
+	}
 }
 
 /*
@@ -178,10 +207,11 @@ static void webgpu_destroyComputePipeline(WebGPU_ComputePipeline *pipeline_ptr)
 	wgpuComputePipelineRelease(pipeline_ptr->pipeline);
 }
 
-static void webgpu_destroySwapchain(WebGPU_Swapchain *swapchain_ptr)
+static void webgpu_destroySwapchain(WebGPU_Device *device_ptr, WebGPU_Swapchain *swapchain_ptr)
 {
 	assert(swapchain_ptr);
 
+	webgpu_releaseSwapchainTexture(device_ptr, swapchain_ptr);
 	wgpuSwapChainRelease(swapchain_ptr->swapchain);
 }
 
@@ -1438,7 +1468,7 @@ static Opal_Result webgpu_deviceDestroySwapchain(Opal_Device this, Opal_Swapchai
 
 	opal_poolRemoveElement(&device_ptr->swapchains, handle);
 
-	webgpu_destroySwapchain(swapchain_ptr);
+	webgpu_destroySwapchain(device_ptr, swapchain_ptr);
 	return OPAL_SUCCESS;
 }
 
@@ -1453,7 +1483,7 @@ static Opal_Result webgpu_deviceDestroy(Opal_Device this)
 		while (head != OPAL_POOL_HANDLE_NULL)
 		{
 			WebGPU_Swapchain *swapchain_ptr = (WebGPU_Swapchain *)opal_poolGetElementByIndex(&ptr->swapchains, head);
-			webgpu_destroySwapchain(swapchain_ptr);
+			webgpu_destroySwapchain(ptr, swapchain_ptr);
 
 			head = opal_poolGetNextIndex(&ptr->swapchains, head);
 		}
@@ -2134,33 +2164,27 @@ static Opal_Result webgpu_deviceAcquire(Opal_Device this, Opal_Swapchain swapcha
 	WebGPU_Swapchain *swapchain_ptr = (WebGPU_Swapchain *)opal_poolGetElement(&device_ptr->swapchains, (Opal_PoolHandle)swapchain);
 	assert(swapchain_ptr);
 
-	if (swapchain_ptr->current_texture_view != OPAL_NULL_HANDLE)
-	{
-		uint64_t max_timeout_frames = 1000;
+	webgpu_releaseSwapchainTexture(device_ptr, swapchain_ptr);
 
-		while (max_timeout_frames-- > 0)
-		{
-			if (swapchain_ptr->semaphore_value >= swapchain_ptr->wait_value)
-				break;
-
-			emscripten_sleep(0);
-		}
-
-		if (swapchain_ptr->semaphore_value < swapchain_ptr->wait_value)
-			return OPAL_WAIT_TIMEOUT;
-
-		webgpu_deviceDestroyTextureView(this, swapchain_ptr->current_texture_view);
-		swapchain_ptr->current_texture_view = OPAL_NULL_HANDLE;
-	}
-
-	WGPUTextureView webgpu_texture_view = wgpuSwapChainGetCurrentTextureView(swapchain_ptr->swapchain);
-	if (webgpu_texture_view == NULL)
+	WGPUTexture webgpu_texture = wgpuSwapChainGetCurrentTexture(swapchain_ptr->swapchain);
+	if (webgpu_texture == NULL)
 		return OPAL_WEBGPU_ERROR;
+
+	WGPUTextureView webgpu_texture_view = wgpuTextureCreateView(webgpu_texture, NULL);
+	if (webgpu_texture_view == NULL)
+	{
+		wgpuTextureRelease(webgpu_texture);
+		return OPAL_WEBGPU_ERROR;
+	}
 
 	WebGPU_TextureView result = {0};
 	result.texture_view = webgpu_texture_view;
+	result.texture = webgpu_texture;
+	result.aspect = WGPUTextureAspect_All;
+	result.base_mip = 0;
 
 	Opal_TextureView handle = (Opal_TextureView)opal_poolAddElement(&device_ptr->texture_views, &result);
+	swapchain_ptr->current_texture = webgpu_texture;
 	swapchain_ptr->current_texture_view = handle;
 	swapchain_ptr->wait_value = swapchain_ptr->semaphore_value + 1;
 
