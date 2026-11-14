@@ -1,6 +1,7 @@
 #include "webgpu_internal.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 /*
@@ -765,9 +766,10 @@ Opal_Result webgpu_helperFillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *in
 
 	memset(info, 0, sizeof(Opal_DeviceInfo));
 
-	// fill basic info
-	if (adapter_info.description)
-		strncpy(info->name, adapter_info.description, 256);
+	if (adapter_info.description[0])
+		snprintf(info->name, sizeof(info->name), "%s", adapter_info.description);
+	else
+		snprintf(info->name, sizeof(info->name), "%s %s", adapter_info.vendor, adapter_info.architecture);
 
 	info->api = OPAL_API_WEBGPU;
 	info->driver_version = 0; // FIXME: is it possible to get uint32 / uint64 driver version for WGPU adapter?
@@ -825,5 +827,6 @@ Opal_Result webgpu_helperFillDeviceInfo(WGPUAdapter adapter, Opal_DeviceInfo *in
 	info->limits.max_compute_workgroup_local_size_y = adapter_limits.limits.maxComputeWorkgroupSizeY;
 	info->limits.max_compute_workgroup_local_size_z = adapter_limits.limits.maxComputeWorkgroupSizeZ;
 
+	wgpuAdapterInfoFreeMembers(adapter_info);
 	return OPAL_SUCCESS;
 }
