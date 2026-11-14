@@ -209,7 +209,7 @@ VkFormat vulkan_helperToImageFormat(Opal_TextureFormat format)
 		VK_FORMAT_ASTC_12x12_UNORM_BLOCK,
 		VK_FORMAT_ASTC_12x12_SRGB_BLOCK,
 
-		// depth_stencil formats
+		// depthstencil formats
 		VK_FORMAT_D16_UNORM,
 		VK_FORMAT_D32_SFLOAT,
 		VK_FORMAT_D24_UNORM_S8_UINT,
@@ -330,7 +330,7 @@ Opal_TextureFormat vulkan_helperFromImageFormat(VkFormat format)
 		case VK_FORMAT_ASTC_12x12_UNORM_BLOCK: return OPAL_TEXTURE_FORMAT_ASTC_12x12_UNORM;
 		case VK_FORMAT_ASTC_12x12_SRGB_BLOCK: return OPAL_TEXTURE_FORMAT_ASTC_12x12_UNORM_SRGB;
 
-		// depth_stencil formats
+		// depthstencil formats
 		case VK_FORMAT_D16_UNORM: return OPAL_TEXTURE_FORMAT_D16_UNORM;
 		case VK_FORMAT_D32_SFLOAT: return OPAL_TEXTURE_FORMAT_D32_SFLOAT;
 		case VK_FORMAT_D24_UNORM_S8_UINT: return OPAL_TEXTURE_FORMAT_D24_UNORM_S8_UINT;

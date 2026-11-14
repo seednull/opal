@@ -184,7 +184,7 @@ WGPUTextureFormat webgpu_helperToTextureFormat(Opal_TextureFormat format)
 		WGPUTextureFormat_ASTC12x12Unorm,
 		WGPUTextureFormat_ASTC12x12UnormSrgb,
 
-		// depth_stencil formats
+		// depthstencil formats
 		WGPUTextureFormat_Depth16Unorm,
 		WGPUTextureFormat_Depth32Float,
 		WGPUTextureFormat_Depth24PlusStencil8,
@@ -680,7 +680,7 @@ WGPUTextureSampleType webgpu_helperToBindingSampleType(Opal_TextureFormat format
 		WGPUTextureSampleType_Float,
 		WGPUTextureSampleType_Float,
 
-		// depth_stencil formats
+		// depthstencil formats
 		WGPUTextureSampleType_Depth,
 		WGPUTextureSampleType_Depth,
 		WGPUTextureSampleType_Depth,
