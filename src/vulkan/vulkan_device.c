@@ -1136,7 +1136,7 @@ static Opal_Result vulkan_deviceGetSupportedSurfaceFormats(Opal_Device this, Opa
 	vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_formats, NULL);
 
 	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * (*num_formats));
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkSurfaceFormatKHR) * num_vulkan_formats);
 	VkSurfaceFormatKHR *vulkan_formats = (VkSurfaceFormatKHR *)(device_ptr->bump.data);
 
 	vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_formats, vulkan_formats);
@@ -1225,7 +1225,7 @@ static Opal_Result vulkan_deviceGetSupportedPresentModes(Opal_Device this, Opal_
 	vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_modes, NULL);
 
 	opal_bumpReset(&device_ptr->bump);
-	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * (*num_present_modes));
+	opal_bumpAlloc(&device_ptr->bump, sizeof(VkPresentModeKHR) * num_vulkan_modes);
 	VkPresentModeKHR *vulkan_modes = (VkPresentModeKHR *)(device_ptr->bump.data);
 
 	vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_physical_device, vulkan_surface, &num_vulkan_modes, vulkan_modes);
