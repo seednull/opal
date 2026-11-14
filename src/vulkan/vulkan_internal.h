@@ -97,6 +97,13 @@ typedef struct Vulkan_DeviceEnginesInfo_t
 	uint32_t queue_counts[OPAL_DEVICE_ENGINE_TYPE_ENUM_MAX];
 } Vulkan_DeviceEnginesInfo;
 
+typedef struct Vulkan_FormatBlock_t
+{
+	uint32_t size;
+	uint32_t width;
+	uint32_t height;
+} Vulkan_FormatBlock;
+
 typedef struct Vulkan_Instance_t
 {
 	Opal_InstanceTable *vtbl;
@@ -370,6 +377,7 @@ VkIndexType vulkan_helperToIndexType(Opal_IndexFormat format);
 
 VkSampleCountFlagBits vulkan_helperToSamples(Opal_Samples samples);
 VkImageAspectFlags vulkan_helperToImageAspectMask(Opal_TextureFormat format);
+Vulkan_FormatBlock vulkan_helperGetFormatBlock(Opal_TextureFormat format);
 
 VkFilter vulkan_helperToFilter(Opal_SamplerFilterMode mode);
 VkSamplerMipmapMode vulkan_helperToSamplerMipmapMode(Opal_SamplerFilterMode mode);

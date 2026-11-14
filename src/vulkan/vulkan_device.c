@@ -5108,14 +5108,19 @@ static Opal_Result vulkan_deviceCmdCopyBufferToTexture(Opal_Device this, Opal_Co
 	Vulkan_ImageView *dst_image_view_ptr = (Vulkan_ImageView *)opal_poolGetElement(&device_ptr->image_views, (Opal_PoolHandle)dst.texture_view);
 	assert(dst_image_view_ptr);
 
+	Vulkan_FormatBlock block = vulkan_helperGetFormatBlock(dst_image_view_ptr->format);
+	assert(block.size > 0);
+
 	VkBufferImageCopy copy_region = {0};
+	copy_region.bufferRowLength = src.row_size / block.size * block.width;
+	copy_region.bufferImageHeight = src.num_rows * block.height;
 	copy_region.bufferOffset = src.offset;
 	copy_region.imageExtent.width = size.width;
 	copy_region.imageExtent.height = size.height;
 	copy_region.imageExtent.depth = size.depth;
 	copy_region.imageOffset.x = dst.offset.x;
-	copy_region.imageOffset.z = dst.offset.y;
-	copy_region.imageOffset.y = dst.offset.z;
+	copy_region.imageOffset.y = dst.offset.y;
+	copy_region.imageOffset.z = dst.offset.z;
 	copy_region.imageSubresource.aspectMask = dst_image_view_ptr->aspect_mask;
 	copy_region.imageSubresource.mipLevel = dst_image_view_ptr->base_mip;
 	copy_region.imageSubresource.baseArrayLayer = dst_image_view_ptr->base_layer;
@@ -5143,14 +5148,19 @@ static Opal_Result vulkan_deviceCmdCopyTextureToBuffer(Opal_Device this, Opal_Co
 	Vulkan_Buffer *dst_buffer_ptr = (Vulkan_Buffer *)opal_poolGetElement(&device_ptr->buffers, (Opal_PoolHandle)dst.buffer);
 	assert(dst_buffer_ptr);
 
+	Vulkan_FormatBlock block = vulkan_helperGetFormatBlock(src_image_view_ptr->format);
+	assert(block.size > 0);
+
 	VkBufferImageCopy copy_region = {0};
+	copy_region.bufferRowLength = dst.row_size / block.size * block.width;
+	copy_region.bufferImageHeight = dst.num_rows * block.height;
 	copy_region.bufferOffset = dst.offset;
 	copy_region.imageExtent.width = size.width;
 	copy_region.imageExtent.height = size.height;
 	copy_region.imageExtent.depth = size.depth;
 	copy_region.imageOffset.x = src.offset.x;
-	copy_region.imageOffset.z = src.offset.y;
-	copy_region.imageOffset.y = src.offset.z;
+	copy_region.imageOffset.y = src.offset.y;
+	copy_region.imageOffset.z = src.offset.z;
 	copy_region.imageSubresource.aspectMask = src_image_view_ptr->aspect_mask;
 	copy_region.imageSubresource.mipLevel = src_image_view_ptr->base_mip;
 	copy_region.imageSubresource.baseArrayLayer = src_image_view_ptr->base_layer;
