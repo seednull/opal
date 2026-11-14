@@ -1882,7 +1882,11 @@ static Opal_Result webgpu_deviceMapBuffer(Opal_Device this, Opal_Buffer buffer, 
 		if (wgpuBufferGetMapState(buffer_ptr->buffer) != WGPUBufferMapState_Mapped)
 			return OPAL_WEBGPU_ERROR;
 
-		buffer_ptr->mapped_ptr = wgpuBufferGetMappedRange(buffer_ptr->buffer, 0, (size_t)buffer_ptr->size);
+		if (buffer_ptr->map_flags & WGPUMapMode_Read)
+			buffer_ptr->mapped_ptr = (void *)wgpuBufferGetConstMappedRange(buffer_ptr->buffer, 0, (size_t)buffer_ptr->size);
+		else
+			buffer_ptr->mapped_ptr = wgpuBufferGetMappedRange(buffer_ptr->buffer, 0, (size_t)buffer_ptr->size);
+
 		if (buffer_ptr->mapped_ptr == NULL)
 			return OPAL_WEBGPU_ERROR;
 	}
