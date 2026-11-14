@@ -79,7 +79,6 @@ static void webgpu_destroyQueue(WebGPU_Queue *queue_ptr)
 {
 	assert(queue_ptr);
 
-	wgpuQueueOnSubmittedWorkDone(queue_ptr->queue, NULL, NULL);
 	wgpuQueueRelease(queue_ptr->queue);
 
 	opal_ringShutdown(&queue_ptr->submit_ring);
